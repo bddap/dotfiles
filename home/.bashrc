@@ -1,6 +1,5 @@
 alias ls='ls -G'
 alias screen='screen-4.6.2'
-alias tmnew='tmux new-session -A -s `pwd`'
 alias onch='ag -l | entr -rc'
 
 export EDITOR='emacs'
@@ -20,3 +19,6 @@ nvm use default &> /dev/null
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/d/flutter/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
+
+export PATH="$HOME/.composer/vendor/bin/:$PATH"
+export PATH=/usr/local/bin:$PATH

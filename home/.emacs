@@ -33,6 +33,12 @@
 	  (lambda ()
 	    (local-set-key (kbd "\C-c\C-f") #'py-yapf-buffer)))
 
+;; Bind C-c C-f to py-yapf-buffer
+;; doesn't work
+;; (add-hook 'elpy-mode-hook
+;; 	  (lambda ()
+;; 	    (local-set-key (kbd "\C-c\C-f") #'py-yapf-buffer)))
+
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -42,7 +48,7 @@
  '(lsp-project-whitelist (quote ("^/Users/a/d/jack/jack-web/$")))
  '(package-selected-packages
    (quote
-    (company auto-complete racer dart-mode py-yapf less-css-mode lsp-rust web-mode py-autopep8 editorconfig lsp-ui avy-flycheck vue-mode mmm-mode lsp-vue php-mode clang-format ag))))
+    (yaml-mode toml-mode elpy jedi company auto-complete racer dart-mode py-yapf less-css-mode lsp-rust web-mode py-autopep8 editorconfig lsp-ui avy-flycheck vue-mode mmm-mode lsp-vue php-mode clang-format ag))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -62,3 +68,4 @@
 (require 'rust-mode)
 (define-key rust-mode-map (kbd "TAB") #'company-indent-or-complete-common)
 (setq company-tooltip-align-annotations t)
+(put 'downcase-region 'disabled nil)
