@@ -23,10 +23,16 @@
 ;; check for .editorconfig
 (add-hook 'vue-mode-hook (lambda () (editorconfig-apply)))
 
+(add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
+
 ;; Bind C-c C-f to beautify
 (add-hook 'c++-mode-hook
 	  (lambda ()
 	    (local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
+(add-hook 'c++-mode-hook 'irony-mode)
+(add-hook 'c-mode-hook 'irony-mode)
+(add-hook 'objc-mode-hook 'irony-mode)
+(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
 
 ;; Bind C-c C-f to py-yapf-buffer
 (add-hook 'python-mode-hook
@@ -48,7 +54,7 @@
  '(lsp-project-whitelist (quote ("^/Users/a/d/jack/jack-web/$")))
  '(package-selected-packages
    (quote
-    (yaml-mode toml-mode elpy jedi company auto-complete racer dart-mode py-yapf less-css-mode lsp-rust web-mode py-autopep8 editorconfig lsp-ui avy-flycheck vue-mode mmm-mode lsp-vue php-mode clang-format ag))))
+    (company-irony irony yaml-mode toml-mode elpy jedi company auto-complete racer dart-mode py-yapf less-css-mode lsp-rust web-mode py-autopep8 editorconfig lsp-ui avy-flycheck vue-mode mmm-mode lsp-vue php-mode clang-format ag))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

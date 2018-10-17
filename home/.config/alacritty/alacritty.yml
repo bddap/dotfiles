@@ -209,6 +209,29 @@ unfocused_hollow_cursor: true
 # Live config reload (changes require restart)
 live_config_reload: true
 
+scrolling:
+  # How many lines of scrollback to keep,
+  # '0' will disable scrolling.
+  history: 10000
+
+  # Number of lines the viewport will move for every line
+  # scrolled when scrollback is enabled (history > 0).
+  multiplier: 3
+
+  # Faux Scrolling
+  #
+  # The `faux_multiplier` setting controls the number
+  # of lines the terminal should scroll when the alternate
+  # screen buffer is active. This is used to allow mouse
+  # scrolling for applications like `man`.
+  #
+  # To disable this completely, set `faux_multiplier` to 0.
+  faux_multiplier: 3
+
+  # Automatically scroll to the bottom when new text is written
+  # to the terminal.
+  auto_scroll: false
+
 # Shell
 #
 # You can set shell.program to the path of your favorite shell, e.g. /bin/fish.
@@ -449,6 +472,7 @@ key_bindings:
   - { key: Key8,      mods: Alt,     chars: "\x1b8"                       }
   - { key: Key9,      mods: Alt,     chars: "\x1b9"                       }
   - { key: Key0,      mods: Alt,     chars: "\x1b0"                       }
-  - { key: LBracket,  mods: Alt|Shift, chars: "\x1b{"                       } # Alt + {
-  - { key: RBracket,  mods: Alt|Shift, chars: "\x1b}"                       } # Alt + }
-  - { key: Semicolon, mods: Alt, chars: "\x1b;"                       } # Alt + }
+  - { key: LBracket,  mods: Alt|Shift, chars: "\x1b{"                     } # Alt + {
+  - { key: RBracket,  mods: Alt|Shift, chars: "\x1b}"                     } # Alt + }
+  - { key: Semicolon, mods: Alt, chars: "\x1b;"                           } # Alt + }
+  - { key: Space,     mods: Alt,   chars: "\x1b "                         } # Alt + Space
