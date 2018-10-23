@@ -3,6 +3,10 @@
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 
+(add-to-list 'load-path "~/.emacs.d/lisp/")
+
+(require 'blacken)
+
 (setq backup-directory-alist `(("." . "~/.emacs-saves/")))
 (setq auto-save-file-name-transforms `((".*" "~/.emacs-saves/" t)))
 
@@ -26,7 +30,7 @@
 ;; Bind C-c C-f to py-yapf-buffer
 (add-hook 'python-mode-hook
 	  (lambda ()
-	    (local-set-key (kbd "\C-c\C-f") #'py-yapf-buffer)))
+	    (local-set-key (kbd "\C-c\C-f") #'blacken-buffer)))
 
 ;; (tool-bar-mode -1)
 (menu-bar-mode -1)
