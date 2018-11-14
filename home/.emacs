@@ -45,6 +45,10 @@
 (setq company-tooltip-align-annotations t)
 (put 'downcase-region 'disabled nil)
 
+;; apply setting from .editorconfig
+(require 'editorconfig)
+(editorconfig-mode 1)
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
