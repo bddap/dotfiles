@@ -1,0 +1,25 @@
+#!/bin/bash
+
+first_err=$(
+	cargo check --message-format json 2>/dev/null \
+	  | jq '
+	  	select(.reason == "compiler-message") 
+			  | .message 
+			  | select(.level == "error") 
+ 			  | .spans[0]
+	  ' \
+	  | jq -sr '.[0]'
+)
+
+rootpath=$(cargo metadata --format-version 1 | jq -r .workspace_root)
+relativepath=$(echo "$first_err" | jq -r '.file_name')
+fullpath=$rootpath/$relativepath
+
+byte_start=$(echo "$first_err" | jq .byte_start)
+
+cat <<EOF
+{
+	"file_name": "$fullpath",
+ 	"byte_start": $byte_start
+}
+EOF

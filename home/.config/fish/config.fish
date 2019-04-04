@@ -1,10 +1,12 @@
 
-set -gx PATH /usr/local/bin ~/.cargo/bin ~/bin $PATH
+set -gx PATH /usr/local/bin ~/.cargo/bin ~/bin ~/go/bin $PATH
+
+set -gx GOPATH ~/go
 
 # alias ls='ls -G'
 # alias onch='ag -l | entr -rc'
 
-# export EDITOR='emacs'
+set -Ux EDITOR emacs
 # export HISTSIZE=
 # export HISTFILESIZE=
 
