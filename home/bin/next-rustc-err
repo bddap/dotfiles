@@ -1,11 +1,14 @@
 #!/bin/bash
 
+# return the span of the last error rustc returns.
+# If there are no errors, return the span of the last warning
+
 set -euo pipefail
 
 function get_target_span {
 	all_messages=$(
-		cargo check --tests --message-format json 2>/dev/null \
-			| jq 'select(.reason == "compiler-message") | .message'
+		cargo check --examples --tests --message-format json 2>/dev/null \
+			| jq 'select(.reason == "compiler-message") | .message | select(.spans | length > 0)'
     )
 
 	all_errs=$(
@@ -16,11 +19,11 @@ function get_target_span {
 	all_warns=$(
 		echo $all_messages \
 			| jq 'select(.level == "warning")'
-    )
+	)
 
-	echo $all_errs $all_warns \
+	echo $all_warns $all_errs \
 		| jq '.spans[0]' \
-		| jq -sr '.[0]'
+		| jq -sr '.[-1]'
 }
 
 target_span=$(get_target_span)

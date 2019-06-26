@@ -26,6 +26,9 @@
 (add-hook 'c++-mode-hook
 		  (lambda ()
 			(local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
+(add-hook 'c-mode-hook
+		  (lambda ()
+			(local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
 (add-hook 'c++-mode-hook 'irony-mode)
 (add-hook 'c-mode-hook 'irony-mode)
 (add-hook 'objc-mode-hook 'irony-mode)
@@ -83,7 +86,7 @@
   "go to location of next compile error"
   (interactive)
   (let ((ner (get-next-err)))
-	(jump-to-file-char (nth 0 ner) (nth 1 ner))
+	(jump-to-file-char (nth 0 ner) (+ 1 (nth 1 ner)))
 	))
 
 (global-set-key (kbd "\C-x n e") 'next-err)
