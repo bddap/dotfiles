@@ -4,6 +4,10 @@
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/") t)
+;; (add-to-list 'package-archives
+;; 			 '("elpa.gnu.org http" . "http://elpa.gnu.org/packages/") t)
+;; (add-to-list 'package-archives
+;; 			 '("melpa http" . "http://melpa.org/packages/") t)
 
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 
@@ -14,7 +18,11 @@
 (setq backup-directory-alist `(("." . "~/.emacs-saves/")))
 (setq auto-save-file-name-transforms `((".*" "~/.emacs-saves/" t)))
 
+(require 'company-lsp)
+(push 'company-lsp company-backends)
+
 ;; (require 'lsp-mode)
+(require 'yasnippet)
 ;; (require 'lsp-vue)
 
 ;; check for .editorconfig
@@ -38,6 +46,9 @@
 (add-hook 'python-mode-hook
 		  (lambda ()
 			(local-set-key (kbd "\C-c\C-f") #'blacken-buffer)))
+(require 'lsp)
+(require 'lsp-clients)
+(add-hook 'python-mode-hook 'lsp) 
 
 ;; (tool-bar-mode -1)
 (menu-bar-mode -1)
@@ -98,7 +109,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-	(dockerfile-mode protobuf-mode markdown-preview-eww haskell-mode toml-mode avy-flycheck dart-mode lsp-rust clang-format php-mode py-autopep8 lsp-vue editorconfig web-mode ag jedi nixos-options elpy irony mmm-mode vue-mode less-css-mode bats-mode git-blamed rust-mode markdown-mode nix-mode lsp-ui company company-irony racer auto-complete yaml-mode))))
+	(go-mode company-lsp yasnippet spinner lsp-mode dockerfile-mode protobuf-mode markdown-preview-eww haskell-mode toml-mode avy-flycheck dart-mode lsp-rust clang-format php-mode py-autopep8 lsp-vue editorconfig web-mode ag jedi nixos-options elpy irony mmm-mode vue-mode less-css-mode bats-mode git-blamed rust-mode markdown-mode nix-mode lsp-ui company company-irony racer auto-complete yaml-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
