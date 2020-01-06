@@ -8,5 +8,10 @@ export PS1="\W ♨ "
 
 export PATH="$HOME/bin:$PATH"
 
-source $HOME/.cargo/env || true
-source /Users/a/Library/Preferences/org.dystroy.broot/launcher/bash/br || true
+if [ -f $HOME/.cargo/env ]; then
+    source $HOME/.cargo/env
+fi
+
+if [ -f "/Users/a/Library/Preferences/org.dystroy.broot/launcher/bash/br" ]; then
+    source /Users/a/Library/Preferences/org.dystroy.broot/launcher/bash/br
+fi

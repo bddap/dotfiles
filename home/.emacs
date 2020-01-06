@@ -5,9 +5,9 @@
 (add-to-list 'package-archives
              '("melpa" . "https://melpa.org/packages/") t)
 ;; (add-to-list 'package-archives
-;; 			 '("elpa.gnu.org http" . "http://elpa.gnu.org/packages/") t)
+;; 	     '("elpa.gnu.org http" . "http://elpa.gnu.org/packages/") t)
 ;; (add-to-list 'package-archives
-;; 			 '("melpa http" . "http://melpa.org/packages/") t)
+;; 	     '("melpa http" . "http://melpa.org/packages/") t)
 
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 
@@ -32,11 +32,11 @@
 
 ;; Bind C-c C-f to beautify
 (add-hook 'c++-mode-hook
-		  (lambda ()
-			(local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
+	  (lambda ()
+	    (local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
 (add-hook 'c-mode-hook
-		  (lambda ()
-			(local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
+	  (lambda ()
+	    (local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
 (add-hook 'c++-mode-hook 'irony-mode)
 (add-hook 'c-mode-hook 'irony-mode)
 (add-hook 'objc-mode-hook 'irony-mode)
@@ -44,8 +44,8 @@
 
 ;; Bind C-c C-f to py-yapf-buffer
 (add-hook 'python-mode-hook
-		  (lambda ()
-			(local-set-key (kbd "\C-c\C-f") #'blacken-buffer)))
+	  (lambda ()
+	    (local-set-key (kbd "\C-c\C-f") #'blacken-buffer)))
 (require 'lsp)
 (require 'lsp-clients)
 (add-hook 'python-mode-hook 'lsp) 
@@ -83,22 +83,22 @@
 (defun get-next-err ()
   "determine the file-name and charater location of the next rustc error"
   (let* ((json-object-type 'hash-table)
-		 (json-array-type 'list)
-		 (json-key-type 'string)
-		 (js (json-read-from-string (shell-command-to-string "next-rustc-err")))
-		 (noth (type-of (gethash "byte_start" js)))
-		 )
-	(list
-	 (gethash "file_name" js)
-	 (gethash "byte_start" js)
-	 )))
+	 (json-array-type 'list)
+	 (json-key-type 'string)
+	 (js (json-read-from-string (shell-command-to-string "next-rustc-err")))
+	 (noth (type-of (gethash "byte_start" js)))
+	 )
+    (list
+     (gethash "file_name" js)
+     (gethash "byte_start" js)
+     )))
 
 (defun next-err ()
   "go to location of next compile error"
   (interactive)
   (let ((ner (get-next-err)))
-	(jump-to-file-char (nth 0 ner) (+ 1 (nth 1 ner)))
-	))
+    (jump-to-file-char (nth 0 ner) (+ 1 (nth 1 ner)))
+    ))
 
 (global-set-key (kbd "\C-x n e") 'next-err)
 
@@ -109,7 +109,7 @@
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-	(go-mode company-lsp yasnippet spinner lsp-mode dockerfile-mode protobuf-mode markdown-preview-eww haskell-mode toml-mode avy-flycheck dart-mode lsp-rust clang-format php-mode py-autopep8 lsp-vue editorconfig web-mode ag jedi nixos-options elpy irony mmm-mode vue-mode less-css-mode bats-mode git-blamed rust-mode markdown-mode nix-mode lsp-ui company company-irony racer auto-complete yaml-mode))))
+    (go-mode company-lsp yasnippet spinner lsp-mode dockerfile-mode protobuf-mode markdown-preview-eww haskell-mode toml-mode avy-flycheck dart-mode lsp-rust clang-format php-mode py-autopep8 lsp-vue editorconfig web-mode ag jedi nixos-options elpy irony mmm-mode vue-mode less-css-mode bats-mode git-blamed rust-mode markdown-mode nix-mode lsp-ui company company-irony racer auto-complete yaml-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
