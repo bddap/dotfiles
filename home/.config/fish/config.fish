@@ -14,8 +14,6 @@ appendp ~/go/bin
 set -gx GOPATH ~/go
 set -Ux EDITOR emacs
 
-alias onch='ag -l | entr -rc'
-
 function bddap_key_bindings -d "key bindings for fish"
     fish_default_key_bindings
     bind --erase \el # disable __fish_list_current_token for alt-l
