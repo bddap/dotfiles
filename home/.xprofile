@@ -1,0 +1,3 @@
+# GNOME SHELL executes this instead of .xinitrc
+# for compatability, we just forward to .xinitrc
+source $HOME/.xinitrc

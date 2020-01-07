@@ -1,0 +1,5 @@
+partial modifier_keys
+xkb_symbols "lalt_is_lctl" {
+    replace key <LALT>  { [ Control_L ] };
+	modifier_map Control { <LALT>, <LCTL>, <RCTL> };
+};

@@ -4,6 +4,6 @@ cd "$(dirname $0)"
 
 if [ ! -d ~/.emacs.d ]; then
 	mkdir ~/.emacs.d
-if
+fi
 
 stow -d ./home -t ~ .
