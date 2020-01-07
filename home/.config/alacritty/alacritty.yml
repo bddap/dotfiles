@@ -1,0 +1,32 @@
+window:
+  padding:
+    x: 4
+    y: 4
+  dynamic_padding: false
+
+colors:
+  primary:
+    background: '0xdfdbc3'
+    foreground: '0x3b2322'
+  normal:
+    black:   '0x000000'
+    red:     '0x990000'
+    green:   '0x00a600'
+    yellow:  '0x999900'
+    blue:    '0x0000b2'
+    magenta: '0xb200b2'
+    cyan:    '0x00a6b2'
+    white:   '0xbfbfbf'
+  bright:
+    black:   '0x666666'
+    red:     '0xa50000'
+    green:   '0x00a900'
+    yellow:  '0xb0b000'
+    blue:    '0x0000a0'
+    magenta: '0xa500a5'
+    cyan:    '0x00a5a5'
+    white:   '0xa5a5a5'
+
+key_bindings:
+  - { key: V, mods: Control, action: Paste }
+  - { key: Backslash, mods: Control, action: ReceiveChar }
