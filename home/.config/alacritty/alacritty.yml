@@ -28,5 +28,4 @@ colors:
     white:   '0xa5a5a5'
 
 key_bindings:
-  - { key: V, mods: Control, action: Paste }
   - { key: Backslash, mods: Control, action: ReceiveChar }

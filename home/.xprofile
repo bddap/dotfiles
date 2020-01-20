@@ -1,3 +1,7 @@
 # GNOME SHELL executes this instead of .xinitrc
 # for compatability, we just forward to .xinitrc
+
+# https://askubuntu.com/questions/448183/keyboard-map-is-changed-randomly
+# /org/gnome/settings-daemon/plugins/keyboard/ has been disabled
+
 source $HOME/.xinitrc

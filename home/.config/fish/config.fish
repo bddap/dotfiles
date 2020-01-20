@@ -10,6 +10,15 @@ appendp /usr/local/bin
 appendp ~/.cargo/bin
 appendp ~/bin
 appendp ~/go/bin
+appendp ~/.local/bin
+
+function ef --description "edit your fish config"
+    eval $EDITOR ~/d/dotfiles/home/.config/fish/config.fish
+end
+
+function ee --description "edit your emacs config"
+    eval $EDITOR ~/d/dotfiles/home/.emacs
+end
 
 set -gx GOPATH ~/go
 set -Ux EDITOR emacs

@@ -1,14 +1,5 @@
 (package-initialize)
 
-(custom-set-variables
- ;; not meant for hand editing
- '(package-selected-packages
-   (quote
-    (go-mode company-lsp yasnippet spinner lsp-mode dockerfile-mode protobuf-mode markdown-preview-eww haskell-mode toml-mode avy-flycheck dart-mode lsp-rust clang-format php-mode py-autopep8 lsp-vue editorconfig web-mode ag jedi nixos-options elpy irony mmm-mode vue-mode less-css-mode bats-mode git-blamed rust-mode markdown-mode nix-mode lsp-ui company company-irony racer auto-complete yaml-mode))))
-(custom-set-faces
- ;; not meant for hand editing
- )
-
 (setq package-check-signature nil)
 (setq package-archives
       '(("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")
@@ -16,47 +7,32 @@
         ("org"          . "~/.emacs.d/elpa-mirror/org/")
         ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")))
 (add-to-list 'load-path "~/.emacs.d/lisp/")
-(package-refresh-contents) ;; fast because local storage
-(package-install-selected-packages) ;; fast because local storage
 (setq backup-directory-alist `(("." . "~/.emacs.d/saves/")))
 (setq auto-save-file-name-transforms `((".*" "~/.emacs.d/saves/" t)))
 
-(require 'blacken)
-(require 'subr-x)
-(require 'json)
-(require 'company-lsp)
-(require 'yasnippet)
 (require 'lsp)
-(require 'lsp-clients)
-(require 'rust-mode)
+(require 'lsp-mode)
 (require 'editorconfig)
-;; (require 'lsp-mode)
-;; (require 'lsp-vue)
 
-(push 'company-lsp company-backends)
+;; use the language server protocol whenever possible
+(add-hook 'prog-mode-hook #'lsp)
+
+(add-hook 'lsp-mode-hook (lambda () (local-set-key (kbd "\C-c\C-f") #'lsp-format-buffer)))
+(add-hook 'company-mode-hook (lambda () (local-set-key (kbd "\C-TAB") #'company-complete-common)))
+;; (add-hook 'flymake-mode-hook (lambda () (local-set-key (kbd "\C-") #'company-complete-common)))
+
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
 
-;; Bind C-c C-f to beautify
-(add-hook 'c++-mode-hook (lambda () (local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
-(add-hook 'c-mode-hook (lambda () (local-set-key (kbd "\C-c\C-f") #'clang-format-buffer)))
-(add-hook 'python-mode-hook (lambda () (local-set-key (kbd "\C-c\C-f") #'blacken-buffer)))
-
-(add-hook 'c++-mode-hook 'irony-mode)
-(add-hook 'c-mode-hook 'irony-mode)
-(add-hook 'objc-mode-hook 'irony-mode)
-(add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
-(add-hook 'python-mode-hook 'lsp) 
-(add-hook 'rust-mode-hook #'racer-mode)
-(add-hook 'racer-mode-hook #'eldoc-mode)
-(add-hook 'racer-mode-hook #'company-mode)
-(define-key rust-mode-map (kbd "TAB") #'company-indent-or-complete-common)
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 (setq company-tooltip-align-annotations t)
 (editorconfig-mode 1)
 (column-number-mode 1)
 (menu-bar-mode -1)
+;; https://github.com/rust-lang/rust-mode#indentation 
+(add-hook 'rust-mode-hook (lambda () (setq indent-tabs-mode nil)))
 
+(require 'json)
 (defun jump-to-file-char (path charnum)
   "open existing file at line"
   (interactive)  
@@ -91,3 +67,17 @@
 
 ;; todo: add-hook, local-set-key
 (global-set-key (kbd "\C-x n e") 'next-err)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   (quote
+	(yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
