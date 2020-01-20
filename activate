@@ -7,3 +7,7 @@ if [ ! -d ~/.emacs.d ]; then
 fi
 
 stow -d ./home -t ~ .
+
+# TODO:
+#   Implement a custom replacement for stow that better fits the use case.
+#     - Don't symlink directories unless explicitly configured to do so.
