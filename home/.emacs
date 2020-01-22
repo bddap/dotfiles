@@ -14,12 +14,22 @@
 (require 'lsp-mode)
 (require 'editorconfig)
 
+(setq lsp-ui-enable nil) ;; dont show doc pane by default
+
 ;; use the language server protocol whenever possible
 (add-hook 'prog-mode-hook #'lsp)
+(add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
 
-(add-hook 'lsp-mode-hook (lambda () (local-set-key (kbd "\C-c\C-f") #'lsp-format-buffer)))
-(add-hook 'company-mode-hook (lambda () (local-set-key (kbd "\C-TAB") #'company-complete-common)))
-;; (add-hook 'flymake-mode-hook (lambda () (local-set-key (kbd "\C-") #'company-complete-common)))
+(define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
+(define-key lsp-mode-map (kbd "C-c i") #'lsp-ui-peek-find-references)
+(define-key lsp-mode-map (kbd "C-c o") #'lsp-ui-doc-glance)
+(define-key lsp-mode-map (kbd "C-c l") #'company-complete-common)
+(define-key lsp-mode-map (kbd "C-c y") #'lsp-execute-code-action)
+(define-key lsp-mode-map (kbd "M-n") #'flycheck-next-error)
+(define-key lsp-mode-map (kbd "M-p") #'flycheck-previous-error)
+(define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
+
+;; Todo, unbind TAB from company-complete-common, use C-c l instead
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
 
@@ -31,6 +41,7 @@
 (menu-bar-mode -1)
 ;; https://github.com/rust-lang/rust-mode#indentation 
 (add-hook 'rust-mode-hook (lambda () (setq indent-tabs-mode nil)))
+(setq lsp-prefer-flymake nil) ;; tell lsp to use flycheck instead
 
 (require 'json)
 (defun jump-to-file-char (path charnum)
@@ -72,9 +83,10 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(lsp-ui-doc-enable nil)
  '(package-selected-packages
    (quote
-	(yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
+	(flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
