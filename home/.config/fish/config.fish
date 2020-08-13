@@ -30,3 +30,5 @@ function bddap_key_bindings -d "key bindings for fish"
     bind \el downcase-word
 end
 set -g fish_key_bindings bddap_key_bindings
+
+alias ytob='ytop -c default-dark'

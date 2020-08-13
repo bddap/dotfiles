@@ -13,8 +13,7 @@
 (require 'lsp)
 (require 'lsp-mode)
 (require 'editorconfig)
-
-(setq lsp-ui-enable nil) ;; dont show doc pane by default
+(require 'use-package)
 
 ;; use the language server protocol whenever possible
 (add-hook 'prog-mode-hook #'lsp)
@@ -28,6 +27,14 @@
 (define-key lsp-mode-map (kbd "M-n") #'flycheck-next-error)
 (define-key lsp-mode-map (kbd "M-p") #'flycheck-previous-error)
 (define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
+(define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
+
+;; stop typescript lsp from adding '.log' file to pwd
+;; https://github.com/emacs-lsp/lsp-mode/issues/1490
+(use-package lsp-mode
+  :hook (web-mode . lsp)
+  :custom
+  (lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
 
 ;; Todo, unbind TAB from company-complete-common, use C-c l instead
 
