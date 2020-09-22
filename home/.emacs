@@ -35,6 +35,9 @@
   :hook (web-mode . lsp)
   :custom
   (lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
+;; js-mode binds "M-." to js-find-symbol. We don't want that because lsp-goto-implementation is better.
+(add-hook 'js-mode-hook (lambda ()
+		  (local-set-key (kbd "M-.") 'lsp-goto-implementation)))
 
 ;; Todo, unbind TAB from company-complete-common, use C-c l instead
 
@@ -93,7 +96,7 @@
  '(lsp-ui-doc-enable nil)
  '(package-selected-packages
    (quote
-	(flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
+	(typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
