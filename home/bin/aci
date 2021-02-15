@@ -1,0 +1,4 @@
+#!/bin/bash
+
+xkbcomp -w0 -I$HOME/.xkb $HOME/.xkb/keymap/kbd $DISPLAY
+# setxkbmap -print > ~/d/dotfiles/home/.xkb/keymap/kbd
