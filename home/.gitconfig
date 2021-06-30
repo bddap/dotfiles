@@ -1,3 +1,8 @@
 [user]
 	email = andrew@dirksen.com
 	name = Andrew Dirksen
+[filter "lfs"]
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f

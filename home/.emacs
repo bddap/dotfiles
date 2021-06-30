@@ -1,13 +1,14 @@
 (package-initialize)
 
 (setq package-check-signature nil)
-;; (setq package-archives
-;;       '(("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")
-;; 		("stable-melpa" . "~/.emacs.d/elpa-mirror/stable-melpa/")
-;;         ("org"          . "~/.emacs.d/elpa-mirror/org/")
-;;         ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")))
 (setq package-archives
-      '(("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")))
+      '(
+		("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")
+		;; ("stable-melpa" . "~/.emacs.d/elpa-mirror/stable-melpa/")
+		;; ("org"          . "~/.emacs.d/elpa-mirror/org/")
+		;; ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")
+		))
+
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 
 (setq backup-directory-alist `(("." . "~/.emacs.d/saves/bak/")))
@@ -23,7 +24,11 @@
 (yas-global-mode 1)
 
 ;; use the language server protocol whenever possible
-(add-hook 'prog-mode-hook #'lsp)
+;; (add-hook 'prog-mode-hook #'lsp)
+(add-hook 'rust-mode-hook #'lsp)
+(add-hook 'python-mode-hook #'lsp)
+(add-hook 'sh-mode-hook #'lsp)
+(add-hook 'dockerfile-mode-hook #'lsp)
 (add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
 
 (define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
@@ -100,6 +105,7 @@
 
 ;; todo: add-hook, local-set-key
 (global-set-key (kbd "\C-x n e") 'next-err)
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -108,7 +114,7 @@
  '(lsp-ui-doc-enable nil)
  '(package-selected-packages
    (quote
-	(glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode company-lsp bats-mode))))
+	(hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
