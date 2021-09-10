@@ -29,15 +29,18 @@
 (add-hook 'python-mode-hook #'lsp)
 (add-hook 'sh-mode-hook #'lsp)
 (add-hook 'dockerfile-mode-hook #'lsp)
+(add-hook 'c-mode-common-hook #'lsp)
 (add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
+
+(define-key prog-mode-map (kbd "C-c f") #'project-find-file)
 
 (define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
 (define-key lsp-mode-map (kbd "C-c i") #'lsp-ui-peek-find-references)
 (define-key lsp-mode-map (kbd "C-c o") #'lsp-ui-doc-glance)
 (define-key lsp-mode-map (kbd "C-c l") #'company-complete-common)
 (define-key lsp-mode-map (kbd "C-c y") #'lsp-execute-code-action)
-(define-key lsp-mode-map (kbd "M-n") #'flycheck-next-error)
-(define-key lsp-mode-map (kbd "M-p") #'flycheck-previous-error)
+(define-key lsp-mode-map (kbd "M-n") #'next-error)
+(define-key lsp-mode-map (kbd "M-p") #'previous-error)
 (define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
@@ -50,6 +53,17 @@
 ;; js-mode binds "M-." to js-find-symbol. We don't want that because lsp-goto-implementation is better.
 (add-hook 'js-mode-hook
 		  (lambda () (local-set-key (kbd "M-.") 'lsp-goto-implementation)))
+
+;; keep lsp-ui-doc from popping up without my say-so
+(setq lsp-ui-doc-enable nil)
+(setq lsp-file-watch-threshold 10000)
+(use-package lsp-ui
+  :ensure t
+  :after lsp-mode
+  :init
+  (setq lsp-ui-doc-enable nil)
+  (setq lsp-signature-render-documentation nil)
+  )
 
 (add-hook 'markdown-mode-hook
 		  (lambda () (visual-line-mode)))
@@ -66,9 +80,14 @@
 (editorconfig-mode 1)
 (column-number-mode 1)
 (menu-bar-mode -1)
+(ivy-mode)
 ;; https://github.com/rust-lang/rust-mode#indentation 
 (add-hook 'rust-mode-hook (lambda () (setq indent-tabs-mode nil)))
 (setq lsp-prefer-flymake nil) ;; tell lsp to use flycheck instead
+;; https://users.rust-lang.org/t/how-to-disable-rust-analyzer-proc-macro-warnings-in-neovim/53150/8
+(setq lsp-rust-analyzer-proc-macro-enable t)
+(setq lsp-rust-analyzer-cargo-load-out-dirs-from-check t)
+;; (setq lsp-rust-analyzer-server-display-inlay-hints t)
 
 (require 'json)
 (defun jump-to-file-char (path charnum)
@@ -105,6 +124,8 @@
 
 ;; todo: add-hook, local-set-key
 (global-set-key (kbd "\C-x n e") 'next-err)
+(global-set-key (kbd "\C-c C-s") 'swiper-isearch)
+(global-set-key (kbd "\C-c C-r") 'swiper-isearch-reverse)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -114,7 +135,7 @@
  '(lsp-ui-doc-enable nil)
  '(package-selected-packages
    (quote
-	(hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode))))
+	(terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
