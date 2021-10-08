@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -ueo pipefail
+
+crate=$1
+
+python -m webbrowser https://docs.rs/${crate}

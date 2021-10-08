@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -ueo pipefail
+
+if [ "$#" -ne 1 ]; then
+	echo onchs: wrong number of arguments 1>&2
+	exit 1
+fi
+
+rg -l . | entr -rcs "$1"
