@@ -65,11 +65,10 @@ function fish_prompt --description 'Write out the prompt'
     echo -n -s (set_color $fish_color_user) "$USER" $normal @ (set_color $color_host) (prompt_hostname) $normal ' ' (set_color $color_cwd) (prompt_pwd) $normal (fish_vcs_prompt) $normal $prompt_status $suffix " "
 end
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-eval $HOME/miniconda3/bin/conda "shell.fish" "hook" $argv | source
-# <<< conda initialize <<<
-
+# # >>> conda initialize >>>
+# # !! Contents within this block are managed by 'conda init' !!
+# eval $HOME/miniconda3/bin/conda "shell.fish" "hook" $argv | source
+# # <<< conda initialize <<<
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end

@@ -56,7 +56,7 @@
 
 ;; keep lsp-ui-doc from popping up without my say-so
 (setq lsp-ui-doc-enable nil)
-(setq lsp-file-watch-threshold 10000)
+(setq lsp-file-watch-threshold 100000)
 (use-package lsp-ui
   :ensure t
   :after lsp-mode
@@ -64,6 +64,12 @@
   (setq lsp-ui-doc-enable nil)
   (setq lsp-signature-render-documentation nil)
   )
+
+(use-package lsp-pyright
+  :ensure t
+  :hook (python-mode . (lambda ()
+                          (require 'lsp-pyright)
+                          (lsp))))  ; or lsp-deferred
 
 (add-hook 'markdown-mode-hook
 		  (lambda () (visual-line-mode)))
@@ -102,6 +108,11 @@
     (with-current-buffer standard-output
       (call-process shell-file-name nil t nil shell-command-switch command))))
 
+;; (defun bddap-lsp-config ()
+;;   "set lsp config"
+;;   (interactive)
+;;   (lsp--set-configuration `(:rust-analyzer (:cargo (:allFeatures (true))))))
+
 (defun get-next-err ()
   "determine the file-name and charater location of the next rustc error"
   (let* ((json-object-type 'hash-table)
@@ -135,13 +146,13 @@
  '(lsp-ui-doc-enable nil)
  '(package-selected-packages
    (quote
-	(terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode))))
+	(lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ '(terraform--resource-name-face ((t (:foreground "brightmagenta")))))
 ;; (custom-set-faces
 ;;  ;; custom-set-faces was added by Custom.
 ;;  ;; If you edit it by hand, you could mess it up, so be careful.
