@@ -41,3 +41,5 @@ fi
 complete -C /usr/bin/terraform terraform
 
 source <(cortex completion bash)
+
+export PATH=$PATH:/usr/local/go/bin

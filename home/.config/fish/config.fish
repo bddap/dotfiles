@@ -7,6 +7,7 @@ function appendp
 end
 
 appendp /usr/local/bin
+appendp /usr/local/go/bin
 appendp ~/.cargo/bin
 appendp ~/bin
 appendp ~/go/bin
@@ -72,3 +73,4 @@ end
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end
+
