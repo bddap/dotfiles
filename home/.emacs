@@ -21,6 +21,15 @@
 (require 'yasnippet)
 (yas-global-mode 1)
 
+;; todo, add a function that takes a command, and formats the current buffer using that command
+;; https://emacs.stackexchange.com/questions/54351/how-to-run-a-custom-formatting-tool-on-save
+
+(add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
+(lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("~/bin/terraform-lsp"
+																			  "-enable-log-file")) 
+									  :major-modes '(terraform-mode) 
+									  :server-id 'terraform-ls))
+
 ;; use the language server protocol whenever possible
 ;; (add-hook 'prog-mode-hook #'lsp)
 (add-hook 'rust-mode-hook #'lsp)
@@ -28,6 +37,7 @@
 (add-hook 'sh-mode-hook #'lsp)
 (add-hook 'dockerfile-mode-hook #'lsp)
 (add-hook 'c-mode-common-hook #'lsp)
+(add-hook 'terraform-mode-hook #'lsp)
 (add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
 
 (define-key prog-mode-map (kbd "C-c f") #'project-find-file)
@@ -46,6 +56,11 @@
 (add-hook 'python-mode-hook (lambda () 
 							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
 									 (local-set-key (kbd "C-c C-f") #'py-yapf-buffer))))
+
+;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
+(add-hook 'terraform-mode-hook (lambda () 
+								 (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+										(local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
 
 (add-hook 'emacs-lisp-mode-hook (lambda () 
 								  (local-set-key (kbd "C-c C-f") #'elisp-format-buffer)))
