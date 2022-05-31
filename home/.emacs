@@ -19,6 +19,7 @@
 (require 'editorconfig)
 (require 'use-package)
 (require 'yasnippet)
+(require 'apheleia)
 (yas-global-mode 1)
 
 ;; todo, add a function that takes a command, and formats the current buffer using that command
@@ -53,9 +54,12 @@
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
 ;; pyright can't format so we define a custom keybind in python mode
+;; (add-hook 'python-mode-hook (lambda ()
+;; 							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil)
+;; 									 (local-set-key (kbd "C-c C-f") #'py-yapf-buffer))))
 (add-hook 'python-mode-hook (lambda () 
 							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-									 (local-set-key (kbd "C-c C-f") #'py-yapf-buffer))))
+									 (local-set-key (kbd "C-c C-f") #'python-black-buffer))))
 
 ;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook (lambda () 
@@ -64,6 +68,22 @@
 
 (add-hook 'emacs-lisp-mode-hook (lambda () 
 								  (local-set-key (kbd "C-c C-f") #'elisp-format-buffer)))
+
+(push '(shfmt . ("beautysh" "-")) apheleia-formatters)
+(add-hook 'sh-mode-hook (lambda () 
+						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								 (local-set-key (kbd "C-c C-f") 
+												(lambda () 
+												  (interactive) 
+												  (apheleia-format-buffer 'shfmt))))))
+
+(push '(yamlfmt . ("yamlfmt")) apheleia-formatters)
+(add-hook 'yaml-mode-hook (lambda () 
+							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								   (local-set-key (kbd "C-c C-f") 
+												  (lambda () 
+													(interactive) 
+													(apheleia-format-buffer 'yamlfmt))))))
 
 ;; stop typescript lsp from adding '.log' file to pwd
 ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
@@ -115,7 +135,11 @@
 ;; https://users.rust-lang.org/t/how-to-disable-rust-analyzer-proc-macro-warnings-in-neovim/53150/8
 (setq lsp-rust-analyzer-proc-macro-enable t)
 (setq lsp-rust-analyzer-cargo-load-out-dirs-from-check t)
+(setq lsp-rust-analyzer-experimental-proc-attr-macros t)
 ;; (setq lsp-rust-analyzer-server-display-inlay-hints t)
+
+;; (setq lsp-rust-analyzer--make-init-options (lambda ()
+;; 											 `(:diagnostics (:enable ,f))))
 
 (require 'json)
 (defun jump-to-file-char (path charnum) 
@@ -163,13 +187,13 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(lsp-ui-doc-enable nil) 
- '(package-selected-packages (quote (elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode
-												  company glsl-mode lsp-mode typescript-mode
-												  json-mode flycheck evil-numbers yasnippet
-												  rust-mode yaml-mode web-mode vue-mode toml-mode
-												  protobuf-mode php-mode nixos-options nix-mode
-												  lsp-ui haskell-mode go-mode git-blamed
-												  editorconfig dockerfile-mode dart-mode))))
+ '(package-selected-packages (quote (apheleia python-black elisp-format py-yapf lsp-pyright
+											  terraform-mode swiper hcl-mode company glsl-mode
+											  lsp-mode typescript-mode json-mode flycheck
+											  evil-numbers yasnippet rust-mode yaml-mode web-mode
+											  vue-mode toml-mode protobuf-mode php-mode
+											  nixos-options nix-mode lsp-ui haskell-mode go-mode
+											  git-blamed editorconfig dockerfile-mode dart-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
