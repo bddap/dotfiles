@@ -39,6 +39,9 @@
 (add-hook 'dockerfile-mode-hook #'lsp)
 (add-hook 'c-mode-common-hook #'lsp)
 (add-hook 'terraform-mode-hook #'lsp)
+(add-hook 'mhtml-mode-hook #'lsp)
+(add-hook 'typescript-mode-hook #'lsp)
+(add-hook 'js-mode-hook #'lsp)
 (add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
 
 (define-key prog-mode-map (kbd "C-c f") #'project-find-file)
@@ -53,13 +56,21 @@
 (define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
-;; pyright can't format so we define a custom keybind in python mode
-;; (add-hook 'python-mode-hook (lambda ()
-;; 							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil)
-;; 									 (local-set-key (kbd "C-c C-f") #'py-yapf-buffer))))
+(push '(black . ("black" "-")) apheleia-formatters)
 (add-hook 'python-mode-hook (lambda () 
-							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-									 (local-set-key (kbd "C-c C-f") #'python-black-buffer))))
+						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								 (local-set-key (kbd "C-c C-f") 
+												(lambda () 
+												  (interactive) 
+												  (apheleia-format-buffer 'black))))))
+
+;; (push '(prettier . ("prettier" "-")) apheleia-formatters)
+(add-hook 'yaml-mode-hook (lambda () 
+						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								 (local-set-key (kbd "C-c C-f") 
+												(lambda () 
+												  (interactive) 
+												  (apheleia-format-buffer 'prettier))))))
 
 ;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook (lambda () 
@@ -76,14 +87,6 @@
 												(lambda () 
 												  (interactive) 
 												  (apheleia-format-buffer 'shfmt))))))
-
-(push '(yamlfmt . ("yamlfmt")) apheleia-formatters)
-(add-hook 'yaml-mode-hook (lambda () 
-							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								   (local-set-key (kbd "C-c C-f") 
-												  (lambda () 
-													(interactive) 
-													(apheleia-format-buffer 'yamlfmt))))))
 
 ;; stop typescript lsp from adding '.log' file to pwd
 ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
@@ -154,6 +157,28 @@
 																			nil shell-command-switch
 																			command))))
 
+(defun increment-number-at-point ()
+  (interactive)
+  (let ((old-point (point)))
+    (unwind-protect
+        (progn
+          (skip-chars-backward "0-9")
+          (or (looking-at "\-?[0-9]+")
+              (error "No number at point"))
+          (replace-match (number-to-string (1+ (string-to-number (match-string 0))))))
+      (goto-char old-point))))
+
+(defun decrement-number-at-point ()
+  (interactive)
+  (let ((old-point (point)))
+    (unwind-protect
+        (progn
+          (skip-chars-backward "0-9")
+		  (or (looking-at "\-?[0-9]+")
+              (error "No number at point"))
+          (replace-match (number-to-string (1- (string-to-number (match-string 0))))))
+      (goto-char old-point))))
+
 ;; (defun bddap-lsp-config ()
 ;;   "set lsp config"
 ;;   (interactive)
@@ -180,27 +205,23 @@
 (global-set-key (kbd "\C-x n e") 'next-err)
 (global-set-key (kbd "\C-c C-s") 'swiper-isearch)
 (global-set-key (kbd "\C-c C-r") 'swiper-isearch-reverse)
+(global-set-key (kbd "\C-c =") 'increment-number-at-point)
+(global-set-key (kbd "\C-c -") 'decrement-number-at-point)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-ui-doc-enable nil) 
- '(package-selected-packages (quote (apheleia python-black elisp-format py-yapf lsp-pyright
-											  terraform-mode swiper hcl-mode company glsl-mode
-											  lsp-mode typescript-mode json-mode flycheck
-											  evil-numbers yasnippet rust-mode yaml-mode web-mode
-											  vue-mode toml-mode protobuf-mode php-mode
-											  nixos-options nix-mode lsp-ui haskell-mode go-mode
-											  git-blamed editorconfig dockerfile-mode dart-mode))))
+ '(lsp-ui-doc-enable nil)
+ '(package-selected-packages
+   '(blamer apheleia elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(terraform--resource-name-face ((t 
-								   (:foreground "brightmagenta")))))
+ '(terraform--resource-name-face ((t (:foreground "brightmagenta")))))
 ;; (custom-set-faces
 ;;  ;; custom-set-faces was added by Custom.
 ;;  ;; If you edit it by hand, you could mess it up, so be careful.

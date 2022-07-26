@@ -6,12 +6,23 @@ function appendp
     end
 end
 
+function prependp
+    set pa $argv[1]
+    if test -d $pa
+       set -gx PATH $pa $PATH
+    end
+end
+
 appendp /usr/local/bin
 appendp /usr/local/go/bin
 appendp ~/.cargo/bin
 appendp ~/bin
 appendp ~/go/bin
 appendp ~/.local/bin
+
+if which yarn > /dev/null
+   appendp (yarn global bin)
+end
 
 function ef --description "edit your fish config"
     eval $EDITOR ~/d/dotfiles/home/.config/fish/config.fish
@@ -66,11 +77,9 @@ function fish_prompt --description 'Write out the prompt'
     echo -n -s (set_color $fish_color_user) "$USER" $normal @ (set_color $color_host) (prompt_hostname) $normal ' ' (set_color $color_cwd) (prompt_pwd) $normal (fish_vcs_prompt) $normal $prompt_status $suffix " "
 end
 
-# # >>> conda initialize >>>
-# # !! Contents within this block are managed by 'conda init' !!
-# eval $HOME/miniconda3/bin/conda "shell.fish" "hook" $argv | source
-# # <<< conda initialize <<<
+if [ -f "$HOME/miniconda3/bin/conda" ]
+    eval "$HOME/miniconda3/bin/conda" "shell.fish" "hook" | source
+end
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end
-
