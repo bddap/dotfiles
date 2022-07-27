@@ -6,45 +6,19 @@ window:
 
 colors:
   primary:
-    background: '0xdfdbc3'
-    foreground: '0x3b2322'
+    background: '0xdfdbc3' #dfdbc3
+    foreground: '0x3b2322' #3b2322
   normal:
-    black:   '0x000000'
-    red:     '0x990000'
-    green:   '0x00a600'
-    yellow:  '0x999900'
-    blue:    '0x0000b2'
-    magenta: '0xb200b2'
-    cyan:    '0x00a6b2'
-    white:   '0xbfbfbf'
-  bright:
-    black:   '0x666666'
-    red:     '0xa50000'
-    green:   '0x00a900'
-    yellow:  '0xb0b000'
-    blue:    '0x0000a0'
-    magenta: '0xa500a5'
-    cyan:    '0x00a5a5'
-    white:   '0xa5a5a5'
+    black:   '0x000000' #000000
+    red:     '0x990000' #990000
+    green:   '0x006600' #006600
+    yellow:  '0xb34700' #b34700
+    blue:    '0x0000b2' #0000b2
+    magenta: '0xa200a2' #a200a2
+    cyan:    '0x007080' #007080
+    white:   '0xffffff' #ffffff
 
 key_bindings:
   - { key: Backslash, mods: Control, action: ReceiveChar }
 
-# 233944
-# 2c201b
-# 32241c
-# 3b2f21
-# 3b3020
-# 3b7c74
-# 492e30
-# 4e8882
-# 504c26
-# 575e69
-# 83836f
-# 899535
-# c38f64
-# deffff
-# e37f83
-# e4ddc6
-# efcebc
-# facc7e
+live_config_reload: true

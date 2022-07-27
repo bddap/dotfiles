@@ -4,7 +4,7 @@
 (setq package-archives '(("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")
 						 ;; ("stable-melpa" . "~/.emacs.d/elpa-mirror/stable-melpa/")
 						 ;; ("org"          . "~/.emacs.d/elpa-mirror/org/")
-						 ;; ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")
+						 ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")
 						 ))
 
 (add-to-list 'load-path "~/.emacs.d/lisp/")
@@ -215,7 +215,7 @@
  ;; If there is more than one, they won't work right.
  '(lsp-ui-doc-enable nil)
  '(package-selected-packages
-   '(blamer apheleia elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode)))
+   '(rainbow-mode blamer apheleia elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
