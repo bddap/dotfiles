@@ -87,7 +87,7 @@
 												  (interactive) 
 												  (apheleia-format-buffer 'shfmt))))))
 
-(push '(clang-format-protobuf . ("clang-format" "--assume-filename" filepath "-"))
+(push '(clang-format-protobuf . ("clang-format" "--assume-filename=.proto" "-"))
 	  apheleia-formatters)
 (add-hook 'protobuf-mode-hook (lambda () 
 								(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
