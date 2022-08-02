@@ -4,8 +4,7 @@
 (setq package-archives '(("melpa"        . "~/.emacs.d/elpa-mirror/melpa/")
 						 ;; ("stable-melpa" . "~/.emacs.d/elpa-mirror/stable-melpa/")
 						 ;; ("org"          . "~/.emacs.d/elpa-mirror/org/")
-						 ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")
-						 ))
+						 ("gnu"          . "~/.emacs.d/elpa-mirror/gnu/")))
 
 (add-to-list 'load-path "~/.emacs.d/lisp/")
 
@@ -58,19 +57,19 @@
 
 (push '(black . ("black" "-")) apheleia-formatters)
 (add-hook 'python-mode-hook (lambda () 
-						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								 (local-set-key (kbd "C-c C-f") 
-												(lambda () 
-												  (interactive) 
-												  (apheleia-format-buffer 'black))))))
+							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+									 (local-set-key (kbd "C-c C-f") 
+													(lambda () 
+													  (interactive) 
+													  (apheleia-format-buffer 'black))))))
 
 ;; (push '(prettier . ("prettier" "-")) apheleia-formatters)
 (add-hook 'yaml-mode-hook (lambda () 
-						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								 (local-set-key (kbd "C-c C-f") 
-												(lambda () 
-												  (interactive) 
-												  (apheleia-format-buffer 'prettier))))))
+							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								   (local-set-key (kbd "C-c C-f") 
+												  (lambda () 
+													(interactive) 
+													(apheleia-format-buffer 'prettier))))))
 
 ;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook (lambda () 
@@ -87,6 +86,16 @@
 												(lambda () 
 												  (interactive) 
 												  (apheleia-format-buffer 'shfmt))))))
+
+(push '(clang-format-protobuf . ("clang-format" "--assume-filename" filepath "-"))
+	  apheleia-formatters)
+(add-hook 'protobuf-mode-hook (lambda () 
+								(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+									   (local-set-key (kbd "C-c C-f") 
+													  (lambda () 
+														(interactive) 
+														(apheleia-format-buffer
+														 'clang-format-protobuf))))))
 
 ;; stop typescript lsp from adding '.log' file to pwd
 ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
@@ -157,27 +166,27 @@
 																			nil shell-command-switch
 																			command))))
 
-(defun increment-number-at-point ()
-  (interactive)
-  (let ((old-point (point)))
-    (unwind-protect
-        (progn
-          (skip-chars-backward "0-9")
-          (or (looking-at "\-?[0-9]+")
-              (error "No number at point"))
-          (replace-match (number-to-string (1+ (string-to-number (match-string 0))))))
-      (goto-char old-point))))
+(defun increment-number-at-point () 
+  (interactive) 
+  (let ((old-point (point))) 
+	(unwind-protect (progn (skip-chars-backward "0-9") 
+						   (or (looking-at "\-?[0-9]+") 
+							   (error 
+								"No number at point")) 
+						   (replace-match (number-to-string (1+ (string-to-number (match-string
+																				   0)))))) 
+	  (goto-char old-point))))
 
-(defun decrement-number-at-point ()
-  (interactive)
-  (let ((old-point (point)))
-    (unwind-protect
-        (progn
-          (skip-chars-backward "0-9")
-		  (or (looking-at "\-?[0-9]+")
-              (error "No number at point"))
-          (replace-match (number-to-string (1- (string-to-number (match-string 0))))))
-      (goto-char old-point))))
+(defun decrement-number-at-point () 
+  (interactive) 
+  (let ((old-point (point))) 
+	(unwind-protect (progn (skip-chars-backward "0-9") 
+						   (or (looking-at "\-?[0-9]+") 
+							   (error 
+								"No number at point")) 
+						   (replace-match (number-to-string (1- (string-to-number (match-string
+																				   0)))))) 
+	  (goto-char old-point))))
 
 ;; (defun bddap-lsp-config ()
 ;;   "set lsp config"
@@ -213,15 +222,21 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-ui-doc-enable nil)
- '(package-selected-packages
-   '(rainbow-mode blamer apheleia elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode)))
+ '(lsp-ui-doc-enable nil) 
+ '(package-selected-packages '(rainbow-mode blamer apheleia elisp-format py-yapf lsp-pyright
+											terraform-mode swiper hcl-mode company glsl-mode
+											lsp-mode typescript-mode json-mode flycheck evil-numbers
+											yasnippet rust-mode yaml-mode web-mode vue-mode
+											toml-mode protobuf-mode php-mode nixos-options nix-mode
+											lsp-ui haskell-mode go-mode git-blamed editorconfig
+											dockerfile-mode dart-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(terraform--resource-name-face ((t (:foreground "brightmagenta")))))
+ '(terraform--resource-name-face ((t 
+								   (:foreground "brightmagenta")))))
 ;; (custom-set-faces
 ;;  ;; custom-set-faces was added by Custom.
 ;;  ;; If you edit it by hand, you could mess it up, so be careful.
