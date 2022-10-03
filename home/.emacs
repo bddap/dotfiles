@@ -53,6 +53,9 @@
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
 (push '(black . ("black" "-")) apheleia-formatters)
+(push '(jq . ("jq" ".")) apheleia-formatters)
+;; (push '(prettier . ("prettier" "-")) apheleia-formatters)
+
 (add-hook 'python-mode-hook (lambda () 
 							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
 									 (local-set-key (kbd "C-c C-f") 
@@ -60,7 +63,14 @@
 													  (interactive) 
 													  (apheleia-format-buffer 'black))))))
 
-;; (push '(prettier . ("prettier" "-")) apheleia-formatters)
+(add-hook 'json-mode-hook (lambda () 
+							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								   (local-set-key (kbd "C-c C-f") 
+												  (lambda () 
+													(interactive) 
+													(apheleia-format-buffer 'jq))))))
+
+
 (add-hook 'yaml-mode-hook (lambda () 
 							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
 								   (local-set-key (kbd "C-c C-f") 
@@ -75,13 +85,13 @@
 														  (interactive) 
 														  (apheleia-format-buffer 'prettier))))))
 
-(push '(jq . ("jq" ".")) apheleia-formatters)
-(add-hook 'json-mode-hook (lambda () 
+
+(add-hook 'html-mode-hook (lambda () 
 							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
 								   (local-set-key (kbd "C-c C-f") 
 												  (lambda () 
 													(interactive) 
-													(apheleia-format-buffer 'jq))))))
+													(apheleia-format-buffer 'prettier))))))
 
 ;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook (lambda () 
@@ -143,7 +153,6 @@
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
-(add-to-list 'auto-mode-alist '("\\justfile\\'" . makefile-mode))
 
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
@@ -235,13 +244,13 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(lsp-ui-doc-enable nil) 
- '(package-selected-packages '(rainbow-mode blamer apheleia elisp-format py-yapf lsp-pyright
-											terraform-mode swiper hcl-mode company glsl-mode
-											lsp-mode typescript-mode json-mode flycheck evil-numbers
-											yasnippet rust-mode yaml-mode web-mode vue-mode
-											toml-mode protobuf-mode php-mode nixos-options nix-mode
-											lsp-ui haskell-mode go-mode git-blamed editorconfig
-											dockerfile-mode dart-mode)))
+ '(package-selected-packages (quote (just-mode rainbow-mode blamer apheleia elisp-format py-yapf
+											   lsp-pyright terraform-mode swiper hcl-mode company
+											   glsl-mode lsp-mode typescript-mode json-mode flycheck
+											   evil-numbers yasnippet rust-mode yaml-mode web-mode
+											   vue-mode toml-mode protobuf-mode php-mode
+											   nixos-options nix-mode lsp-ui haskell-mode go-mode
+											   git-blamed editorconfig dockerfile-mode dart-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
