@@ -1,4 +1,5 @@
 #!/bin/bash
 
-rg -l . | entr -rc $@
+args=("$@")
 
+rg -l . | entr -rc "${args[@]}"

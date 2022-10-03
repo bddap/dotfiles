@@ -21,9 +21,6 @@
 (require 'apheleia)
 (yas-global-mode 1)
 
-;; todo, add a function that takes a command, and formats the current buffer using that command
-;; https://emacs.stackexchange.com/questions/54351/how-to-run-a-custom-formatting-tool-on-save
-
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
 (lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("~/bin/terraform-lsp"
 																			  "-enable-log-file")) 
@@ -50,8 +47,8 @@
 (define-key lsp-mode-map (kbd "C-c o") #'lsp-ui-doc-glance)
 (define-key lsp-mode-map (kbd "C-c l") #'company-complete-common)
 (define-key lsp-mode-map (kbd "C-c y") #'lsp-execute-code-action)
-(define-key lsp-mode-map (kbd "M-n") #'next-error)
-(define-key lsp-mode-map (kbd "M-p") #'previous-error)
+(define-key lsp-mode-map (kbd "M-n") #'flycheck-next-error)
+(define-key lsp-mode-map (kbd "M-p") #'flycheck-previous-error)
 (define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
@@ -70,6 +67,21 @@
 												  (lambda () 
 													(interactive) 
 													(apheleia-format-buffer 'prettier))))))
+
+(add-hook 'typescript-mode-hook (lambda () 
+								  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+										 (local-set-key (kbd "C-c C-f") 
+														(lambda () 
+														  (interactive) 
+														  (apheleia-format-buffer 'prettier))))))
+
+(push '(jq . ("jq" ".")) apheleia-formatters)
+(add-hook 'json-mode-hook (lambda () 
+							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+								   (local-set-key (kbd "C-c C-f") 
+												  (lambda () 
+													(interactive) 
+													(apheleia-format-buffer 'jq))))))
 
 ;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook (lambda () 
@@ -130,7 +142,7 @@
 ;; Todo, unbind TAB from company-complete-common, use C-c l instead
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
 (add-to-list 'auto-mode-alist '("\\justfile\\'" . makefile-mode))
 
 (put 'upcase-region 'disabled nil)
@@ -237,9 +249,3 @@
  ;; If there is more than one, they won't work right.
  '(terraform--resource-name-face ((t 
 								   (:foreground "brightmagenta")))))
-;; (custom-set-faces
-;;  ;; custom-set-faces was added by Custom.
-;;  ;; If you edit it by hand, you could mess it up, so be careful.
-;;  ;; Your init file should contain only one such instance.
-;;  ;; If there is more than one, they won't work right.
-;;  '(terraform--resource-name-face ((t (:foreground "brightmagenta")))))
