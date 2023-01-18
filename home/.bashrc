@@ -27,21 +27,6 @@ maybesrc "$HOME/Library/Preferences/org.dystroy.broot/launcher/bash/br"
 maybesrc "$HOME/.nix-profile/etc/profile.d/nix.sh"
 maybesrc "$HOME/.fzf.bash"
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('$HOME/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-        . "$HOME/miniconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="$HOME/miniconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-
 complete -C /usr/bin/terraform terraform
 
 if which cortex > /dev/null; then

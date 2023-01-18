@@ -52,72 +52,39 @@
 (define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
 (define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
 
-(push '(black . ("black" "-")) apheleia-formatters)
+(push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
 (push '(jq . ("jq" ".")) apheleia-formatters)
-;; (push '(prettier . ("prettier" "-")) apheleia-formatters)
+(push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
+(push '(shfmt . ("beautysh" "-")) apheleia-formatters)
+(push '(clang-format-protobuf . ("clang-format" "--assume-filename=.proto" "-"))
+	  apheleia-formatters)
+(push '(clang-format . ("clang-format" "-")) apheleia-formatters)
 
-(add-hook 'python-mode-hook (lambda () 
-							  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-									 (local-set-key (kbd "C-c C-f") 
-													(lambda () 
-													  (interactive) 
-													  (apheleia-format-buffer 'black))))))
+(defun use-apheleia (hook formatter) 
+  (add-hook hook (lambda () 
+				   (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+						  (local-set-key (kbd "C-c C-f") 
+										 (lambda () 
+										   (interactive) 
+										   (apheleia-format-buffer formatter)))))))
 
-(add-hook 'json-mode-hook (lambda () 
-							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								   (local-set-key (kbd "C-c C-f") 
-												  (lambda () 
-													(interactive) 
-													(apheleia-format-buffer 'jq))))))
-
-
-(add-hook 'yaml-mode-hook (lambda () 
-							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								   (local-set-key (kbd "C-c C-f") 
-												  (lambda () 
-													(interactive) 
-													(apheleia-format-buffer 'prettier))))))
-
-(add-hook 'typescript-mode-hook (lambda () 
-								  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-										 (local-set-key (kbd "C-c C-f") 
-														(lambda () 
-														  (interactive) 
-														  (apheleia-format-buffer 'prettier))))))
-
-
-(add-hook 'html-mode-hook (lambda () 
-							(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								   (local-set-key (kbd "C-c C-f") 
-												  (lambda () 
-													(interactive) 
-													(apheleia-format-buffer 'prettier))))))
-
-;; like pyright, terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
-(add-hook 'terraform-mode-hook (lambda () 
-								 (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-										(local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
+(use-apheleia 'python-mode-hook 'black)
+(use-apheleia 'json-mode-hook 'prettier)
+(use-apheleia 'js-mode-hook 'prettier)
+(use-apheleia 'yaml-mode-hook 'prettier)
+(use-apheleia 'typescript-mode-hook 'prettier)
+(use-apheleia 'html-mode-hook 'prettier)
+(use-apheleia 'sh-mode-hook 'shfmt)
+(use-apheleia 'c-mode-hook 'clang-format)
+(use-apheleia 'protobuf-mode-hook 'clang-format-protobuf)
 
 (add-hook 'emacs-lisp-mode-hook (lambda () 
 								  (local-set-key (kbd "C-c C-f") #'elisp-format-buffer)))
 
-(push '(shfmt . ("beautysh" "-")) apheleia-formatters)
-(add-hook 'sh-mode-hook (lambda () 
-						  (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-								 (local-set-key (kbd "C-c C-f") 
-												(lambda () 
-												  (interactive) 
-												  (apheleia-format-buffer 'shfmt))))))
-
-(push '(clang-format-protobuf . ("clang-format" "--assume-filename=.proto" "-"))
-	  apheleia-formatters)
-(add-hook 'protobuf-mode-hook (lambda () 
-								(progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
-									   (local-set-key (kbd "C-c C-f") 
-													  (lambda () 
-														(interactive) 
-														(apheleia-format-buffer
-														 'clang-format-protobuf))))))
+;; terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
+(add-hook 'terraform-mode-hook (lambda () 
+								 (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
+										(local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
 
 ;; stop typescript lsp from adding '.log' file to pwd
 ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
@@ -243,12 +210,19 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(lsp-ui-doc-enable nil)
- '(package-selected-packages
-   '(just-mode rainbow-mode blamer apheleia elisp-format py-yapf lsp-pyright terraform-mode swiper hcl-mode company glsl-mode lsp-mode typescript-mode json-mode flycheck evil-numbers yasnippet rust-mode yaml-mode web-mode vue-mode toml-mode protobuf-mode php-mode nixos-options nix-mode lsp-ui haskell-mode go-mode git-blamed editorconfig dockerfile-mode dart-mode)))
+ '(lsp-ui-doc-enable nil) 
+ '(package-selected-packages '(yasnippet-snippets dap-mode just-mode rainbow-mode blamer
+												  elisp-format py-yapf lsp-pyright terraform-mode
+												  swiper hcl-mode company glsl-mode lsp-mode
+												  typescript-mode json-mode flycheck evil-numbers
+												  yasnippet rust-mode yaml-mode web-mode vue-mode
+												  toml-mode protobuf-mode php-mode nixos-options
+												  nix-mode lsp-ui haskell-mode go-mode git-blamed
+												  editorconfig dockerfile-mode dart-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(terraform--resource-name-face ((t (:foreground "brightmagenta")))))
+ '(terraform--resource-name-face ((t 
+								   (:foreground "brightmagenta")))))
