@@ -126,15 +126,37 @@
 (global-set-key (kbd "\C-c C-s") 'swiper-isearch)
 (global-set-key (kbd "\C-c C-r") 'swiper-isearch-reverse)
 
-(straight-use-package 'just-mode)
-(straight-use-package 'rainbow-mode)
-(straight-use-package 'terraform-mode)
-(straight-use-package 'hcl-mode)
 (straight-use-package 'company)
 (setq company-tooltip-align-annotations t)
 (setq company-minimum-prefix-length 1000) ;; don't offer autocomplete unless "C-c l" is pressed
 (global-set-key (kbd "C-c l") 'company-complete-common)
 
+(straight-use-package '(copilot :type git 
+								:host github 
+								:repo "zerolfx/copilot.el" 
+								:files ("dist" "*.el")))
+(require 'copilot)
+;; enable copilot by default
+(global-copilot-mode 1)
+;; key to toggle copilot
+(global-set-key (kbd "C-c C-o") 'copilot-mode)
+(with-eval-after-load 'company
+  ;; disable inline previews
+  (delq 'company-preview-if-just-one-frontend company-frontends))
+(global-set-key (kbd "C-c C-l") 
+				(lambda () 
+				  (copilot-complete 1)))
+(define-key copilot-completion-map (kbd "C-c C-l") 'copilot-accept-completion)
+(define-key copilot-completion-map (kbd "M-p") 'copilot-previous-completion)
+(global-unset-key (kbd "M-i"))
+(define-key copilot-completion-map (kbd "M-i") 'copilot-next-completion)
+(define-key copilot-completion-map (kbd "M-j") 'copilot-accept-completion-by-word)
+(define-key copilot-completion-map (kbd "M-n") 'copilot-accept-completion-by-line)
+
+(straight-use-package 'just-mode)
+(straight-use-package 'rainbow-mode)
+(straight-use-package 'terraform-mode)
+(straight-use-package 'hcl-mode)
 (straight-use-package 'glsl-mode)
 (straight-use-package 'typescript-mode)
 (straight-use-package 'flycheck)
