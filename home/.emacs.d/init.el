@@ -81,6 +81,8 @@
 (push '(shfmt . ("beautysh" "-")) apheleia-formatters)
 (push '(clang-format-protobuf . ("clang-format" "--assume-filename=.proto" "-")) apheleia-formatters)
 (push '(clang-format . ("clang-format" "-")) apheleia-formatters)
+(push '(justfile . ("sed" "s/\t/    /g")) apheleia-formatters)
+;; this function relies on lexical-binding, which is off by default. I is enabled at the top of this file
 (defun use-apheleia (hook formatter) 
   (add-hook hook (lambda () 
 				   (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
@@ -97,6 +99,7 @@
 (use-apheleia 'sh-mode-hook 'shfmt)
 (use-apheleia 'c-mode-hook 'clang-format)
 (use-apheleia 'protobuf-mode-hook 'clang-format-protobuf)
+(use-apheleia 'just-mode-hook 'justfile)
 
 (straight-use-package 'elisp-format)
 (add-hook 'emacs-lisp-mode-hook (lambda () 
