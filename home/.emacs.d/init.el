@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 ;; TODO: https://github.com/zerolfx/copilot.el
 
 (defvar bootstrap-version)
