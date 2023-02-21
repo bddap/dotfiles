@@ -24,7 +24,7 @@
 (column-number-mode 1)
 (menu-bar-mode -1)
 (setq tab-always-indent t) ;; don't use tab for autocomplete
-(define-key prog-mode-map (kbd "C-c f") #'project-find-file)
+(global-set-key (kbd "C-c f") 'project-find-file)
 
 (straight-use-package 'yasnippet)
 (yas-global-mode 1)
