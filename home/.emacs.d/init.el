@@ -119,6 +119,7 @@
 (setq lsp-rust-analyzer-proc-macro-enable t)
 (setq lsp-rust-analyzer-cargo-load-out-dirs-from-check t)
 (setq lsp-rust-analyzer-experimental-proc-attr-macros t)
+(setq lsp-rust-analyzer-cargo-watch-command "clippy")
 ;; (defun bddap-lsp-config ()
 ;;   "set lsp config"
 ;;   (interactive)
