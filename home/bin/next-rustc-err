@@ -12,16 +12,16 @@ function get_target_span {
     )
 
     all_errs=$(
-        echo $all_messages \
+        echo "$all_messages" \
             | jq 'select(.level == "error")'
     )
 
     all_warns=$(
-        echo $all_messages \
+        echo "$all_messages" \
             | jq 'select(.level == "warning")'
     )
 
-    echo $all_warns $all_errs \
+    echo "$all_warns" "$all_errs" \
         | jq '.spans[0]' \
         | jq -sr '.[-1]'
 }
