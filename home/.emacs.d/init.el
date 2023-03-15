@@ -242,3 +242,27 @@
   (let ((ner (get-next-err))) 
 	(jump-to-file-char (nth 0 ner) 
 					   (+ 1 (nth 1 ner)))))
+
+(defun refac (start end) 
+  (interactive "r") 
+  (let* ((selected-text 
+		  (buffer-substring-no-properties 
+		   start
+		   end)) 
+		 (transform (read-string "Enter transformation instruction: ")) 
+		 (refac-executable (executable-find "refac"))) 
+	(if refac-executable (progn (let (result exit-status) 
+								  (with-temp-buffer 
+									(setq exit-status (call-process refac-executable nil t nil "tor" selected-text
+																	transform)) 
+									(setq result (buffer-string))) 
+								  (if (zerop exit-status) 
+									  (progn (delete-region start end) 
+											 (insert result)) 
+									(message "refac returned a non-zero exit status: %d. Error: %s" exit-status
+											 result)))) 
+	  (error 
+	   "refac executable not found"))))
+
+;; and bind the function to a key if you want
+(global-set-key (kbd "C-c r") 'refac)
