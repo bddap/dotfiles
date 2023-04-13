@@ -22,3 +22,17 @@ key_bindings:
   - { key: Backslash, mods: Control, action: ReceiveChar }
 
 live_config_reload: true
+
+# set font to Comic Mono because it's funny
+# https://github.com/dtinth/comic-mono-font
+font:
+  normal:
+    family: 'Comic Mono'
+    style: Regular
+  bold:
+    family: 'Comic Mono'
+    style: Bold
+  italic:
+    family: 'Comic Mono'
+    style: Italic
+

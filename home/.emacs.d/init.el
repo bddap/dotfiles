@@ -33,10 +33,10 @@
 (editorconfig-mode 1)
 
 (straight-use-package 'lsp-mode)
-;; stop typescript lsp from adding '.log' file to pwd
-;; https://github.com/emacs-lsp/lsp-mode/issues/1490
-(with-eval-after-load 'lsp-mode (add-hook 'web-mode-hook #'lsp) 
-					  (setq lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
+;; ;; stop typescript lsp from adding '.log' file to pwd
+;; ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
+;; (with-eval-after-load 'lsp-mode (add-hook 'web-mode-hook #'lsp) 
+;; 					  (setq lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
 (require 'lsp)
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
 (lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("~/bin/terraform-lsp" "-enable-log-file")) 
@@ -243,26 +243,69 @@
 	(jump-to-file-char (nth 0 ner) 
 					   (+ 1 (nth 1 ner)))))
 
+(defun refac-git-style-diff (a b) 
+  (with-temp-buffer (let ((temp-file-a (make-temp-file "a")) 
+						  (temp-file-b (make-temp-file "b"))) 
+					  (unwind-protect (progn (write-region a nil temp-file-a) 
+											 (write-region b nil temp-file-b) 
+											 (call-process "diff" nil t nil "-u" temp-file-a temp-file-b) 
+											 (buffer-string)) 
+						(delete-file temp-file-a) 
+						(delete-file temp-file-b)))))
+
+(defun refac-filter-diff-output (diff-output) 
+  (with-temp-buffer (insert diff-output) 
+					(goto-char (point-min)) 
+					(while (not (eobp)) 
+					  (let ((line 
+							 (buffer-substring-no-properties 
+							  (line-beginning-position) 
+							  (line-end-position)))) 
+						(if (or (string-prefix-p "--- " line) 
+								(string-prefix-p "+++ " line) 
+								(string-prefix-p "\\ No newline at end of file" line)) 
+							(delete-region (line-beginning-position) 
+										   (1+ (line-end-position))) 
+						  (forward-line)))) 
+					(buffer-string)))
+
+
+(defun refac-call-executable (selected-text transform) 
+  (let (result exit-status refac-executable) 
+	(setq refac-executable (executable-find "refac")) 
+	(if refac-executable (with-temp-buffer 
+						   (setq exit-status (call-process refac-executable nil t nil "--sass" "tor" selected-text
+														   transform)) 
+						   (setq result (buffer-string))) 
+	  (error 
+	   "refac executable not found")) 
+	(if (zerop exit-status) result 
+	  (error 
+	   "refac returned a non-zero exit status: %d. Error: %s"
+	   exit-status
+	   result))))
+
 (defun refac (start end) 
   (interactive "r") 
   (let* ((selected-text 
 		  (buffer-substring-no-properties 
 		   start
 		   end)) 
-		 (transform (read-string "Enter transformation instruction: ")) 
-		 (refac-executable (executable-find "refac"))) 
-	(if refac-executable (progn (let (result exit-status) 
-								  (with-temp-buffer 
-									(setq exit-status (call-process refac-executable nil t nil "tor" selected-text
-																	transform)) 
-									(setq result (buffer-string))) 
-								  (if (zerop exit-status) 
-									  (progn (delete-region start end) 
-											 (insert result)) 
-									(message "refac returned a non-zero exit status: %d. Error: %s" exit-status
-											 result)))) 
-	  (error 
-	   "refac executable not found"))))
+		 (transform (read-string "Enter transformation instruction: "))) 
+	(let ((result (refac-call-executable selected-text transform))) 
+	  (delete-region start end) 
+	  (insert result) 
+	  (let ((diff-output (refac-git-style-diff selected-text result))) 
+		(message (refac-filter-diff-output diff-output))))))
 
-;; and bind the function to a key if you want
 (global-set-key (kbd "C-c r") 'refac)
+
+(require 'url-util)
+(defun googleit (start end) 
+  (interactive "r") 
+  (let ((selected-text 
+		 (buffer-substring-no-properties 
+		  start
+		  end))) 
+	(browse-url (concat "https://www.google.com/search?q=" (url-hexify-string selected-text)))))
+(global-set-key (kbd "C-c g") 'googleit)
