@@ -35,7 +35,7 @@
 (straight-use-package 'lsp-mode)
 ;; ;; stop typescript lsp from adding '.log' file to pwd
 ;; ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
-;; (with-eval-after-load 'lsp-mode (add-hook 'web-mode-hook #'lsp) 
+;; (with-eval-after-load 'lsp-mode (add-hook 'web-mode-hook #'lsp)
 ;; 					  (setq lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
 (require 'lsp)
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
@@ -309,3 +309,13 @@
 		  end))) 
 	(browse-url (concat "https://www.google.com/search?q=" (url-hexify-string selected-text)))))
 (global-set-key (kbd "C-c g") 'googleit)
+
+;; lookup snippent in explainshell.com
+(defun explainshell (start end) 
+  (interactive "r") 
+  (let ((selected-text 
+		 (buffer-substring-no-properties 
+		  start
+		  end))) 
+	(browse-url (concat "https://explainshell.com/explain?cmd=" (url-hexify-string selected-text)))))
+(global-set-key (kbd "C-c e") 'explainshell)
