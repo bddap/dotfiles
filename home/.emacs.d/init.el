@@ -1,7 +1,5 @@
 ;; -*- lexical-binding: t -*-
 
-;; TODO: https://github.com/zerolfx/copilot.el
-
 (defvar bootstrap-version)
 (let ((bootstrap-file (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory)) 
 	  (bootstrap-version 6)) 
@@ -33,10 +31,6 @@
 (editorconfig-mode 1)
 
 (straight-use-package 'lsp-mode)
-;; ;; stop typescript lsp from adding '.log' file to pwd
-;; ;; https://github.com/emacs-lsp/lsp-mode/issues/1490
-;; (with-eval-after-load 'lsp-mode (add-hook 'web-mode-hook #'lsp)
-;; 					  (setq lsp-clients-typescript-server-args '("--stdio" "--tsserver-log-file" "/dev/stderr")))
 (require 'lsp)
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
 (lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("~/bin/terraform-lsp" "-enable-log-file")) 
@@ -76,13 +70,14 @@
 (straight-use-package 'apheleia)
 (require 'apheleia)
 (push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
+(push '(isort . ("isort" "--stdout" "--profile" "black" "-")) apheleia-formatters)
 (push '(jq . ("jq" ".")) apheleia-formatters)
 (push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
 (push '(shfmt . ("beautysh" "-")) apheleia-formatters)
 (push '(clang-format-protobuf . ("clang-format" "--assume-filename=.proto" "-")) apheleia-formatters)
 (push '(clang-format . ("clang-format" "-")) apheleia-formatters)
 (push '(justfile . ("sed" "s/\t/    /g")) apheleia-formatters)
-;; this function relies on lexical-binding, which is off by default. I is enabled at the top of this file
+;; this function relies on lexical-binding, which is off by default. It is enabled at the top of this file
 (defun use-apheleia (hook formatter) 
   (add-hook hook (lambda () 
 				   (progn (define-key lsp-mode-map (kbd "C-c C-f") nil) 
@@ -90,7 +85,7 @@
 										 (lambda () 
 										   (interactive) 
 										   (apheleia-format-buffer formatter)))))))
-(use-apheleia 'python-mode-hook 'black)
+(use-apheleia 'python-mode-hook '(black isort))
 (use-apheleia 'json-mode-hook 'prettier)
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
