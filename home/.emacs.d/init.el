@@ -33,7 +33,7 @@
 (straight-use-package 'lsp-mode)
 (require 'lsp)
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
-(lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("~/bin/terraform-lsp" "-enable-log-file")) 
+(lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("terraform-ls")) 
 									  :major-modes '(terraform-mode) 
 									  :server-id 'terraform-ls))
 ;; use lsp for these languages
@@ -63,6 +63,7 @@
   (setq lsp-ui-doc-enable nil) 
   (setq lsp-signature-render-documentation nil))
 (setq lsp-prefer-flymake nil) ;; tell lsp to use flycheck instead
+;; (setq lsp-inlay-hint-enable t)
 
 (straight-use-package 'lsp-ui)
 (add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
@@ -71,6 +72,8 @@
 (require 'apheleia)
 (push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
 (push '(isort . ("isort" "--stdout" "--profile" "black" "-")) apheleia-formatters)
+(push '(add-trailing-comma . ("add-trailing-comma" "--py36-plus" "--exit-zero-even-if-changed" "-"))
+	  apheleia-formatters)
 (push '(jq . ("jq" ".")) apheleia-formatters)
 (push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
 (push '(shfmt . ("beautysh" "-")) apheleia-formatters)
@@ -85,7 +88,7 @@
 										 (lambda () 
 										   (interactive) 
 										   (apheleia-format-buffer formatter)))))))
-(use-apheleia 'python-mode-hook '(black isort))
+(use-apheleia 'python-mode-hook '(isort black add-trailing-comma black))
 (use-apheleia 'json-mode-hook 'prettier)
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
@@ -269,8 +272,7 @@
   (let (result exit-status refac-executable) 
 	(setq refac-executable (executable-find "refac")) 
 	(if refac-executable (with-temp-buffer 
-						   (setq exit-status (call-process refac-executable nil t nil "--sass" "tor" selected-text
-														   transform)) 
+						   (setq exit-status (call-process refac-executable nil t nil "tor" selected-text transform)) 
 						   (setq result (buffer-string))) 
 	  (error 
 	   "refac executable not found")) 
@@ -314,3 +316,16 @@
 		  end))) 
 	(browse-url (concat "https://explainshell.com/explain?cmd=" (url-hexify-string selected-text)))))
 (global-set-key (kbd "C-c e") 'explainshell)
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(terraform--resource-name-face ((t 
+								   (:foreground "yellow")))))

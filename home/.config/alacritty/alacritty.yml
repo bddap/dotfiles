@@ -1,38 +1,37 @@
 window:
-  padding:
-    x: 4
-    y: 4
-  dynamic_padding: false
+    padding:
+        x: 4
+        y: 4
+    dynamic_padding: false
 
 colors:
-  primary:
-    background: '0xdfdbc3' #dfdbc3
-    foreground: '0x3b2322' #3b2322
-  normal:
-    black:   '0x000000' #000000
-    red:     '0x990000' #990000
-    green:   '0x006600' #006600
-    yellow:  '0xb34700' #b34700
-    blue:    '0x0000b2' #0000b2
-    magenta: '0xa200a2' #a200a2
-    cyan:    '0x007080' #007080
-    white:   '0xffffff' #ffffff
+    primary:
+        background: "0xdfdbc3" #dfdbc3
+        foreground: "0x3b2322" #3b2322
+    normal:
+        black: "0x000000" #000000
+        red: "0x990000" #990000
+        green: "0x006600" #006600
+        yellow: "0xb34700" #b34700
+        blue: "0x0000b2" #0000b2
+        magenta: "0xa200a2" #a200a2
+        cyan: "0x007080" #007080
+        white: "0xffffff" #ffffff
 
 key_bindings:
-  - { key: Backslash, mods: Control, action: ReceiveChar }
+    - { key: Backslash, mods: Control, action: ReceiveChar }
 
 live_config_reload: true
 
 # set font to Comic Mono because it's funny
 # https://github.com/dtinth/comic-mono-font
 font:
-  normal:
-    family: 'Comic Mono'
-    style: Regular
-  bold:
-    family: 'Comic Mono'
-    style: Bold
-  italic:
-    family: 'Comic Mono'
-    style: Italic
-
+    normal:
+        family: "Comic Mono"
+        style: Regular
+    bold:
+        family: "Comic Mono"
+        style: Bold
+    italic:
+        family: "Comic Mono"
+        style: Italic
