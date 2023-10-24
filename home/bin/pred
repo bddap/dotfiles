@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# open editor in a poetry shell
+
+set -euo pipefail
+
+args=("$@")
+EDITOR="${EDITOR:-/bin/vim}"
+
+poetry run "$EDITOR" "${args[@]}"
