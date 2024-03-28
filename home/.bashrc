@@ -1,5 +1,3 @@
-alias ls='ls -G'
-
 export EDITOR='emacs'
 export HISTSIZE=
 export HISTFILESIZE=
@@ -29,8 +27,6 @@ maybesrc "$HOME/.fzf.bash"
 
 complete -C /usr/bin/terraform terraform
 
-if which cortex > /dev/null; then
+if which cortex &> /dev/null; then
     source <(cortex completion bash)
 fi
-
-source <(cortex completion bash)
