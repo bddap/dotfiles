@@ -1,12 +1,4 @@
-
 function appendp
-    set pa $argv[1]
-    if test -d $pa
-       set -gx PATH $pa $PATH
-    end
-end
-
-function prependp
     set pa $argv[1]
     if test -d $pa
        set -gx PATH $pa $PATH
@@ -73,7 +65,7 @@ function fish_greeting
    fish_logo
 end
 
-if which yarn > /dev/null
+if which yarn &> /dev/null
    appendp (yarn global bin)
 end
 
