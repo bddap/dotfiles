@@ -46,6 +46,7 @@
 (add-hook 'mhtml-mode-hook #'lsp)
 (add-hook 'typescript-mode-hook #'lsp)
 (add-hook 'js-mode-hook #'lsp)
+(add-hook 'nix-mode-hook #'lsp)
 ;; to use the lsp whenever possible:
 ;; (add-hook 'prog-mode-hook #'lsp)
 (define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
@@ -125,6 +126,8 @@
 ;;   (interactive)
 ;;   (lsp--set-configuration `(:rust-analyzer (:cargo (:allFeatures (true))))))
 
+(setq lsp-nix-nil-formatter ["nixpkgs-fmt"])
+
 (straight-use-package 'ivy)
 (ivy-mode)
 
@@ -143,7 +146,7 @@
 								:files ("dist" "*.el")))
 (require 'copilot)
 ;; enable copilot by default
-(global-copilot-mode 1)
+;; (global-copilot-mode 1)
 ;; key to toggle copilot
 (global-set-key (kbd "C-c C-o") 'copilot-mode)
 (with-eval-after-load 'company
@@ -170,11 +173,13 @@
 (straight-use-package 'web-mode)
 (straight-use-package 'toml-mode)
 (straight-use-package 'protobuf-mode)
-(straight-use-package 'nix-mode)
 (straight-use-package 'lsp-ui)
 (straight-use-package 'haskell-mode)
 (straight-use-package 'go-mode)
 (straight-use-package 'dockerfile-mode)
+
+(straight-use-package 'nix-mode)
+(add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
 
 ;; js-mode binds "M-." to js-find-symbol. We don't want that because lsp-goto-implementation is better.
 (add-hook 'js-mode-hook (lambda () 

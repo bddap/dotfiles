@@ -1,2 +1,4 @@
 .DS_Store
 home/.config/karabiner/automatic_backups/
+result
+nix/nixos/hardware-configuration.nix
