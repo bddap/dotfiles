@@ -74,11 +74,11 @@ function ef --description "edit your fish config"
 end
 
 function ee --description "edit your emacs config"
-    eval $EDITOR ~/d/dotfiles/home/.emacs
+    eval $EDITOR ~/d/dotfiles/home/.emacs.d/init.el
 end
 
-set -gx GOPATH ~/go
-set -Ux EDITOR emacs
+set -x GOPATH ~/go
+set -x EDITOR emacs
 
 function bddap_key_bindings -d "key bindings for fish"
     fish_default_key_bindings
@@ -87,8 +87,6 @@ function bddap_key_bindings -d "key bindings for fish"
     bind \el downcase-word
 end
 set -g fish_key_bindings bddap_key_bindings
-
-alias ytob='ytop -c default-dark'
 
 function fish_right_prompt
     # intentionally left blank
@@ -128,3 +126,5 @@ end
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end
+
+alias ytob='ytop -c default-dark'

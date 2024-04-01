@@ -8,8 +8,8 @@
     nixosConfigurations.default = nixpkgs-23-11.lib.nixosSystem {
       specialArgs = {
         inherit inputs;
-        nixpkgs-23-11 = nixpkgs-23-11;
-        nixpkgs-unstable = nixpkgs-unstable;
+        nixpkgs-23-11 = nixpkgs-23-11.outputs.legacyPackages.x86_64-linux;
+        nixpkgs-unstable = nixpkgs-unstable.outputs.legacyPackages.x86_64-linux;
       };
       modules = [
         ./configuration.nix

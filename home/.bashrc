@@ -24,9 +24,3 @@ maybesrc "$HOME/.cargo/env"
 maybesrc "$HOME/Library/Preferences/org.dystroy.broot/launcher/bash/br"
 maybesrc "$HOME/.nix-profile/etc/profile.d/nix.sh"
 maybesrc "$HOME/.fzf.bash"
-
-complete -C /usr/bin/terraform terraform
-
-if which cortex &> /dev/null; then
-    source <(cortex completion bash)
-fi

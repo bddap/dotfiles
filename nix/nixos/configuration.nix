@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ pkgs, ... }:
+{ pkgs, nixpkgs-unstable, ... }:
 
 {
   imports = [
@@ -92,7 +92,7 @@
     isNormalUser = true;
     description = "a";
     extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [
+    packages = (with pkgs; [
       firefox
       git
       emacs-nox
@@ -114,7 +114,10 @@
       nixfmt
       nixpkgs-fmt
       nodejs
-    ];
+    ]) ++ (with nixpkgs-unstable; [
+      deja-dup
+    ]);
+
     shell = pkgs.fish;
   };
 

@@ -36,6 +36,7 @@
 (lsp-register-client (make-lsp-client :new-connection (lsp-stdio-connection '("terraform-ls")) 
 									  :major-modes '(terraform-mode) 
 									  :server-id 'terraform-ls))
+
 ;; use lsp for these languages
 (add-hook 'rust-mode-hook #'lsp)
 (add-hook 'python-mode-hook #'lsp)
