@@ -127,7 +127,7 @@
 ;;   (interactive)
 ;;   (lsp--set-configuration `(:rust-analyzer (:cargo (:allFeatures (true))))))
 
-(setq lsp-nix-nil-formatter ["nixpkgs-fmt"])
+(setq lsp-nix-nil-formatter ["nixfmt"])
 
 (straight-use-package 'ivy)
 (ivy-mode)

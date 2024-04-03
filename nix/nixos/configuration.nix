@@ -17,6 +17,7 @@
   boot.initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device =
     "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
   networking.hostName = "nixos"; # Define your hostname.
+  hardware.bluetooth.enable = true;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -42,6 +43,11 @@
     LC_PAPER = "en_US.UTF-8";
     LC_TELEPHONE = "en_US.UTF-8";
     LC_TIME = "en_US.UTF-8";
+  };
+
+  services.avahi = {
+    enable = true;
+    nssmdns = true;
   };
 
   services.xserver = {
@@ -93,30 +99,34 @@
     description = "a";
     extraGroups = [ "networkmanager" "wheel" ];
     packages = (with pkgs; [
-      firefox
-      git
-      emacs-nox
       alacritty
       curl
+      emacs-nox
+      entr
+      firefox
+      fish
+      git
+      git-lfs
+      gitui
       gnome3.gnome-tweaks
       google-chrome
-      zoom-us
-      slack
-      tmux
-      stow
-      fish
-      nodePackages.bash-language-server
-      gitui
-      rustup
-      ripgrep
-      entr
+      htop
+      htop
+      jq
+      just
       nil
       nixfmt
       nixpkgs-fmt
       nodejs
-    ]) ++ (with nixpkgs-unstable; [
-      deja-dup
-    ]);
+      nodePackages.bash-language-server
+      ripgrep
+      rustup
+      slack
+      stow
+      tmux
+      tree
+      zoom-us
+    ]) ++ (with nixpkgs-unstable; [ deja-dup ]);
 
     shell = pkgs.fish;
   };
