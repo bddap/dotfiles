@@ -3,8 +3,42 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { pkgs, nixpkgs-unstable, ... }:
-
-{
+let
+  user-packages = (with pkgs; [
+    alacritty
+    curl
+    emacs-nox
+    entr
+    firefox
+    fish
+    fzf
+    git
+    git-lfs
+    gitui
+    gnome3.gnome-tweaks
+    google-chrome
+    htop
+    htop
+    jq
+    just
+    nil
+    nixd
+    niv
+    nixfmt
+    nixpkgs-fmt
+    nodejs
+    nodePackages.bash-language-server
+    ripgrep
+    rustup
+    spotify
+    slack
+    stow
+    tmux
+    tree
+    xclip
+    zoom-us
+  ]) ++ (with nixpkgs-unstable; [ deja-dup ]);
+in {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -98,35 +132,7 @@
     isNormalUser = true;
     description = "a";
     extraGroups = [ "networkmanager" "wheel" ];
-    packages = (with pkgs; [
-      alacritty
-      curl
-      emacs-nox
-      entr
-      firefox
-      fish
-      git
-      git-lfs
-      gitui
-      gnome3.gnome-tweaks
-      google-chrome
-      htop
-      htop
-      jq
-      just
-      nil
-      nixfmt
-      nixpkgs-fmt
-      nodejs
-      nodePackages.bash-language-server
-      ripgrep
-      rustup
-      slack
-      stow
-      tmux
-      tree
-      zoom-us
-    ]) ++ (with nixpkgs-unstable; [ deja-dup ]);
+    packages = user-packages;
 
     shell = pkgs.fish;
   };
