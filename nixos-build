@@ -4,10 +4,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-flake="path:$(realpath nix/nixos)#default"
+export NIXOS_CONFIG="$(realpath nix/nixos/configuration.nix)"
 
-nixos-rebuild build --flake "$flake"
+NIXPKGS_ALLOW_UNFREE=1 nixos-rebuild build
 
 if [ -n "${1+x}" ]; then
-	sudo nixos-rebuild "$1" --flake "$flake"
+	# sudo seems to clear NIXOS_CONFIG 
+    sudo env NIXPKGS_ALLOW_UNFREE=1 NIXOS_CONFIG="$NIXOS_CONFIG" nixos-rebuild "$1"
 fi

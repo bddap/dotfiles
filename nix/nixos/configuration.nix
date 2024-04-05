@@ -2,9 +2,10 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ pkgs, nixpkgs-unstable, ... }:
+{ ... }:
 let
-  user-packages = (with pkgs; [
+  pkgs = import ./nix/pkgs.nix;
+  user-packages = with pkgs; [
     alacritty
     curl
     emacs-nox
@@ -22,22 +23,23 @@ let
     jq
     just
     nil
-    nixd
     niv
+    nixd
     nixfmt
     nixpkgs-fmt
+    nixpkgs-unstable.deja-dup
     nodejs
     nodePackages.bash-language-server
     ripgrep
     rustup
-    spotify
     slack
+    spotify
     stow
     tmux
     tree
     xclip
     zoom-us
-  ]) ++ (with nixpkgs-unstable; [ deja-dup ]);
+  ];
 in {
   imports = [
     # Include the results of the hardware scan.
@@ -123,7 +125,7 @@ in {
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  # nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   programs.fish.enable = true;
 
