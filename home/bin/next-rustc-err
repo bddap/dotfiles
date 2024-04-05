@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # return the span of the last error rustc returns.
 # If there are no errors, return the span of the last warning

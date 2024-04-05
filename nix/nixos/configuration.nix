@@ -20,6 +20,7 @@ let
     google-chrome
     htop
     htop
+    ispell
     jq
     just
     nil
@@ -31,7 +32,6 @@ let
     nodejs
     nodePackages.bash-language-server
     ripgrep
-    rustup
     slack
     spotify
     stow

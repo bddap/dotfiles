@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ueo pipefail
 
 mkdir -p /tmp/aghnuiwenfuiwnuiosiue
 

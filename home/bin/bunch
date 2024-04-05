@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -ueo pipefail
 
 # examples
 # yes sl | head -n 8 | bunch
