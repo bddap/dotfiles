@@ -80,11 +80,17 @@ end
 set -x GOPATH ~/go
 set -x EDITOR emacs
 
-function bddap_key_bindings -d "key bindings for fish"
+function bddap_key_bindings -d "bddap's cusrom key bindings for fish"
     fish_default_key_bindings
+	
+    # get alt-l back
     bind --erase \el # disable __fish_list_current_token for alt-l
     bind \es __fish_list_current_token # set it to alt-s instead
     bind \el downcase-word
+
+    # get alt-c back
+	bind --erase \ec
+	bind \ec capitalize-word
 end
 set -g fish_key_bindings bddap_key_bindings
 
