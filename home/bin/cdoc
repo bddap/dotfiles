@@ -1,7 +1,8 @@
-#!/usr/bin/env bash
+#! /usr/bin/env nix-shell
+#! nix-shell -i bash -p python3
 
 set -ueo pipefail
 
-crate=$1
+crate="$1"
 
-python3 -m webbrowser https://docs.rs/${crate}
+python3 -m webbrowser "https://docs.rs/${crate}"

@@ -31,6 +31,7 @@ let
     nixpkgs-unstable.deja-dup
     nodejs
     nodePackages.bash-language-server
+    nodePackages.typescript-language-server
     ripgrep
     slack
     spotify
