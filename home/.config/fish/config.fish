@@ -12,6 +12,7 @@ appendp ~/bin
 appendp ~/go/bin
 appendp ~/.local/bin
 appendp ~/.tfenv/bin
+appendp ~/.yarn/bin
 
 function fish_logo \
     --description="Fish-shell colorful ASCII-art logo" \

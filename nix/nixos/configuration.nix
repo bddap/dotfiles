@@ -92,6 +92,10 @@ in {
   services.avahi = {
     enable = true;
     nssmdns = true;
+    publish = {
+      enable = true;
+      userServices = true;
+    };
   };
 
   services.xserver = {
