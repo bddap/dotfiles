@@ -1,0 +1,50 @@
+{
+    "crane": {
+        "branch": "master",
+        "description": "A Nix library for building cargo projects. Never build twice thanks to incremental artifact caching.",
+        "homepage": "https://crane.dev",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "7443df1c478947bf96a2e699209f53b2db26209d",
+        "sha256": "0bvr05wwnli5h2hrgadd73p8s78d54gv3iqhadpbhwlicpnifdaf",
+        "type": "tarball",
+        "url": "https://github.com/ipetkov/crane/archive/7443df1c478947bf96a2e699209f53b2db26209d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixos-23.11": {
+        "branch": "nixos-23.11",
+        "description": "Nix Packages collection",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "1487bdea619e4a7a53a4590c475deabb5a9d1bfb",
+        "sha256": "0aga80czsq950mja7hrdamm02lfhgpnd47ak2a3a2zqvxasbizaw",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/1487bdea619e4a7a53a4590c475deabb5a9d1bfb.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "nixpkgs-unstable": {
+        "branch": "nixpkgs-unstable",
+        "description": "Nix Packages collection & NixOS",
+        "homepage": "",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f480f9d09e4b4cf87ee6151eba068197125714de",
+        "sha256": "1bk23ffgkyd3p2jbs1lhgcqxssxslp3gd6sxcrw32ac9b0xdbdid",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/f480f9d09e4b4cf87ee6151eba068197125714de.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "refac": {
+        "branch": "main",
+        "description": "Apply arbitrary transformations to text via an LLM.",
+        "homepage": "",
+        "owner": "bddap",
+        "repo": "refac",
+        "rev": "2e667292c87cae213596511942b323da4225ffd1",
+        "sha256": "00p4ay6174xzw68x21a2xffkf2ip0gwqfxiks0708b0ky0d30pjp",
+        "type": "tarball",
+        "url": "https://github.com/bddap/refac/archive/2e667292c87cae213596511942b323da4225ffd1.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    }
+}

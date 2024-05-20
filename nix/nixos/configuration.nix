@@ -4,7 +4,7 @@
 
 { ... }:
 let
-  pkgs = import ./nix/pkgs.nix;
+  pkgs = import ../nix { };
   user-packages = with pkgs; [
     alacritty
     curl
@@ -19,7 +19,7 @@ let
     gitui
     gnome3.gnome-tweaks
     google-chrome
-    htop
+    home-manager
     htop
     ispell
     jq
