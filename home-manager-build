@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+home-manager build -f ./nix/home-manager/home.nix --no-out-link
+
+
+if [ -n "${1+x}" ]; then
+	home-manager build -f ./nix/home-manager/home.nix --no-out-link "$1"
+fi

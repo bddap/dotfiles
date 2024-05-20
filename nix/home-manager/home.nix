@@ -47,6 +47,7 @@ in { config, ... }: {
     nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
+    pv
     ripgrep
     slack
     spotify
