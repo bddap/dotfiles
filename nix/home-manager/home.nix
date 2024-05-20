@@ -1,4 +1,6 @@
-let pkgs = import ../nix { };
+let
+  pkgs = import ../nix { };
+  nixpkgs-unstable = pkgs.nixpkgs-unstable;
 in { config, ... }: {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -16,10 +18,45 @@ in { config, ... }: {
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
-  home.packages = [
-    # Adds the 'hello' command to your environment. It prints a friendly
-    # "Hello, world!" when run.
-    pkgs.hello
+  home.packages = with pkgs; [
+    refac
+    telegram-desktop
+    alacritty
+    curl
+    emacs-nox
+    entr
+    dockerfile-language-server-nodejs
+    firefox
+    fish
+    fzf
+    git
+    git-lfs
+    gitui
+    gnome3.gnome-tweaks
+    google-chrome
+    htop
+    ispell
+    jq
+    just
+    nil
+    niv
+    nixd
+    nixfmt
+    nixpkgs-fmt
+    nixpkgs-unstable.deja-dup
+    nodejs
+    nodePackages.bash-language-server
+    nodePackages.typescript-language-server
+    ripgrep
+    slack
+    spotify
+    stow
+    taplo
+    tmux
+    tree
+    xclip
+    yj
+    zoom-us
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the

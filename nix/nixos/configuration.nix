@@ -5,45 +5,7 @@
 { ... }:
 let
   pkgs = import ../nix { };
-  user-packages = with pkgs; [
-    alacritty
-    curl
-    emacs-nox
-    entr
-    dockerfile-language-server-nodejs
-    firefox
-    fish
-    fzf
-    git
-    git-lfs
-    gitui
-    gnome3.gnome-tweaks
-    google-chrome
-    home-manager
-    htop
-    ispell
-    jq
-    just
-    nil
-    niv
-    nixd
-    nixfmt
-    nixpkgs-fmt
-    nixpkgs-unstable.deja-dup
-    nodejs
-    nodePackages.bash-language-server
-    nodePackages.typescript-language-server
-    ripgrep
-    slack
-    spotify
-    stow
-    taplo
-    tmux
-    tree
-    xclip
-    yj
-    zoom-us
-  ];
+  user-packages = with pkgs; [ home-manager ];
 in {
   imports = [
     # Include the results of the hardware scan.
