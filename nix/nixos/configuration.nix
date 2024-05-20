@@ -10,6 +10,7 @@ let
     curl
     emacs-nox
     entr
+    dockerfile-language-server-nodejs
     firefox
     fish
     fzf
@@ -36,6 +37,7 @@ let
     slack
     spotify
     stow
+    taplo
     tmux
     tree
     xclip

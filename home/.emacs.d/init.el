@@ -16,7 +16,6 @@
 ;; stop emacs from creating '.#filename' files becuase they mess with filesystem watchers
 (setq create-lockfiles nil)
 
-
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 (column-number-mode 1)
@@ -72,10 +71,12 @@
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
-(push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
-(push '(isort . ("isort" "--stdout" "--profile" "black" "-")) apheleia-formatters)
-(push '(add-trailing-comma . ("add-trailing-comma" "--py36-plus" "--exit-zero-even-if-changed" "-"))
-	  apheleia-formatters)
+;; (push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
+;; (push '(isort . ("isort" "--stdout" "--profile" "black" "-")) apheleia-formatters)
+;; (push '(add-trailing-comma . ("add-trailing-comma" "--py36-plus" "--exit-zero-even-if-changed" "-"))
+;; 	  apheleia-formatters)
+(push '(python-fmt . ("bash" "-c"
+					  "black - | isort --stdout --profile black - | add-trailing-comma --py36-plus --exit-zero-even-if-changed - | black -")) apheleia-formatters)
 (push '(jq . ("jq" ".")) apheleia-formatters)
 (push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
 (push '(shfmt . ("beautysh" "-")) apheleia-formatters)
@@ -91,7 +92,7 @@
 										 (lambda () 
 										   (interactive) 
 										   (apheleia-format-buffer formatter)))))))
-(use-apheleia 'python-mode-hook '(isort black add-trailing-comma black))
+(use-apheleia 'python-mode-hook 'python-fmt)
 (use-apheleia 'json-mode-hook 'prettier)
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
@@ -103,14 +104,13 @@
 (use-apheleia 'just-mode-hook 'justfile)
 (use-apheleia 'toml-mode-hook 'taplo)
 
+
 (straight-use-package 'elisp-format)
 (add-hook 'emacs-lisp-mode-hook (lambda () 
 								  (local-set-key (kbd "C-c C-f") #'elisp-format-buffer)))
 (setq elisp-format-column 120) ;; https://github.com/Yuki-Inoue/elisp-format/issues/3
 
 (straight-use-package 'lsp-pyright)
-
-(straight-use-package 'editorconfig)
 
 (straight-use-package 'rust-mode)
 ;; https://github.com/rust-lang/rust-mode#indentation
@@ -146,6 +146,8 @@
 								:repo "zerolfx/copilot.el" 
 								:files ("dist" "*.el")))
 (require 'copilot)
+(setq copilot-indent-offset-warning-disable t)
+
 ;; enable copilot by default
 ;; (global-copilot-mode 1)
 ;; key to toggle copilot
