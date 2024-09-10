@@ -34,6 +34,7 @@ in { config, ... }: {
     gitui
     gnome3.gnome-tweaks
     google-chrome
+    graphviz
     htop
     ispell
     jq
@@ -44,6 +45,7 @@ in { config, ... }: {
     nixfmt
     nixpkgs-fmt
     nixpkgs-unstable.deja-dup
+    nixpkgs-unstable.uv
     nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
