@@ -1,0 +1,28 @@
+live_config_reload = true
+
+[env]
+TERM = "xterm-256color"
+
+[font.bold]
+family = "Comic Mono"
+style = "Bold"
+
+[font.italic]
+family = "Comic Mono"
+style = "Italic"
+
+[font.normal]
+family = "Comic Mono"
+style = "Regular"
+
+[[keyboard.bindings]]
+action = "ReceiveChar"
+key = "Backslash"
+mods = "Control"
+
+[window]
+dynamic_padding = false
+
+[window.padding]
+x = 4
+y = 4
