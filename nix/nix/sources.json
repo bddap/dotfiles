@@ -5,22 +5,22 @@
         "homepage": "https://crane.dev",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "7443df1c478947bf96a2e699209f53b2db26209d",
-        "sha256": "0bvr05wwnli5h2hrgadd73p8s78d54gv3iqhadpbhwlicpnifdaf",
+        "rev": "7e4586bad4e3f8f97a9271def747cf58c4b68f3c",
+        "sha256": "1fbxk1ckin5kx39h2f0ydrn624ccndn21yxv7x4lpsacm2d4pfry",
         "type": "tarball",
-        "url": "https://github.com/ipetkov/crane/archive/7443df1c478947bf96a2e699209f53b2db26209d.tar.gz",
+        "url": "https://github.com/ipetkov/crane/archive/7e4586bad4e3f8f97a9271def747cf58c4b68f3c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "nixos-23.11": {
-        "branch": "nixos-23.11",
+    "nixos-stable": {
+        "branch": "nixos-24.05",
         "description": "Nix Packages collection",
         "homepage": null,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "1487bdea619e4a7a53a4590c475deabb5a9d1bfb",
-        "sha256": "0aga80czsq950mja7hrdamm02lfhgpnd47ak2a3a2zqvxasbizaw",
+        "rev": "086b448a5d54fd117f4dc2dee55c9f0ff461bdc1",
+        "sha256": "156lkf9wq1hs028g2q8ndzyh4133kgh89iv2grjrzmh4csg7q9fv",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/1487bdea619e4a7a53a4590c475deabb5a9d1bfb.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/086b448a5d54fd117f4dc2dee55c9f0ff461bdc1.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs-unstable": {
@@ -29,10 +29,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "add0443ee587a0c44f22793b8c8649a0dbc3bb00",
-        "sha256": "09ci84bqd0yb1p667wha2lj42285h4jgz28mmvshbc9z8hrbdanh",
+        "rev": "20f9370d5f588fb8c72e844c54511cab054b5f40",
+        "sha256": "1vncvmr80wa1mb0di6vfw4hs794j12zhvb96v8rk5rsxhwgw2r1i",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/add0443ee587a0c44f22793b8c8649a0dbc3bb00.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/20f9370d5f588fb8c72e844c54511cab054b5f40.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "refac": {
