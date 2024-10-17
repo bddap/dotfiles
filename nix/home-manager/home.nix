@@ -19,13 +19,13 @@ in { config, ... }: {
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = with pkgs; [
-    refac
-    telegram-desktop
     alacritty
+    bambu-studio
+    colorized-logs
     curl
+    dockerfile-language-server-nodejs
     emacs-nox
     entr
-    dockerfile-language-server-nodejs
     firefox
     fish
     fzf
@@ -43,6 +43,7 @@ in { config, ... }: {
     niv
     nixd
     nixfmt
+    nix-index
     nixpkgs-fmt
     nixpkgs-unstable.deja-dup
     nixpkgs-unstable.uv
@@ -50,13 +51,16 @@ in { config, ... }: {
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
     pv
+    refac
     ripgrep
     slack
     spotify
     stow
     taplo
+    telegram-desktop
     tmux
     tree
+    vlc
     xclip
     yj
     zoom-us
