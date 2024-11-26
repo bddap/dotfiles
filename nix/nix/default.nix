@@ -8,4 +8,8 @@ let
       craneLib = final.craneLib;
     };
   };
-in { pkgs ? import sources.nixos-stable { } }: pkgs.appendOverlays [ overlay ]
+in
+{
+  pkgs ? import sources.nixos-stable { },
+}:
+pkgs.appendOverlays [ overlay ]

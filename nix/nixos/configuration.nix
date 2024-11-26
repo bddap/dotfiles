@@ -1,6 +1,8 @@
 { ... }:
-let pkgs = import ../nix { };
-in {
+let
+  pkgs = import ../nix { };
+in
+{
   imports = [ ./hardware-configuration.nix ];
 
   boot = {
@@ -8,8 +10,7 @@ in {
     loader.efi.canTouchEfiVariables = true;
 
     # how did this get here? Shouldn't this be in hardware-configuration.nix?
-    initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device =
-      "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
+    initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device = "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
 
     # disable tmpfs for /tmp, its limited size causes pain
     tmp.useTmpfs = false;
@@ -84,7 +85,10 @@ in {
   users.users.a = {
     isNormalUser = true;
     description = "a";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+    ];
     packages = [ pkgs.home-manager ];
     shell = pkgs.fish;
   };
