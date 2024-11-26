@@ -21,6 +21,7 @@ in { config, ... }: {
   home.packages = with pkgs; [
     alacritty
     bambu-studio
+    beautysh
     colorized-logs
     curl
     dockerfile-language-server-nodejs
@@ -42,9 +43,8 @@ in { config, ... }: {
     nil
     niv
     nixd
-    nixfmt
+    nixfmt-rfc-style
     nix-index
-    nixpkgs-fmt
     nixpkgs-unstable.deja-dup
     nixpkgs-unstable.uv
     nodejs
