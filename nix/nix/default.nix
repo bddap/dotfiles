@@ -7,6 +7,7 @@ let
       pkgs = final;
       craneLib = final.craneLib;
     };
+    uv = import ./uv.nix final.nixpkgs-unstable.pkgs;
   };
 in
 {

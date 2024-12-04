@@ -48,13 +48,14 @@ in
     nixfmt-rfc-style
     nix-index
     nixpkgs-unstable.deja-dup
-    nixpkgs-unstable.uv
+    uv
     nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
     pv
     refac
     ripgrep
+    ruff
     slack
     spotify
     stow
