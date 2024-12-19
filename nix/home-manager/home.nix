@@ -41,6 +41,7 @@ in
     htop
     ispell
     jq
+    nixpkgs-unstable.jujutsu
     just
     nil
     niv
@@ -48,7 +49,6 @@ in
     nixfmt-rfc-style
     nix-index
     nixpkgs-unstable.deja-dup
-    uv
     nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
@@ -63,6 +63,7 @@ in
     telegram-desktop
     tmux
     tree
+    uv
     vlc
     xclip
     yj
