@@ -42,6 +42,7 @@ in
     ispell
     jq
     nixpkgs-unstable.jujutsu
+    nixpkgs-unstable.gg-jj
     just
     nil
     niv
