@@ -35,7 +35,7 @@ in
     git
     git-lfs
     gitui
-    gnome3.gnome-tweaks
+    gnome-tweaks
     google-chrome
     graphviz
     htop
