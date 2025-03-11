@@ -122,6 +122,7 @@
 (use-apheleia 'just-mode-hook 'justfile)
 (use-apheleia 'toml-mode-hook 'taplo)
 
+;; todo: port https://codeberg.org/ideasman42/emacs-elisp-autofmt to rust or pure lisp
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
             (local-set-key (kbd "C-c C-f")
@@ -298,6 +299,91 @@
 	(jump-to-file-char (nth 0 ner) 
 					   (+ 1 (nth 1 ner)))))
 
+
+(defun refac-call-executable-async (selected-text transform callback)
+  "Asynchronously call the refac executable, passing SELECTED-TEXT and TRANSFORM as arguments. 
+CALLBACK is a function taking two parameters: EXIT-STATUS and RESULT."
+  (let ((refac-executable (executable-find "refac"))
+        (temp-buf (generate-new-buffer "*refac-output*")))
+    (if refac-executable
+        (make-process
+         :name "refac-async"
+         :buffer temp-buf
+         :command (list refac-executable "tor" selected-text transform)
+         :sentinel (lambda (proc _event)
+                     (when (memq (process-status proc) '(exit signal))
+                       (let ((buf (process-buffer proc)))
+                         ;; Ensure the buffer is still alive before attempting to read from it
+                         (when (buffer-live-p buf)
+                           (with-current-buffer buf
+                             (let ((exit-status (process-exit-status proc))
+                                   (result (buffer-string)))
+                               (kill-buffer buf)
+                               (funcall callback exit-status result))))))))
+      (error "refac executable not found"))))
+
+(global-set-key (kbd "C-c r") 'refac)
+
+(defun refac (beg end transform)
+  "Perform the refac transform in place, inserting merge markers inline, asynchronously."
+  (interactive "r\nMTransform: ")
+  (let* ((buffer (current-buffer))
+         (original-text (buffer-substring-no-properties beg end))
+         ;; Insert merge markers
+         (_ (goto-char end))
+         (_ (insert "\n=======\n"))
+         (overlay (make-overlay (point) (point) buffer t nil))
+         (_ (insert ">>>>>>> TRANSFORMED\n"))
+         (_ (goto-char beg))
+         (_ (insert "<<<<<<< ORIGINAL\n"))
+         (_ (smerge-mode 1)))
+	(overlay-put overlay 'display (concat "Running refac...\nTransform: " transform "\n"))
+    (refac-call-executable-async
+     original-text
+     transform
+     (lambda (exit-status result)
+       (with-current-buffer buffer
+         (let ((saved-point (point)))
+           (goto-char (overlay-start overlay))
+           (delete-overlay overlay)
+           (insert result)
+           (goto-char saved-point)
+           (unless (zerop exit-status)
+             (error "refac returned a non-zero exit status: %d. Error: %s"
+                    exit-status result))))))))
+
+(require 'url-util)
+
+(defun googleit (start end)
+  (interactive "r")
+  (let ((selected-text (buffer-substring-no-properties start end)))
+    (browse-url
+     (concat "https://www.google.com/search?q="
+             (url-hexify-string selected-text)))))
+
+(global-set-key (kbd "C-c g") 'googleit)
+
+
+(global-set-key (kbd "C-c w") 'refac-inline)
+
+
+(global-set-key (kbd "C-c q") 'refac-smerge)
+
+(defun refac-smerge (beg end transform)
+  "Perform the REFAC transform in place, inserting merge markers inline."
+  (interactive "r\nMTransform: ")
+  (let* ((original-text (buffer-substring-no-properties beg end))
+         (new-text (refac-call-executable original-text transform)))
+    ;; Remove the selected region, replacing it with conflict markers.
+    (goto-char end)
+	(insert "\n=======\n")
+    (insert new-text)
+    (insert "\n>>>>>>> TRANSFORMED\n")
+	(goto-char beg)
+    (insert "<<<<<<< ORIGINAL\n")
+    ;; Enable smerge-mode for conflict resolution right in the buffer.
+    (smerge-mode 1)))
+
 (defun refac-git-style-diff (a b) 
   (with-temp-buffer
 	(let ((temp-file-a (make-temp-file "a")) 
@@ -315,23 +401,39 @@
 		(delete-file temp-file-a) 
 		(delete-file temp-file-b)))))
 
-(defun refac-filter-diff-output (diff-output) 
-  (with-temp-buffer
-	(insert diff-output) 
-	(goto-char (point-min)) 
-	(while (not (eobp)) 
-	  (let ((line (buffer-substring-no-properties
-				   (line-beginning-position) 
-				   (line-end-position)))) 
-		(if (or (string-prefix-p "--- " line) 
-				(string-prefix-p "+++ " line) 
-				(string-prefix-p
-				 "\\ No newline at end of file" line)) 
-			(delete-region (line-beginning-position) 
-						   (1+ (line-end-position))) 
-		  (forward-line)))) 
-	(buffer-string)))
+(defun refac-inline (beg end transform)
+  "Call `refac-call-executable' on the contents of selected region using TRANSFORM.
+Instead of in-place replacement, create an overlay with a split
+showing the original text on the left and transformed text on the
+right in a minimal GitHub-style diff. Prompt to accept or deny the
+changes."
+  (interactive "r\nMTransform: ")
+  (let* ((original-text (buffer-substring-no-properties beg end))
+         (new-text (refac-call-executable original-text transform))
+         (diff-text (refac-git-style-diff original-text new-text))
+         (overlay (make-overlay beg end (current-buffer) t nil)))
 
+    (overlay-put overlay 'face 'highlight)
+	(overlay-put overlay 'display diff-text)
+
+    (message "Proposed changes. Press (a)ccept or (b)deny.")
+    (let ((response (read-char-exclusive)))
+	  (cond
+	   ((eq response ?a)
+		;; Accept changes: replace original with new text
+		(delete-overlay overlay)
+        (delete-region beg end)
+        (goto-char beg)
+        (insert new-text)
+        (message "Changes accepted."))
+	   (t
+        ;; Deny changes: revert to original
+        (delete-region beg (+ beg (length diff-text)))
+        (goto-char beg)
+        (insert original-text)
+        (overlay-put overlay 'face nil)
+        (delete-overlay overlay)
+        (message "Changes denied."))))))
 
 (defun refac-call-executable (selected-text transform) 
   (let (result exit-status refac-executable) 
@@ -348,39 +450,242 @@
 	  (error "refac returned a non-zero exit status: %d. Error: %s"
 			 exit-status result))))
 
-(global-set-key (kbd "C-c r") 'refac)
-(defun refac (start end)
-  "Run refac on region and show diff for approval before applying, then close the diff buffer."
-  (interactive "r")
-  (let* ((orig-text (buffer-substring-no-properties start end))
-         (instruction
-          (read-string "Enter transformation instruction: "))
-         (new-text (refac-call-executable orig-text instruction)))
-    (let* ((diff-output (refac-git-style-diff orig-text new-text))
-           (clean-diff (refac-filter-diff-output diff-output)))
-      (with-current-buffer (get-buffer-create "*Refac Diff*")
-        (erase-buffer)
-        (insert clean-diff)
-        (diff-mode)
-        (display-buffer (current-buffer)))
-      (if (yes-or-no-p "Apply this refac change? ")
-          (progn
-            (delete-region start end)
-            (insert new-text)
-            (message "Refac changes applied."))
-        (message "Refac changes canceled (no changes made)."))
-      (when (get-buffer "*Refac Diff*")
-        (delete-windows-on "*Refac Diff*")))))
+;; (global-set-key (kbd "C-c r") 'refac)
+
+;; (defun refac (beg end transform)
+;;   "Perform the refac transform in place, inserting merge markers inline."
+;;   (interactive "r\nMTransform: ")
+;;   (let* (
+;; 		 (buffer (current-buffer))
+;; 		 (original-text (buffer-substring-no-properties beg end))
+
+;; 		 (_ (goto-char end))
+;; 		 (_ (insert "\n=======\n"))
+
+;; 		 ;; add an overlay here to track the future insertion point
+;; 		 (overlay (make-overlay (point) (point) buffer t nil))
+
+;; 		 (_ (insert ">>>>>>> TRANSFORMED\n"))
+;; 		 (_ (goto-char beg))
+;; 		 (_ (insert "<<<<<<< ORIGINAL\n"))
+
+;; 		 (_ (smerge-mode 1))
+
+;; 		 (new-text (refac-call-executable original-text transform)))
+
+;; 	(goto-char (overlay-start overlay))
+;; 	(insert new-text)
+;; 	(delete-overlay overlay)))
 
 
-(require 'url-util)
-(defun googleit (start end) 
-  (interactive "r") 
-  (let ((selected-text (buffer-substring-no-properties start end))) 
-	(browse-url
-	 (concat "https://www.google.com/search?q="
-			 (url-hexify-string selected-text)))))
-(global-set-key (kbd "C-c g") 'googleit)
+;; (defun refac (beg end transform)
+;;   "Call `refac-call-executable' on the contents of selected region using TRANSFORM.
+;; `refac-call-executable` will return the transformed region.
+;; Create an overlay in place with changes highlighted.
+;; Prompt user to accept or deny the changes.
+;; When accepted, write them back to the buffer, otherwise revert to original."
+;;   (interactive "r\nMTransform: ")
+;;   ;; Save original text
+;;   (let* ((original-text (buffer-substring-no-properties beg end))
+;;          (new-text (refac-call-executable original-text transform))
+;;          (overlay (make-overlay beg end (current-buffer) t nil)))
+;;     ;; Highlight proposed changes
+;;     (overlay-put overlay 'face 'highlight)
+
+;;     ;; Temporarily replace the region with new text
+;;     (delete-region beg end)
+;;     (goto-char beg)
+;;     (insert new-text)
+
+;;     ;; Prompt user
+;;     (message "Proposed changes. Press (a)ccept or (b)deny.")
+;;     (let ((response (read-char-exclusive)))
+;;       (cond
+;;        ((eq response ?a)
+;;         ;; Accept changes
+;;         (overlay-put overlay 'face nil)
+;;         (delete-overlay overlay)
+;;         (message "Changes accepted."))
+;;        (t
+;;         ;; Deny changes: revert
+;;         (delete-region beg (+ beg (length new-text)))
+;;         (goto-char beg)
+;;         (insert original-text)
+;;         (delete-overlay overlay)
+;;         (message "Changes denied."))))))
+
+;; (defun refac (beg end transform)
+;;   "Call `refac-call-executable' on region [BEG..END] using TRANSFORM.
+;; Then run `ediff-region-internal' to compare the region in the current buffer
+;; to the transformed text in a temporary buffer, allowing you to merge changes."
+;;   (interactive "r\nMTransform: ")
+;;   (let ((original (buffer-substring-no-properties beg end))
+;;         (temp-buf (generate-new-buffer "*my-refac-transformed*")))
+;;     (unwind-protect
+;;         (let ((transformed (refac-call-executable original transform)))
+;;           (with-current-buffer temp-buf (insert transformed))
+;;           (let ((tbeg (with-current-buffer temp-buf (point-min)))
+;;                 (tend (with-current-buffer temp-buf (point-max))))
+;;             (ediff-region-internal (current-buffer) beg end
+;;                                    temp-buf tbeg tend
+;;                                    nil 'wordwise)))
+;;       (add-hook 'ediff-quit-hook
+;;                 (lambda ()
+;;                   (when (buffer-live-p temp-buf)
+;;                     (kill-buffer temp-buf)))
+;;                 t t))))
+
+
+;; (defun refac (beg end transform)
+;;   "Call `refac-call-executable' on region [BEG..END] using TRANSFORM.
+;; Then run `ediff-regions-linewise' to compare the region in the current buffer
+;; to the transformed text in a temporary buffer, allowing you to merge changes."
+;;   (interactive "r\nMTransform: ")
+;;   (let ((original (buffer-substring-no-properties beg end))
+;;         (temp-buf (generate-new-buffer "*my-refac-transformed*")))
+;;     (unwind-protect
+;;         (progn
+;;           ;; 1) Put transformed text in the temp buffer
+;;           (with-current-buffer temp-buf
+;;             (insert (refac-call-executable original transform)))
+
+;;           ;; 2) Set the region in the original buffer
+;;           (save-excursion
+;;             (push-mark beg)
+;;             (goto-char end)
+;;             (activate-mark))
+
+;;           ;; 3) Set the region in the transformed buffer
+;;           (with-current-buffer temp-buf
+;;             (push-mark (point-min))
+;;             (goto-char (point-max))
+;;             (activate-mark))
+
+;;           ;; 4) Compare the two regions linewise
+;;           (ediff-regions-linewise (current-buffer) temp-buf))
+
+;;       ;; Clean up: kill the temp buffer when Ediff quits.
+;;       (add-hook 'ediff-quit-hook
+;;                 (lambda ()
+;;                   (when (buffer-live-p temp-buf)
+;;                     (kill-buffer temp-buf)))
+;;                 ;; Append instead of prepend so we don't disrupt other ediff-quit-hooks
+;;                 t t))))
+
+
+
+;; (defun refac (beg end)
+;;   "Call `refac-call-executable' on the region from BEG to END,
+;; put both original and transformed text in temp buffers, then Ediff them."
+;;   (interactive "r")
+;;   (let* ((original (buffer-substring-no-properties beg end))
+;; 		 (instruction (read-string "Transform: "))
+;;          (transformed (refac-call-executable original instruction))
+;;          (buf-A (get-buffer-create "*my-diff-A*"))
+;;          (buf-B (get-buffer-create "*my-diff-B*")))
+;;     ;; Prepare the two buffers
+;;     (with-current-buffer buf-A
+;;       (erase-buffer)
+;;       (insert original)
+;;       (set-buffer-modified-p nil))
+;;     (with-current-buffer buf-B
+;;       (erase-buffer)
+;;       (insert transformed)
+;;       (set-buffer-modified-p nil))
+;;     ;; Now show Ediff
+;;     (ediff-buffers buf-A buf-B)))
+
+
+;; (defun partial-merge-refactor-region (start end)
+;;   "Refactor only part of the current buffer, then partially merge changes via `diff-mode`.
+;; After selecting a region, run this command.  It will:
+;; 1) Prompt for transformation instructions.
+;; 2) Create a temp file containing the 'after' version (with your region transformed).
+;; 3) Diff that temp file against your on-disk file.
+;; 4) Open the patch in a `diff-mode` buffer, letting you apply hunks selectively.
+
+;; Keybindings in the patch buffer:
+;;   n      Move to next hunk
+;;   p      Move to previous hunk
+;;   C-c C-a  Apply the current hunk
+;;   C-c C-r  Revert the current hunk (undo it)
+;;   q      Quit the patch buffer"
+;;   (interactive "r")
+;;   ;; Ensure the buffer is saved before we diff against disk.
+;;   (when (buffer-modified-p)
+;;     (when (yes-or-no-p "Buffer has unsaved changes. Save before generating diff? ")
+;;       (save-buffer)))
+
+;;   (let* ((orig-file (buffer-file-name (current-buffer)))
+;;          (full-orig (buffer-substring-no-properties (point-min) (point-max)))
+;;          (region-text (buffer-substring-no-properties start end))
+;;          (instruction (read-string "Enter transformation instruction: "))
+;;          ;; Transform only the region
+;;          (new-region-text (refac-call-executable region-text instruction))
+;;          ;; Construct the would-be new entire buffer
+;;          (new-full
+;;           (concat (substring full-orig 0 start)
+;;                   new-region-text
+;;                   (substring full-orig end)))
+;;          ;; Temporary file to store the new version
+;;          (tmp-file (make-temp-file "refac-" nil ".tmp"))
+;;          ;; We'll store the diff buffer here
+;;          diff-buf)
+
+;;     ;; Write the new version to the temp file
+;;     (with-temp-file tmp-file
+;;       (insert new-full))
+
+;;     ;; Now generate the diff in the background (synchronously in this case).
+;;     ;; `diff-no-select` returns a buffer in `diff-mode` that isn't displayed yet.
+;;     (setq diff-buf (diff-no-select orig-file tmp-file nil 'no-async))
+
+;;     ;; Show the diff buffer to the user
+;;     (switch-to-buffer diff-buf)
+;;     (diff-mode)
+
+;;     (message "Use n/p to navigate hunks, C-c C-a to apply, C-c C-r to revert, then q to quit.")))
+
+
+;; (defun refac (start end)
+;;   "Run refac on region, and compare original vs. transformed text with Ediff.
+;; When you finish Ediff, the merged buffer (if any) will be placed in the kill ring,
+;; so you can paste it back into your original buffer if desired."
+;;   (interactive "r")
+;;   (let* ((orig-text (buffer-substring-no-properties start end))
+;;          (instruction (read-string "Enter transformation instruction: "))
+;;          (new-text (refac-call-executable orig-text instruction)))
+;;     (my-ediff-merge-region start end new-text)
+;;     ;; Place merged text in kill ring after Ediff is closed.
+;;     (add-hook 'ediff-quit-hook
+;;               (lambda ()
+;;                 (let ((merged-buf (get-buffer "*Ediff Merge*")))
+;;                   (when (buffer-live-p merged-buf)
+;;                     (with-current-buffer merged-buf
+;;                       (kill-new (buffer-string))
+;;                       (message "Ediff merged output copied to kill ring. Paste where you want it.")))))
+;;               nil 'local)))
+
+
+;; (defun my-ediff-merge-region (start end new-value)
+;;   "Interactively merge changes from NEW-VALUE into the region between START and END."
+;;   (interactive "r\nsNew value for region: ")
+;;   (let* ((original-buffer (current-buffer))
+;;          (original-content (buffer-substring-no-properties start end))
+;;          (temp-buffer (generate-new-buffer "*ediff-region-temp*")))
+;;     ;; Insert the new value into the temporary buffer
+;;     (with-current-buffer temp-buffer
+;;       (insert new-value))
+;;     ;; Create an indirect buffer so we can narrow to the region
+;;     (let ((region-buffer (make-indirect-buffer original-buffer "*ediff-region-orig*" t)))
+;;       (with-current-buffer region-buffer
+;;         (narrow-to-region start end))
+;;       ;; Start ediff to merge the two
+;;       (ediff-buffers region-buffer temp-buffer
+;;                      (lambda ()
+;;                        ;; Cleanup buffers after merging
+;;                        (kill-buffer temp-buffer)
+;;                        (kill-buffer region-buffer))))))
 
 ;; lookup snippent in explainshell.com
 (defun explainshell (start end) 

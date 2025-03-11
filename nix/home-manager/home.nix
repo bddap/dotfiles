@@ -69,6 +69,7 @@ in
     xclip
     yj
     zoom-us
+    nixpkgs-unstable.copilot-language-server
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
