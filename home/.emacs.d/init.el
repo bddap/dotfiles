@@ -111,6 +111,8 @@
 
 (use-apheleia 'python-mode-hook 'python-fmt)
 (use-apheleia 'json-mode-hook 'prettier)
+(use-apheleia 'js-json-mode-hook 'prettier)
+(use-apheleia 'ts-json-mode-hook 'prettier)
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
 (use-apheleia 'typescript-mode-hook 'prettier)
@@ -315,18 +317,20 @@ CALLBACK is a function taking two parameters: EXIT-STATUS and RESULT."
 (global-set-key (kbd "C-c r") 'refac)
 
 (defun refac (beg end transform)
-  "Perform the refac transform in place, inserting merge markers inline, asynchronously."
+  "Perform the refac transform in place, inserting merge markers inline, asynchronously.
+The overlay will display the transform prompt until the results arrive."
   (interactive "r\nMTransform: ")
   (let* ((buffer (current-buffer))
          (original-text (buffer-substring-no-properties beg end))
-         ;; Insert merge markers
+         ;; Insert merge markers.
          (_ (goto-char end))
-         (_ (insert "\n=======\n"))
-         (overlay (make-overlay (point) (point) buffer t nil))
+         (_ (insert "\n=======\n\n"))
+         (overlay (make-overlay (- (point) 1) (point) buffer t nil))
          (_ (insert ">>>>>>> TRANSFORMED\n"))
          (_ (goto-char beg))
          (_ (insert "<<<<<<< ORIGINAL\n"))
          (_ (smerge-mode 1)))
+    ;; Show the transform prompt in the overlay until the async call finishes.
     (overlay-put overlay 'display
                  (concat "Running refac...\nTransform: " transform "\n"))
     (refac-call-executable-async
@@ -336,6 +340,7 @@ CALLBACK is a function taking two parameters: EXIT-STATUS and RESULT."
        (with-current-buffer buffer
          (let ((saved-point (point)))
            (goto-char (overlay-start overlay))
+           ;; Once results arrive, we remove the overlay and insert the result.
            (delete-overlay overlay)
            (insert result)
            (goto-char saved-point)
@@ -354,6 +359,7 @@ CALLBACK is a function taking two parameters: EXIT-STATUS and RESULT."
              (url-hexify-string selected-text)))))
 
 (global-set-key (kbd "C-c g") 'googleit)
+
 (global-set-key (kbd "C-c w") 'refac-inline)
 (global-set-key (kbd "C-c q") 'refac-smerge)
 

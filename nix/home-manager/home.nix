@@ -70,6 +70,15 @@ in
     yj
     zoom-us
     nixpkgs-unstable.copilot-language-server
+    nodePackages.prettier
+    ollama-cuda
+    open-webui
+    nixpkgs-unstable.code-cursor
+    nixpkgs-unstable.zed-editor
+    jc
+    kolourpaint
+    dig
+    lazydocker
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
