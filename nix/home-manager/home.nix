@@ -1,6 +1,6 @@
 let
   pkgs = import ../nix { };
-  nixpkgs-unstable = pkgs.nixpkgs-unstable;
+  nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
 in
 { config, ... }:
 {
@@ -54,7 +54,7 @@ in
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
     pv
-    refac
+    bddap.refac
     ripgrep
     ruff
     slack
@@ -64,7 +64,7 @@ in
     telegram-desktop
     tmux
     tree
-    uv
+    bddap.uv
     vlc
     xclip
     yj
@@ -79,6 +79,7 @@ in
     kolourpaint
     dig
     lazydocker
+    bddap.codex
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the

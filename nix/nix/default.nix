@@ -1,13 +1,19 @@
 let
   sources = import ./sources.nix;
+  use_nodejs_22 = (
+    final: prev: {
+      nodejs = final.nodejs_22;
+    }
+  );
   overlay = final: prev: {
-    nixpkgs-unstable = import sources.nixpkgs-unstable { };
-    craneLib = import sources.crane { pkgs = final; };
-    refac = import ./refac.nix {
-      pkgs = final;
-      craneLib = final.craneLib;
+    bddap = {
+      sources = sources;
+      nixpkgs-unstable = import sources.nixpkgs-unstable { };
+      craneLib = import sources.crane { pkgs = final; };
+      refac = import ./refac.nix final;
+      uv = import ./uv.nix final.bddap.nixpkgs-unstable.pkgs;
+      codex = import ./codex.nix (final.appendOverlays [ use_nodejs_22 ]);
     };
-    uv = import ./uv.nix final.nixpkgs-unstable.pkgs;
   };
 in
 {
