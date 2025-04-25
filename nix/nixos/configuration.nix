@@ -10,7 +10,8 @@ in
     loader.efi.canTouchEfiVariables = true;
 
     # how did this get here? Shouldn't this be in hardware-configuration.nix?
-    initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device = "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
+    initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device =
+      "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
 
     # disable tmpfs for /tmp, its limited size causes pain
     tmp.useTmpfs = false;
@@ -21,7 +22,7 @@ in
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # steam wants this
-  hardware.opengl.driSupport32Bit = true;
+  hardware.graphics.enable32Bit = true;
 
   networking.networkmanager.enable = true;
 
@@ -41,7 +42,7 @@ in
 
   services.avahi = {
     enable = true;
-    nssmdns = true;
+    nssmdns4 = true;
     publish = {
       enable = true;
       userServices = true;
@@ -57,19 +58,18 @@ in
     displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
 
-    layout = "us";
-    xkbVariant = "";
-
-    # maybe not needed for trackpad inpu since it's enabled by default in most desktopManager?
-    libinput.enable = true;
-
-    displayManager.autoLogin.enable = true;
-    displayManager.autoLogin.user = "a";
+    xkb.layout = "us";
+    xkb.variant = "";
   };
+
+  services.displayManager.autoLogin.enable = true;
+  services.displayManager.autoLogin.user = "a";
+
+  # maybe not needed for trackpad inpu since it's enabled by default in most desktopManager?
+  services.libinput.enable = true;
 
   services.printing.enable = true;
 
-  sound.enable = true;
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {

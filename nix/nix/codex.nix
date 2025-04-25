@@ -8,7 +8,7 @@
 }:
 let
   src_rev = "b34ed2ab831d9b11d77ce493371112fd7d67eccb";
-  src_sha256 = "sha256-gHk2ydublBWuHqli11Dj5C9en2HtwTtwxhuayVHbcXs=";
+  src_sha256 = "sha256-q2pcZfZUZVaG9IY/kgaIJZDUHcU8cUkk5KblZTevGQg=";
   dep_hash = "sha256-XEmStjnyWTHLQUawtLwqn14AO7516M4k4V+TP69YZ9M=";
 in
 stdenv.mkDerivation rec {

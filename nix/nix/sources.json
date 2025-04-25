@@ -11,7 +11,7 @@
         "url": "https://github.com/ipetkov/crane/archive/75390a36cd0c2cdd5f1aafd8a9f827d7107f2e53.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "nixos-stable": {
+    "nixpkgs": {
         "branch": "nixos-24.11",
         "description": "Nix Packages collection",
         "homepage": null,

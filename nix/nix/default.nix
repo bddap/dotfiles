@@ -13,10 +13,10 @@ let
       refac = import ./refac.nix final;
       uv = import ./uv.nix final.bddap.nixpkgs-unstable.pkgs;
       codex = import ./codex.nix (final.appendOverlays [ use_nodejs_22 ]);
+      shitty-nixpath = "nixpkgs=${sources.nixpkgs}:home-manager=${final.home-manager.src}";
     };
   };
+  pkgs = import sources.nixpkgs { overlays = [ overlay ]; };
 in
-{
-  pkgs ? import sources.nixos-stable { },
-}:
-pkgs.appendOverlays [ overlay ]
+{ ... }:
+pkgs

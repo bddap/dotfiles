@@ -4,11 +4,24 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-export NIXOS_CONFIG="$(realpath nix/nixos/configuration.nix)"
+# NIX_PATH and channels are gross, we ingnore them and build up channels of our own
+# we only need to do this becasue home-manager assumes certain channels are present
+unset NIX_PATH
+NIX_PATH="$(nix-instantiate --eval --strict --json -E '(import ./nix/nix {}).bddap.shitty-nixpath' | jq -r)"
+export NIX_PATH
 
-NIXPKGS_ALLOW_UNFREE=1 nixos-rebuild build
+NIXOS_CONFIG="$(realpath nix/nixos/configuration.nix)"
+NIXPKGS_ALLOW_UNFREE=1
+
+export NIXOS_CONFIG
+export NIXPKGS_ALLOW_UNFREE
+nixos-rebuild build
 
 if [ -n "${1+x}" ]; then
-	# sudo seems to clear NIXOS_CONFIG 
-    sudo env NIXPKGS_ALLOW_UNFREE=1 NIXOS_CONFIG="$NIXOS_CONFIG" nixos-rebuild "$1"
+    # sudo seems to clear NIXOS_CONFIG
+    sudo env \
+        NIX_PATH="$NIX_PATH" \
+        NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
+        NIXOS_CONFIG="$NIXOS_CONFIG" \
+        nixos-rebuild "$1"
 fi
