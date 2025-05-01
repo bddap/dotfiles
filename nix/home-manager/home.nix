@@ -58,6 +58,7 @@ in
     ripgrep
     ruff
     slack
+    sl
     spotify
     stow
     taplo

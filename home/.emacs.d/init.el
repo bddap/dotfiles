@@ -35,6 +35,8 @@
 (straight-use-package 'editorconfig)
 (editorconfig-mode 1)
 
+(straight-use-package 'tree-sitter)
+
 (straight-use-package 'lsp-mode)
 (require 'lsp)
 (add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
