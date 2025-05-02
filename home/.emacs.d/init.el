@@ -13,6 +13,8 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
+;; (straight-use-package 'use-package)
+
 (setq backup-directory-alist
       `(("." . ,(expand-file-name "saves/bak/" user-emacs-directory))))
 
@@ -55,10 +57,27 @@
 (add-hook 'terraform-mode-hook #'lsp)
 (add-hook 'mhtml-mode-hook #'lsp)
 (add-hook 'typescript-mode-hook #'lsp)
+(add-hook 'typescript-ts-mode-hook #'lsp)
+(add-hook 'tsx-ts-mode-hook #'lsp)
+(add-hook 'typscript-ts-mode-hook #'lsp)
 (add-hook 'js-mode-hook #'lsp)
 (add-hook 'nix-mode-hook #'lsp)
 ;; to use the lsp whenever possible:
 ;; (add-hook 'prog-mode-hook #'lsp)
+
+;; (setq major-mode-remap-alist
+;;       '((bash-mode        . bash-ts-mode)
+;;         (c-mode           . c-ts-mode)
+;;         (c++-mode         . c++-ts-mode)
+;;         (css-mode         . css-ts-mode)
+;;         (javascript-mode  . js-ts-mode)
+;;         (js-json-mode     . json-ts-mode)
+;;         (json-mode        . json-ts-mode)
+;;         (python-mode      . python-ts-mode)
+;;         (ruby-mode        . ruby-ts-mode)
+;;         (typescript-mode  . typescript-ts-mode)
+;;         (tsx-mode         . tsx-ts-mode)
+;;         (yaml-mode        . yaml-ts-mode)))
 
 (define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
 (define-key lsp-mode-map (kbd "C-c i") #'lsp-ui-peek-find-references)
@@ -221,7 +240,7 @@
             (local-set-key (kbd "M-.") 'lsp-goto-implementation)))
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
+(add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
 
 ;; (require 'use-package)
 
