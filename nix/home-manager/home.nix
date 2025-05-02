@@ -27,7 +27,9 @@ in
     colorized-logs
     curl
     dockerfile-language-server-nodejs
-    emacs-nox
+    (emacs-nox.pkgs.withPackages (epkgs: [
+      epkgs.treesit-grammars.with-all-grammars
+    ]))
     entr
     firefox
     fish
