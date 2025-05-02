@@ -14,6 +14,7 @@ let
       uv = import ./uv.nix final.bddap.nixpkgs-unstable.pkgs;
       codex = import ./codex.nix (final.appendOverlays [ use_nodejs_22 ]);
       shitty-nixpath = "nixpkgs=${sources.nixpkgs}:home-manager=${final.home-manager.src}";
+      zoom = import ./zoom.nix final;
     };
   };
   pkgs = import sources.nixpkgs { overlays = [ overlay ]; };

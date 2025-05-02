@@ -69,7 +69,7 @@ in
     vlc
     xclip
     yj
-    zoom-us
+    pkgs.bddap.zoom
     nixpkgs-unstable.copilot-language-server
     nodePackages.prettier
     ollama-cuda
