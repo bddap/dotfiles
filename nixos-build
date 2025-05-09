@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 # NIX_PATH and channels are gross, we ingnore them and build up channels of our own
 # we only need to do this becasue home-manager assumes certain channels are present
 unset NIX_PATH
-NIX_PATH="$(nix-instantiate --eval --strict --json -E '(import ./nix/nix {}).bddap.shitty-nixpath' | jq -r)"
+NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
 NIXOS_CONFIG="$(realpath nix/nixos/configuration.nix)"
