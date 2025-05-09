@@ -31,6 +31,8 @@
 (setq tab-always-indent t) ;; don't use tab for autocomplete
 (global-set-key (kbd "C-c f") 'project-find-file)
 
+(straight-use-package 'magit)
+
 (straight-use-package 'yasnippet)
 (yas-global-mode 1)
 
@@ -137,6 +139,9 @@
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
 (use-apheleia 'typescript-mode-hook 'prettier)
+(use-apheleia 'typescript-ts-mode-hook 'prettier)
+(use-apheleia 'tsx-ts-mode-hook 'prettier)
+(use-apheleia 'tsx-mode-hook 'prettier)
 (use-apheleia 'html-mode-hook 'prettier)
 (use-apheleia 'sh-mode-hook 'shfmt)
 (use-apheleia 'c-mode-hook 'clang-format)

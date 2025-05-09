@@ -83,6 +83,7 @@ in
     dig
     lazydocker
     bddap.codex
+    wl-clipboard # wayland clipboard gets up wl-copy and wl-paste
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
     # # overrides. You can do that directly here, just don't forget the
