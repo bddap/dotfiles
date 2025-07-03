@@ -22,7 +22,7 @@ in
   # environment.
   home.packages = with pkgs; [
     alacritty
-    athenticator
+    authenticator
     bambu-studio
     beautysh
     colorized-logs
