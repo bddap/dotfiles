@@ -64,6 +64,7 @@
 (add-hook 'typscript-ts-mode-hook #'lsp)
 (add-hook 'js-mode-hook #'lsp)
 (add-hook 'nix-mode-hook #'lsp)
+(add-hook 'python-ts-mode-hook #'lsp)
 ;; to use the lsp whenever possible:
 ;; (add-hook 'prog-mode-hook #'lsp)
 
@@ -246,6 +247,8 @@
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.pyw\\'" . python-ts-mode))
 
 ;; (require 'use-package)
 
