@@ -28,6 +28,7 @@ in
     colorized-logs
     curl
     dockerfile-language-server-nodejs
+    discord
     (emacs-nox.pkgs.withPackages (epkgs: [
       epkgs.treesit-grammars.with-all-grammars
     ]))
@@ -44,8 +45,8 @@ in
     htop
     ispell
     jq
-    nixpkgs-unstable.jujutsu
-    nixpkgs-unstable.gg-jj
+    jujutsu
+    gg-jj
     just
     nil
     niv
@@ -68,19 +69,19 @@ in
     telegram-desktop
     tmux
     tree
-    bddap.uv
+    uv
     vlc
     xclip
     yj
-    pkgs.bddap.zoom
-    nixpkgs-unstable.copilot-language-server
+    zoom-us
+    copilot-language-server
     nodePackages.prettier
     ollama-cuda
     open-webui
-    nixpkgs-unstable.code-cursor
-    nixpkgs-unstable.zed-editor
+    code-cursor
+    zed-editor
     jc
-    kolourpaint
+    kdePackages.kolourpaint
     dig
     lazydocker
     bddap.codex
