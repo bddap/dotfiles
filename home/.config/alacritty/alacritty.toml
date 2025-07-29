@@ -19,6 +19,11 @@ action = "ReceiveChar"
 key = "Backslash"
 mods = "Control"
 
+[[keyboard.bindings]]
+action = "CreateNewWindow"
+key = "N"
+mods = "Control|Shift"
+
 [window]
 dynamic_padding = false
 

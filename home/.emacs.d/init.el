@@ -105,11 +105,8 @@
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
-;; (push '(black . ("black" "--stdin-filename" filepath "-")) apheleia-formatters)
-;; (push '(isort . ("isort" "--stdout" "--profile" "black" "-")) apheleia-formatters)
-;; (push '(add-trailing-comma . ("add-trailing-comma" "--py36-plus" "--exit-zero-even-if-changed" "-")) apheleia-formatters)
 (push
- '(python-fmt . ("bash" "-c" "ruff format - | isort --stdout --profile black -"))
+ '(python-fmt . ("fmt-python"))
  apheleia-formatters)
 (push '(jq . ("jq" ".")) apheleia-formatters)
 (push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
@@ -134,11 +131,13 @@
                                  (apheleia-format-buffer formatter)))))))
 
 (use-apheleia 'python-mode-hook 'python-fmt)
+(use-apheleia 'python-ts-mode-hook 'python-fmt)
 (use-apheleia 'json-mode-hook 'prettier)
 (use-apheleia 'js-json-mode-hook 'prettier)
 (use-apheleia 'ts-json-mode-hook 'prettier)
 (use-apheleia 'js-mode-hook 'prettier)
 (use-apheleia 'yaml-mode-hook 'prettier)
+(use-apheleia 'yaml-ts-mode-hook 'prettier)
 (use-apheleia 'typescript-mode-hook 'prettier)
 (use-apheleia 'typescript-ts-mode-hook 'prettier)
 (use-apheleia 'tsx-ts-mode-hook 'prettier)
@@ -249,6 +248,7 @@
 (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.pyw\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
 
 ;; (require 'use-package)
 

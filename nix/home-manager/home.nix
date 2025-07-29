@@ -23,8 +23,10 @@ in
   home.packages = with pkgs; [
     alacritty
     authenticator
-    bambu-studio
+    nixpkgs-unstable.bambu-studio
+    openscad
     beautysh
+    cached-nix-shell
     colorized-logs
     curl
     dockerfile-language-server-nodejs
@@ -37,6 +39,7 @@ in
     fish
     fzf
     git
+    gh
     git-lfs
     gitui
     gnome-tweaks
@@ -57,6 +60,7 @@ in
     nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
+    nvtopPackages.full
     pv
     bddap.refac
     ripgrep

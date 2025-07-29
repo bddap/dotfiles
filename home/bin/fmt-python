@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if which isort &> /dev/null; then
+    isort="isort --stdout --profile black -"
+else
+    isort="cat"
+fi
+
+# --config 'format.skip-magic-trailing-comma = true'
+ruff format - | $isort
