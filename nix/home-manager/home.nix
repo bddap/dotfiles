@@ -57,7 +57,8 @@ in
     nixfmt-rfc-style
     nix-index
     nixpkgs-unstable.deja-dup
-    nodejs
+    fnm
+    # nodejs
     nodePackages.bash-language-server
     nodePackages.typescript-language-server
     nvtopPackages.full
