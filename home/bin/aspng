@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Reads RGB24 from stdin, pads with black to fill W×H, outputs PNG to stdout.
+# W defaults to 128 unless IMG_W env var is set.
+
+W="${IMG_W:-128}"
+
+tmp_raw="$(mktemp)"
+trap 'rm -f "$tmp_raw"' EXIT
+
+# Capture stdin
+cat > "$tmp_raw"
+L=$(wc -c < "$tmp_raw"); L=${L//[[:space:]]/}
+
+# Calculate height based on total pixels needed
+pixels=$(( (L + 2) / 3 ))
+H=$(( (pixels + W - 1) / W ))
+
+# Pad with zeros if needed
+need=$(( W * H * 3 ))
+pad=$(( need - L ))
+if (( pad > 0 )); then
+  dd if=/dev/zero bs=1 count="$pad" status=none >> "$tmp_raw"
+fi
+
+# Output PNG
+magick -size "${W}x${H}" -depth 8 rgb:- png:- < "$tmp_raw"

@@ -46,6 +46,7 @@ in
     google-chrome
     graphviz
     htop
+    imagemagick
     ispell
     jq
     jujutsu
