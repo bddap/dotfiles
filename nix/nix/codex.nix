@@ -1,23 +1,16 @@
-{
-  stdenv,
-  fetchurl,
-  lib,
-  ...
-}:
+{ stdenv, fetchurl, lib, ... }:
 
 stdenv.mkDerivation rec {
   pname = "codex";
   version = "0.7.0";
 
   src = fetchurl {
-    url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
+    url =
+      "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
     sha256 = "sha256-zzU7Fc7aHwfeP1w069SjdSivBB8TqqN5i1rs3SBZT3k=";
   };
 
-  phases = [
-    "unpackPhase"
-    "installPhase"
-  ];
+  phases = [ "unpackPhase" "installPhase" ];
 
   unpackPhase = ''
     runHook preUnpack

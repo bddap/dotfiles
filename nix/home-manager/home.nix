@@ -1,9 +1,7 @@
 let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
-in
-{ config, ... }:
-{
+in { config, ... }: {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "a";
@@ -31,9 +29,8 @@ in
     curl
     dockerfile-language-server-nodejs
     discord
-    (emacs-nox.pkgs.withPackages (epkgs: [
-      epkgs.treesit-grammars.with-all-grammars
-    ]))
+    (emacs-nox.pkgs.withPackages
+      (epkgs: [ epkgs.treesit-grammars.with-all-grammars ]))
     entr
     firefox
     fish
@@ -55,7 +52,8 @@ in
     nil
     niv
     nixd
-    nixfmt-rfc-style
+    # nixfmt-rfc-style is not zealous enough, neither is alejandra
+    nixfmt-classic
     nix-index
     nixpkgs-unstable.deja-dup
     fnm

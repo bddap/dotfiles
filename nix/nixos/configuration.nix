@@ -1,8 +1,6 @@
 { ... }:
-let
-  pkgs = import ../nix { };
-in
-{
+let pkgs = import ../nix { };
+in {
   imports = [ ./hardware-configuration.nix ];
 
   boot = {
@@ -85,10 +83,7 @@ in
   users.users.a = {
     isNormalUser = true;
     description = "a";
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-    ];
+    extraGroups = [ "networkmanager" "wheel" ];
     packages = [ pkgs.home-manager ];
     shell = pkgs.fish;
   };

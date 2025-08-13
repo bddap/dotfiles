@@ -1,17 +1,8 @@
-{
-  pkg-config,
-  openssl,
-  bddap,
-  ...
-}:
+{ pkg-config, openssl, bddap, ... }:
 let
   craneLib = bddap.craneLib;
   sources = import ./sources.nix;
-in
-craneLib.buildPackage {
+in craneLib.buildPackage {
   src = sources.refac;
-  buildInputs = [
-    pkg-config
-    openssl
-  ];
+  buildInputs = [ pkg-config openssl ];
 }

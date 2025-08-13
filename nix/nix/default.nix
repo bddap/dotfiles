@@ -1,10 +1,6 @@
 let
   sources = import ./sources.nix;
-  use_nodejs_22 = (
-    final: prev: {
-      nodejs = final.nodejs_22;
-    }
-  );
+  use_nodejs_22 = (final: prev: { nodejs = final.nodejs_22; });
   overlay = final: prev: {
     bddap = {
       sources = sources;
@@ -13,12 +9,11 @@ let
       refac = import ./refac.nix final;
       shitty-nixpath = final.writeTextFile {
         name = "shitty-nixpath";
-        text = "nixpkgs=${sources.nixpkgs}:home-manager=${final.home-manager.src}";
+        text =
+          "nixpkgs=${sources.nixpkgs}:home-manager=${final.home-manager.src}";
       };
       codex = import ./codex.nix final;
     };
   };
   pkgs = import sources.nixpkgs { overlays = [ overlay ]; };
-in
-{ ... }:
-pkgs
+in { ... }: pkgs
