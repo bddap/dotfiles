@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-set -ueo pipefail
-
-xclip -o -selection clipboard

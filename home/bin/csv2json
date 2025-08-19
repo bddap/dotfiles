@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-
-set -ueo pipefail
-
-# https://stackoverflow.com/a/65100738
-python3 -c 'import csv, json, sys; print(json.dumps([dict(r) for r in csv.DictReader(sys.stdin)]))'

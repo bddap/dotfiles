@@ -15,7 +15,6 @@ function maybesrc {
     fi
 }
 
-appendp "$HOME/bin"
 appendp "/usr/local/go/bin"
 appendp "$HOME/go/bin"
 appendp "$HOME/.yarn/bin"
