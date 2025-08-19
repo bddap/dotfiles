@@ -106,9 +106,7 @@ in { config, ... }: {
     # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
     # Migrated scripts from ./home/bin
-    (pkgs.writeShellScriptBin "browser" ''
-      set -euo pipefail
-      ${pkgs.python3}/bin/python3 << 'EOF'
+    (pkgs.writers.writePython3Bin "browser" {} ''
       import sys
       import webbrowser
       import tempfile
@@ -126,17 +124,17 @@ in { config, ... }: {
           webbrowser.open(url)
       finally:
           os.remove(path)
-      EOF
     '')
 
-    (pkgs.writeShellScriptBin "csv2json" ''
-      set -ueo pipefail
-      ${pkgs.python3}/bin/python3 -c 'import csv, json, sys; print(json.dumps([dict(r) for r in csv.DictReader(sys.stdin)]))'
+    (pkgs.writers.writePython3Bin "csv2json" {} ''
+      import csv
+      import json
+      import sys
+      
+      print(json.dumps([dict(r) for r in csv.DictReader(sys.stdin)]))
     '')
 
-    (pkgs.writeShellScriptBin "json2csv" ''
-      set -ueo pipefail
-      ${pkgs.python3}/bin/python3 -c '
+    (pkgs.writers.writePython3Bin "json2csv" {} ''
       import sys
       import json
       import csv
@@ -151,7 +149,6 @@ in { config, ... }: {
       writer.writeheader()
       for row in data:
           writer.writerow(row)
-      '
     '')
 
     (pkgs.writeShellScriptBin "next-rustc-err" ''
@@ -349,15 +346,16 @@ in { config, ... }: {
         | ${pkgs.viu}/bin/viu -
     '')
 
-    (pkgs.writeShellScriptBin "cdoc" ''
-      #! /usr/bin/env nix-shell
-      #! nix-shell -i bash -p python3
-
-      set -ueo pipefail
-
-      crate="$1"
-
-      ${pkgs.python3}/bin/python3 -m webbrowser "https://docs.rs/''${crate}"
+    (pkgs.writers.writePython3Bin "cdoc" {} ''
+      import sys
+      import webbrowser
+      
+      if len(sys.argv) != 2:
+          print("Usage: cdoc <crate_name>", file=sys.stderr)
+          sys.exit(1)
+          
+      crate = sys.argv[1]
+      webbrowser.open(f"https://docs.rs/{crate}")
     '')
 
     (pkgs.writeShellScriptBin "tmnew" ''
