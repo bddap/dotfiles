@@ -96,7 +96,7 @@ in { config, ... }: {
     viu # terminal image viewer
     poetry # Python packaging tool
     python3Packages.isort # Python import sorter
-    fswebcam # webcam capture tool  
+    fswebcam # webcam capture tool
     xorg.xkbcomp # keyboard compiler
 
     # # It is sometimes useful to fine-tune packages, for example, by applying
@@ -105,8 +105,7 @@ in { config, ... }: {
     # # fonts?
     # (pkgs.nerdfonts.override { fonts = [ "FantasqueSansMono" ]; })
 
-    # Migrated scripts from ./home/bin
-    (pkgs.writers.writePython3Bin "browser" {} ''
+    (pkgs.writers.writePython3Bin "browser" { } ''
       import sys
       import webbrowser
       import tempfile
@@ -126,15 +125,15 @@ in { config, ... }: {
           os.remove(path)
     '')
 
-    (pkgs.writers.writePython3Bin "csv2json" {} ''
+    (pkgs.writers.writePython3Bin "csv2json" { } ''
       import csv
       import json
       import sys
-      
+
       print(json.dumps([dict(r) for r in csv.DictReader(sys.stdin)]))
     '')
 
-    (pkgs.writers.writePython3Bin "json2csv" {} ''
+    (pkgs.writers.writePython3Bin "json2csv" { } ''
       import sys
       import json
       import csv
@@ -142,9 +141,12 @@ in { config, ... }: {
       data = json.load(sys.stdin)
 
       if len(data) == 0:
-          print("json2csv unable to determine header, no data found", file=sys.stderr)
+          print(
+              "json2csv unable to determine header, no data found",
+              file=sys.stderr
+          )
           sys.exit(0)
-
+      
       writer = csv.DictWriter(sys.stdout, fieldnames=data[0].keys())
       writer.writeheader()
       for row in data:
@@ -346,14 +348,14 @@ in { config, ... }: {
         | ${pkgs.viu}/bin/viu -
     '')
 
-    (pkgs.writers.writePython3Bin "cdoc" {} ''
+    (pkgs.writers.writePython3Bin "cdoc" { } ''
       import sys
       import webbrowser
-      
+
       if len(sys.argv) != 2:
           print("Usage: cdoc <crate_name>", file=sys.stderr)
           sys.exit(1)
-          
+
       crate = sys.argv[1]
       webbrowser.open(f"https://docs.rs/{crate}")
     '')
