@@ -41,32 +41,30 @@
 
 (straight-use-package 'tree-sitter)
 
-(straight-use-package 'lsp-mode)
-(require 'lsp)
-(add-to-list 'lsp-language-id-configuration '(terraform-mode . "terraform"))
-(lsp-register-client
- (make-lsp-client
-  :new-connection (lsp-stdio-connection '("terraform-ls"))
-  :major-modes '(terraform-mode)
-  :server-id 'terraform-ls))
+;; eglot is built into Emacs 29+, but we can still use straight to ensure we have it
+(straight-use-package 'eglot)
+(require 'eglot)
 
-;; use lsp for these languages
-(add-hook 'rust-mode-hook #'lsp)
-(add-hook 'python-mode-hook #'lsp)
-(add-hook 'sh-mode-hook #'lsp)
-(add-hook 'dockerfile-mode-hook #'lsp)
-(add-hook 'c-mode-common-hook #'lsp)
-(add-hook 'terraform-mode-hook #'lsp)
-(add-hook 'mhtml-mode-hook #'lsp)
-(add-hook 'typescript-mode-hook #'lsp)
-(add-hook 'typescript-ts-mode-hook #'lsp)
-(add-hook 'tsx-ts-mode-hook #'lsp)
-(add-hook 'typscript-ts-mode-hook #'lsp)
-(add-hook 'js-mode-hook #'lsp)
-(add-hook 'nix-mode-hook #'lsp)
-(add-hook 'python-ts-mode-hook #'lsp)
+;; Configure language servers for eglot
+(add-to-list 'eglot-server-programs '(terraform-mode . ("terraform-ls")))
+
+;; use eglot for these languages
+(add-hook 'rust-mode-hook #'eglot-ensure)
+(add-hook 'python-mode-hook #'eglot-ensure)
+(add-hook 'sh-mode-hook #'eglot-ensure)
+(add-hook 'dockerfile-mode-hook #'eglot-ensure)
+(add-hook 'c-mode-common-hook #'eglot-ensure)
+(add-hook 'terraform-mode-hook #'eglot-ensure)
+(add-hook 'mhtml-mode-hook #'eglot-ensure)
+(add-hook 'typescript-mode-hook #'eglot-ensure)
+(add-hook 'typescript-ts-mode-hook #'eglot-ensure)
+(add-hook 'tsx-ts-mode-hook #'eglot-ensure)
+(add-hook 'typscript-ts-mode-hook #'eglot-ensure)
+(add-hook 'js-mode-hook #'eglot-ensure)
+(add-hook 'nix-mode-hook #'eglot-ensure)
+(add-hook 'python-ts-mode-hook #'eglot-ensure)
 ;; to use the lsp whenever possible:
-;; (add-hook 'prog-mode-hook #'lsp)
+;; (add-hook 'prog-mode-hook #'eglot-ensure)
 
 ;; (setq major-mode-remap-alist
 ;;       '((bash-mode        . bash-ts-mode)
@@ -82,26 +80,21 @@
 ;;         (tsx-mode         . tsx-ts-mode)
 ;;         (yaml-mode        . yaml-ts-mode)))
 
-(define-key lsp-mode-map (kbd "C-c u") #'lsp-rename)
-(define-key lsp-mode-map (kbd "C-c i") #'lsp-ui-peek-find-references)
-(define-key lsp-mode-map (kbd "C-c o") #'lsp-ui-doc-glance)
-(define-key lsp-mode-map (kbd "C-c y") #'lsp-execute-code-action)
-(define-key lsp-mode-map (kbd "M-n") #'flycheck-next-error)
-(define-key lsp-mode-map (kbd "M-p") #'flycheck-previous-error)
-(define-key lsp-mode-map (kbd "C-c h") #'flycheck-first-error)
-(define-key lsp-mode-map (kbd "C-c C-f") #'lsp-format-buffer)
+;; Key bindings for eglot
+(define-key eglot-mode-map (kbd "C-c u") #'eglot-rename)
+(define-key eglot-mode-map (kbd "C-c i") #'xref-find-references)
+(define-key eglot-mode-map (kbd "C-c o") #'eldoc-doc-buffer)
+(define-key eglot-mode-map (kbd "C-c y") #'eglot-code-actions)
+(define-key eglot-mode-map (kbd "M-n") #'flycheck-next-error)
+(define-key eglot-mode-map (kbd "M-p") #'flycheck-previous-error)
+(define-key eglot-mode-map (kbd "C-c h") #'flycheck-first-error)
+(define-key eglot-mode-map (kbd "C-c C-f") #'eglot-format-buffer)
 
-;; keep lsp-ui-doc from popping up without my say-so
-(setq lsp-ui-doc-enable nil)
-(setq lsp-file-watch-threshold 100000)
-(with-eval-after-load 'lsp-mode
-  (setq lsp-ui-doc-enable nil)
-  (setq lsp-signature-render-documentation nil))
-(setq lsp-prefer-flymake nil) ;; tell lsp to use flycheck instead
-;; (setq lsp-inlay-hint-enable t)
+;; eglot configuration
+(setq eglot-autoshutdown t) ;; shutdown language server after closing last file
+(setq eglot-confirm-server-initiated-edits nil) ;; don't ask for confirmation on server edits
 
-(straight-use-package 'lsp-ui)
-(add-hook 'lsp-ui-mode-hook 'lsp-ui-doc-hide)
+
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
@@ -124,7 +117,7 @@
   (add-hook hook
             (lambda ()
               (progn
-                (define-key lsp-mode-map (kbd "C-c C-f") nil)
+                (define-key eglot-mode-map (kbd "C-c C-f") nil)
                 (local-set-key (kbd "C-c C-f")
                                (lambda ()
                                  (interactive)
@@ -157,7 +150,7 @@
                              (interactive)
                              (indent-region (point-min) (point-max))))))
 
-(straight-use-package 'lsp-pyright)
+
 
 (straight-use-package 'rust-mode)
 ;; https://github.com/rust-lang/rust-mode#indentation
@@ -165,17 +158,10 @@
           (lambda ()
             (setq indent-tabs-mode nil)
             (local-set-key (kbd "\C-x n e") 'next-err)))
-;; https://users.rust-lang.org/t/how-to-disable-rust-analyzer-proc-macro-warnings-in-neovim/53150/8
-(setq lsp-rust-analyzer-proc-macro-enable t)
-(setq lsp-rust-analyzer-cargo-load-out-dirs-from-check t)
-(setq lsp-rust-analyzer-experimental-proc-attr-macros t)
-(setq lsp-rust-analyzer-cargo-watch-command "clippy")
-;; (defun bddap-lsp-config ()
-;;   "set lsp config"
-;;   (interactive)
-;;   (lsp--set-configuration `(:rust-analyzer (:cargo (:allFeatures (true))))))
-
-(setq lsp-nix-nil-formatter ["nixfmt"])
+;; Language server configuration for eglot
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer")))
+  (add-to-list 'eglot-server-programs '(nix-mode . ("nil"))))
 
 (straight-use-package 'ivy)
 (ivy-mode)
@@ -231,7 +217,7 @@
 (straight-use-package 'web-mode)
 (straight-use-package 'toml-mode)
 (straight-use-package 'protobuf-mode)
-(straight-use-package 'lsp-ui)
+
 (straight-use-package 'haskell-mode)
 (straight-use-package 'go-mode)
 (straight-use-package 'dockerfile-mode)
@@ -239,10 +225,10 @@
 (straight-use-package 'nix-mode)
 (add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
 
-;; js-mode binds "M-." to js-find-symbol. We don't want that because lsp-goto-implementation is better.
+;; js-mode binds "M-." to js-find-symbol. We don't want that because xref-find-definitions is better.
 (add-hook 'js-mode-hook
           (lambda ()
-            (local-set-key (kbd "M-.") 'lsp-goto-implementation)))
+            (local-set-key (kbd "M-.") 'xref-find-definitions)))
 
 (add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
 (add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
@@ -252,11 +238,11 @@
 
 ;; (require 'use-package)
 
-;; terraform-lsp has no formatting provider. luckily terraform-mode can do formatting
+;; terraform-ls has no formatting provider. luckily terraform-mode can do formatting
 (add-hook 'terraform-mode-hook
           (lambda ()
             (progn
-              (define-key lsp-mode-map (kbd "C-c C-f") nil)
+              (define-key eglot-mode-map (kbd "C-c C-f") nil)
               (local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
 
 (add-hook 'markdown-mode-hook
