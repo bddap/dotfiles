@@ -41,12 +41,28 @@
 
 (straight-use-package 'tree-sitter)
 
-;; eglot is built into Emacs 29+, but we can still use straight to ensure we have it
-(straight-use-package 'eglot)
 (require 'eglot)
+(require 'project)
+(require 'cl-lib)
+(defun project-try-terraform (dir)
+  "Return Terraform project if a nearest `.terraform/` is found above DIR."
+  (when-let ((root (locate-dominating-file dir ".terraform")))
+    (cons 'terraform root)))
+(defun project-try-cargo (dir)
+  "Return Cargo project if a nearest `Cargo.toml` is found above DIR."
+  (when-let ((root (locate-dominating-file dir "Cargo.toml")))
+    (cons 'cargo root)))
+(cl-defmethod project-root ((project (head terraform)))
+  (cdr project))
+(cl-defmethod project-root ((project (head cargo)))
+  (cdr project))
+(add-hook 'terraform-mode-hook
+          (lambda ()
+            (add-hook 'project-find-functions #'project-try-terraform nil t)))
+(add-hook 'rust-mode-hook
+          (lambda ()
+            (add-hook 'project-find-functions #'project-try-cargo nil t)))
 
-;; Configure language servers for eglot
-(add-to-list 'eglot-server-programs '(terraform-mode . ("terraform-ls")))
 
 ;; use eglot for these languages
 (add-hook 'rust-mode-hook #'eglot-ensure)
@@ -85,16 +101,12 @@
 (define-key eglot-mode-map (kbd "C-c i") #'xref-find-references)
 (define-key eglot-mode-map (kbd "C-c o") #'eldoc-doc-buffer)
 (define-key eglot-mode-map (kbd "C-c y") #'eglot-code-actions)
-(define-key eglot-mode-map (kbd "M-n") #'flycheck-next-error)
-(define-key eglot-mode-map (kbd "M-p") #'flycheck-previous-error)
-(define-key eglot-mode-map (kbd "C-c h") #'flycheck-first-error)
-(define-key eglot-mode-map (kbd "C-c C-f") #'eglot-format-buffer)
+(define-key eglot-mode-map (kbd "M-n") #'flymake-goto-next-error)
+(define-key eglot-mode-map (kbd "M-p") #'flymake-goto-prev-error)
 
 ;; eglot configuration
 (setq eglot-autoshutdown t) ;; shutdown language server after closing last file
 (setq eglot-confirm-server-initiated-edits nil) ;; don't ask for confirmation on server edits
-
-
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
@@ -245,6 +257,7 @@
               (define-key eglot-mode-map (kbd "C-c C-f") nil)
               (local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
 
+(straight-use-package 'markdown-mode) ;; eglot uses markdown-mode to render pretty docs
 (add-hook 'markdown-mode-hook
           (lambda ()
             (visual-line-mode)))
