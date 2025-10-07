@@ -89,6 +89,7 @@ in { config, ... }: {
     dig
     lazydocker
     bddap.codex
+    wget
     wl-clipboard # wayland clipboard gets up wl-copy and wl-paste
 
     # Additional dependencies for migrated scripts

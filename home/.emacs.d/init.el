@@ -123,6 +123,7 @@
 (push '(clang-format . ("clang-format" "-")) apheleia-formatters)
 (push '(justfile . ("sed" "s/\t/    /g")) apheleia-formatters)
 (push '(taplo . ("taplo" "fmt" "-")) apheleia-formatters)
+(push '(nixfmt . ("nixfmt" "-")) apheleia-formatters)
 
 ;; this function relies on lexical-binding, which is off by default. It is enabled at the top of this file
 (defun use-apheleia (hook formatter)
@@ -150,9 +151,11 @@
 (use-apheleia 'html-mode-hook 'prettier)
 (use-apheleia 'sh-mode-hook 'shfmt)
 (use-apheleia 'c-mode-hook 'clang-format)
+(use-apheleia 'c++-mode-hook 'clang-format)
 (use-apheleia 'protobuf-mode-hook 'clang-format-protobuf)
 (use-apheleia 'just-mode-hook 'justfile)
 (use-apheleia 'toml-mode-hook 'taplo)
+(use-apheleia 'nix-mode-hook 'nixfmt)
 
 ;; todo: port https://codeberg.org/ideasman42/emacs-elisp-autofmt to rust or pure lisp
 (add-hook 'emacs-lisp-mode-hook
@@ -485,4 +488,6 @@ Prompt to accept or deny the changes."
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful. Your init file should
  ;; contain only one such instance. If there is more than one, they won't work right.
- '(terraform--resource-name-face ((t (:foreground "yellow")))))
+ '(terraform--resource-name-face ((t (:foreground "yellow"))))
+ '(eglot-inlay-hint-face ((t (:foreground "gray32"))))
+ )
