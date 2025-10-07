@@ -13,11 +13,8 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
-;; (straight-use-package 'use-package)
-
 (setq backup-directory-alist
       `(("." . ,(expand-file-name "saves/bak/" user-emacs-directory))))
-
 (setq auto-save-file-name-transforms
       `((".*" ,(expand-file-name "saves/auto/" user-emacs-directory) t)))
 
@@ -29,7 +26,6 @@
 (column-number-mode 1)
 (menu-bar-mode -1)
 (setq tab-always-indent t) ;; don't use tab for autocomplete
-(global-set-key (kbd "C-c f") 'project-find-file)
 
 (straight-use-package 'magit)
 
@@ -63,7 +59,6 @@
           (lambda ()
             (add-hook 'project-find-functions #'project-try-cargo nil t)))
 
-
 ;; use eglot for these languages
 (add-hook 'rust-mode-hook #'eglot-ensure)
 (add-hook 'python-mode-hook #'eglot-ensure)
@@ -79,30 +74,6 @@
 (add-hook 'js-mode-hook #'eglot-ensure)
 (add-hook 'nix-mode-hook #'eglot-ensure)
 (add-hook 'python-ts-mode-hook #'eglot-ensure)
-;; to use the lsp whenever possible:
-;; (add-hook 'prog-mode-hook #'eglot-ensure)
-
-;; (setq major-mode-remap-alist
-;;       '((bash-mode        . bash-ts-mode)
-;;         (c-mode           . c-ts-mode)
-;;         (c++-mode         . c++-ts-mode)
-;;         (css-mode         . css-ts-mode)
-;;         (javascript-mode  . js-ts-mode)
-;;         (js-json-mode     . json-ts-mode)
-;;         (json-mode        . json-ts-mode)
-;;         (python-mode      . python-ts-mode)
-;;         (ruby-mode        . ruby-ts-mode)
-;;         (typescript-mode  . typescript-ts-mode)
-;;         (tsx-mode         . tsx-ts-mode)
-;;         (yaml-mode        . yaml-ts-mode)))
-
-;; Key bindings for eglot
-(define-key eglot-mode-map (kbd "C-c u") #'eglot-rename)
-(define-key eglot-mode-map (kbd "C-c i") #'xref-find-references)
-(define-key eglot-mode-map (kbd "C-c o") #'eldoc-doc-buffer)
-(define-key eglot-mode-map (kbd "C-c y") #'eglot-code-actions)
-(define-key eglot-mode-map (kbd "M-n") #'flymake-goto-next-error)
-(define-key eglot-mode-map (kbd "M-p") #'flymake-goto-prev-error)
 
 ;; eglot configuration
 (setq eglot-autoshutdown t) ;; shutdown language server after closing last file
@@ -110,70 +81,44 @@
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
-(push
- '(python-fmt . ("fmt-python"))
- apheleia-formatters)
-(push '(jq . ("jq" ".")) apheleia-formatters)
-(push '(prettier . ("prettier" "--stdin-filepath" filepath)) apheleia-formatters)
-(push '(shfmt . ("beautysh" "-")) apheleia-formatters)
-(push
- '(clang-format-protobuf
-   . ("clang-format" "--assume-filename=.proto" "-"))
- apheleia-formatters)
-(push '(clang-format . ("clang-format" "-")) apheleia-formatters)
-(push '(justfile . ("sed" "s/\t/    /g")) apheleia-formatters)
-(push '(taplo . ("taplo" "fmt" "-")) apheleia-formatters)
-(push '(nixfmt . ("nixfmt" "-")) apheleia-formatters)
+(defun declare-formatter (name cmd)
+  "Set apheleia formatter NAME to use command CMD."
+  (push (cons name cmd) apheleia-formatters))
+(declare-formatter 'clang-format '("clang-format" "-"))
+(declare-formatter 'clang-format-protobuf '("clang-format" "--assume-filename=.proto" "-"))
+(declare-formatter 'jq '("jq" "."))
+(declare-formatter 'justfile '("sed" "s/\t/    /g"))
+(declare-formatter 'nixfmt '("nixfmt" "-"))
+(declare-formatter 'prettier '("prettier" "--stdin-filepath" filepath))
+(declare-formatter 'python-fmt '("fmt-python"))
+(declare-formatter 'shfmt '("beautysh" "-"))
+(declare-formatter 'taplo '("taplo" "fmt" "-"))
+(declare-formatter 'terraform-fmt '("terraform" "fmt" "-"))
 
-;; this function relies on lexical-binding, which is off by default. It is enabled at the top of this file
-(defun use-apheleia (hook formatter)
-  (add-hook hook
-            (lambda ()
-              (progn
-                (define-key eglot-mode-map (kbd "C-c C-f") nil)
-                (local-set-key (kbd "C-c C-f")
-                               (lambda ()
-                                 (interactive)
-                                 (apheleia-format-buffer formatter)))))))
+(defun assign-formatter (mode formatter)
+  (setf (alist-get mode apheleia-mode-alist) (list formatter)))
+(assign-formatter 'c++-mode 'clang-format)
+(assign-formatter 'c-mode 'clang-format)
+(assign-formatter 'html-mode 'prettier)
+(assign-formatter 'js-json-mode 'prettier)
+(assign-formatter 'js-mode 'prettier)
+(assign-formatter 'json-mode 'prettier)
+(assign-formatter 'just-mode 'justfile)
+(assign-formatter 'nix-mode 'nixfmt)
+(assign-formatter 'protobuf-mode 'clang-format-protobuf)
+(assign-formatter 'python-mode 'python-fmt)
+(assign-formatter 'python-ts-mode 'python-fmt)
+(assign-formatter 'sh-mode 'shfmt)
+(assign-formatter 'terraform-mode 'terraform-fmt)
+(assign-formatter 'toml-mode 'taplo)
+(assign-formatter 'ts-json-mode 'prettier)
+(assign-formatter 'tsx-mode 'prettier)
+(assign-formatter 'tsx-ts-mode 'prettier)
+(assign-formatter 'typescript-mode 'prettier)
+(assign-formatter 'typescript-ts-mode 'prettier)
+(assign-formatter 'yaml-mode 'prettier)
+(assign-formatter 'yaml-ts-mode 'prettier)
 
-(use-apheleia 'python-mode-hook 'python-fmt)
-(use-apheleia 'python-ts-mode-hook 'python-fmt)
-(use-apheleia 'json-mode-hook 'prettier)
-(use-apheleia 'js-json-mode-hook 'prettier)
-(use-apheleia 'ts-json-mode-hook 'prettier)
-(use-apheleia 'js-mode-hook 'prettier)
-(use-apheleia 'yaml-mode-hook 'prettier)
-(use-apheleia 'yaml-ts-mode-hook 'prettier)
-(use-apheleia 'typescript-mode-hook 'prettier)
-(use-apheleia 'typescript-ts-mode-hook 'prettier)
-(use-apheleia 'tsx-ts-mode-hook 'prettier)
-(use-apheleia 'tsx-mode-hook 'prettier)
-(use-apheleia 'html-mode-hook 'prettier)
-(use-apheleia 'sh-mode-hook 'shfmt)
-(use-apheleia 'c-mode-hook 'clang-format)
-(use-apheleia 'c++-mode-hook 'clang-format)
-(use-apheleia 'protobuf-mode-hook 'clang-format-protobuf)
-(use-apheleia 'just-mode-hook 'justfile)
-(use-apheleia 'toml-mode-hook 'taplo)
-(use-apheleia 'nix-mode-hook 'nixfmt)
-
-;; todo: port https://codeberg.org/ideasman42/emacs-elisp-autofmt to rust or pure lisp
-(add-hook 'emacs-lisp-mode-hook
-          (lambda ()
-            (local-set-key (kbd "C-c C-f")
-                           (lambda ()
-                             (interactive)
-                             (indent-region (point-min) (point-max))))))
-
-
-
-(straight-use-package 'rust-mode)
-;; https://github.com/rust-lang/rust-mode#indentation
-(add-hook 'rust-mode-hook
-          (lambda ()
-            (setq indent-tabs-mode nil)
-            (local-set-key (kbd "\C-x n e") 'next-err)))
-;; Language server configuration for eglot
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs '(rust-mode . ("rust-analyzer")))
   (add-to-list 'eglot-server-programs '(nix-mode . ("nil"))))
@@ -182,13 +127,10 @@
 (ivy-mode)
 
 (straight-use-package 'swiper)
-(global-set-key (kbd "\C-c C-s") 'swiper-isearch)
-(global-set-key (kbd "\C-c C-r") 'swiper-isearch-reverse)
 
 (straight-use-package 'company)
 (setq company-tooltip-align-annotations t)
 (setq company-minimum-prefix-length 1000) ;; don't offer autocomplete unless "C-c l" is pressed
-(global-set-key (kbd "C-c l") 'company-complete-common)
 
 (straight-use-package
  '(copilot :type git
@@ -198,29 +140,11 @@
 (require 'copilot)
 (setq copilot-indent-offset-warning-disable t)
 
-;; enable copilot by default
-;; (global-copilot-mode 1)
-;; key to toggle copilot
-(global-set-key (kbd "C-c C-o") 'copilot-mode)
 (with-eval-after-load 'company
   ;; disable inline previews
   (delq 'company-preview-if-just-one-frontend company-frontends))
-(global-set-key (kbd "C-c C-l")
-                (lambda ()
-                  (copilot-complete 1)))
 
-(define-key copilot-completion-map (kbd "C-c C-l")
-			'copilot-accept-completion)
-(define-key copilot-completion-map (kbd "M-p")
-			'copilot-previous-completion)
-(global-unset-key (kbd "M-i"))
-(define-key copilot-completion-map (kbd "M-i")
-			'copilot-next-completion)
-(define-key copilot-completion-map (kbd "M-j")
-			'copilot-accept-completion-by-word)
-(define-key copilot-completion-map (kbd "M-n")
-			'copilot-accept-completion-by-line)
-
+(straight-use-package 'rust-mode)
 (straight-use-package 'just-mode)
 (straight-use-package 'rainbow-mode)
 (straight-use-package 'terraform-mode)
@@ -232,38 +156,22 @@
 (straight-use-package 'web-mode)
 (straight-use-package 'toml-mode)
 (straight-use-package 'protobuf-mode)
-
 (straight-use-package 'haskell-mode)
 (straight-use-package 'go-mode)
 (straight-use-package 'dockerfile-mode)
-
 (straight-use-package 'nix-mode)
-(add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
-
-;; js-mode binds "M-." to js-find-symbol. We don't want that because xref-find-definitions is better.
-(add-hook 'js-mode-hook
-          (lambda ()
-            (local-set-key (kbd "M-.") 'xref-find-definitions)))
-
-(add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
-(add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
-(add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
-(add-to-list 'auto-mode-alist '("\\.pyw\\'" . python-ts-mode))
-(add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
-
-;; (require 'use-package)
-
-;; terraform-ls has no formatting provider. luckily terraform-mode can do formatting
-(add-hook 'terraform-mode-hook
-          (lambda ()
-            (progn
-              (define-key eglot-mode-map (kbd "C-c C-f") nil)
-              (local-set-key (kbd "C-c C-f") #'terraform-format-buffer))))
 
 (straight-use-package 'markdown-mode) ;; eglot uses markdown-mode to render pretty docs
 (add-hook 'markdown-mode-hook
           (lambda ()
             (visual-line-mode)))
+
+(add-to-list 'auto-mode-alist '("\\.nix\\'" . nix-mode))
+(add-to-list 'auto-mode-alist '("\\.tpp\\'" . c++-mode))
+(add-to-list 'auto-mode-alist '("\\.tsx\\'" . tsx-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.pyw\\'" . python-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
 
 (defun increment-number-at-point ()
   (interactive)
@@ -277,7 +185,6 @@
            (number-to-string
             (1+ (string-to-number (match-string 0))))))
       (goto-char old-point))))
-(global-set-key (kbd "\C-c =") 'increment-number-at-point)
 
 (defun decrement-number-at-point ()
   (interactive)
@@ -291,7 +198,6 @@
            (number-to-string
             (1- (string-to-number (match-string 0))))))
       (goto-char old-point))))
-(global-set-key (kbd "\C-c -") 'decrement-number-at-point)
 
 (defun jump-to-file-char (path charnum)
   "Open existing file at PATH and move point to CHARNUM."
@@ -345,8 +251,6 @@ CALLBACK is a function taking two parameters: EXIT-STATUS and RESULT."
                      (funcall callback exit-status result))))))))
       (error "refac executable not found"))))
 
-(global-set-key (kbd "C-c r") 'refac)
-
 (defun refac (beg end transform)
   "Perform the refac transform in place, inserting merge markers inline, asynchronously.
 The overlay will display the transform prompt until the results arrive."
@@ -389,26 +293,6 @@ The overlay will display the transform prompt until the results arrive."
      (concat "https://www.google.com/search?q="
              (url-hexify-string selected-text)))))
 
-(global-set-key (kbd "C-c g") 'googleit)
-
-(global-set-key (kbd "C-c w") 'refac-inline)
-(global-set-key (kbd "C-c q") 'refac-smerge)
-
-(defun refac-smerge (beg end transform)
-  "Perform the REFAC transform in place, inserting merge markers inline."
-  (interactive "r\nMTransform: ")
-  (let* ((original-text (buffer-substring-no-properties beg end))
-         (new-text (refac-call-executable original-text transform)))
-    ;; Remove the selected region, replacing it with conflict markers.
-    (goto-char end)
-    (insert "\n=======\n")
-    (insert new-text)
-    (insert "\n>>>>>>> TRANSFORMED\n")
-    (goto-char beg)
-    (insert "<<<<<<< ORIGINAL\n")
-    ;; Enable smerge-mode for conflict resolution right in the buffer.
-    (smerge-mode 1)))
-
 (defun refac-git-style-diff (a b)
   "Return a Git-style unified diff between strings A and B."
   (with-temp-buffer
@@ -422,35 +306,6 @@ The overlay will display the transform prompt until the results arrive."
             (buffer-string))
         (delete-file temp-file-a)
         (delete-file temp-file-b)))))
-
-(defun refac-inline (beg end transform)
-  "Call `refac-call-executable' on the contents of selected region using TRANSFORM, then show a split diff.
-Prompt to accept or deny the changes."
-  (interactive "r\nMTransform: ")
-  (let* ((original-text (buffer-substring-no-properties beg end))
-         (new-text (refac-call-executable original-text transform))
-         (diff-text (refac-git-style-diff original-text new-text))
-         (overlay (make-overlay beg end (current-buffer) t nil)))
-    (overlay-put overlay 'face 'highlight)
-    (overlay-put overlay 'display diff-text)
-    (message "Proposed changes. Press (a)ccept or (b)deny.")
-    (let ((response (read-char-exclusive)))
-      (cond
-       ((eq response ?a)
-        ;; Accept changes: replace original with new text
-        (delete-overlay overlay)
-        (delete-region beg end)
-        (goto-char beg)
-        (insert new-text)
-        (message "Changes accepted."))
-       (t
-        ;; Deny changes: revert to original
-        (delete-region beg (+ beg (length diff-text)))
-        (goto-char beg)
-        (insert original-text)
-        (overlay-put overlay 'face nil)
-        (delete-overlay overlay)
-        (message "Changes denied."))))))
 
 (defun refac-call-executable (selected-text transform)
   "Synchronously call the refac executable, passing SELECTED-TEXT and TRANSFORM."
@@ -467,16 +322,47 @@ Prompt to accept or deny the changes."
       (error "refac returned a non-zero exit status: %d. Error: %s"
              exit-status result))))
 
-;; lookup snippet in explainshell.com
 (defun explainshell (start end)
-  "Open explainshell.com with the selected region."
+  "Open explainshell.com to explain the selected region."
   (interactive "r")
   (let ((selected-text (buffer-substring-no-properties start end)))
     (browse-url
      (concat "https://explainshell.com/explain?cmd="
              (url-hexify-string selected-text)))))
 
-(global-set-key (kbd "C-c e") 'explainshell)
+;; wish: port https://codeberg.org/ideasman42/emacs-elisp-autofmt to rust or pure lisp
+(defun fmt-elisp-buffer ()
+  "Format the current buffer as Emacs Lisp code."
+  (interactive)
+  (indent-region (point-min) (point-max)))
+
+(defvar bddap-keymap (make-sparse-keymap) "reserved bindings that override everything")
+(define-minor-mode bddap-keymap-mode
+  "Prioritize my own bindings."
+  :global t :init-value t)
+(add-to-list 'emulation-mode-map-alists `((bddap-keymap-mode . ,bddap-keymap)))
+(defun bddap-bind (keys fn)
+  "Bind FN on KEYS in a high-priority map."
+  (define-key bddap-keymap (kbd keys) fn))
+(bddap-bind "M--" 'decrement-number-at-point)
+(bddap-bind "M-=" 'increment-number-at-point)
+(bddap-bind "C-c f" 'project-find-file)
+(bddap-bind "C-c C-l" 'copilot-accept-completion)
+(bddap-bind "C-c C-o" 'copilot-mode)
+(bddap-bind "C-c e" 'explainshell)
+(bddap-bind "C-c C-f" 'apheleia-format-buffer)
+(bddap-bind "C-c C-g" 'fmt-elisp-buffer)
+(bddap-bind "C-c g" 'googleit)
+(bddap-bind "C-c i" 'xref-find-references)
+(bddap-bind "C-c l" 'company-complete-common)
+(bddap-bind "C-c n e" 'next-err)
+(bddap-bind "C-c o" 'eldoc-doc-buffer)
+(bddap-bind "C-c r" 'refac)
+(bddap-bind "C-c u" 'eglot-rename)
+(bddap-bind "C-c y" 'eglot-code-actions)
+(bddap-bind "M-." 'xref-find-definitions)
+(bddap-bind "M-n" 'flymake-goto-next-error)
+(bddap-bind "M-p" 'flymake-goto-prev-error)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
