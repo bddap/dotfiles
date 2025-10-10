@@ -29,7 +29,7 @@ class Orientation:
     is_spiral: bool
 
     @classmethod
-    def from_flags(cls, flags: Sequence[str]) -> Orientation:
+    def from_flags(cls, flags: Sequence[str]) -> "Orientation":
         flag_string = "".join(flags).lower()
         unknown = sorted(set(flag_string) - _ALLOWED_FLAGS)
         if unknown:
@@ -163,8 +163,9 @@ def build_commands(
         commands.append(["resize-pane", "-t", pane_id, "-y", str(window_height)])
         commands.append(["select-pane", "-t", pane_id])
 
-        join_command: List[str] = ["join-pane", "-d", "-s", ".+1", "-t", "."]
-        join_command.append("-h" if split_is_horizontal else "-v")
+        join_command: List[str] = ["move-pane", "-d", "-s", ".+1", "-t", "."]
+        if split_is_horizontal:
+            join_command.append("-h")
         if place_before:
             join_command.append("-b")
         commands.append(join_command)
