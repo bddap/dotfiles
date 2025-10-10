@@ -19,9 +19,17 @@ in { config, ... }: {
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = with pkgs; [
-    (pkgs.runCommand "bddap-raw-root" { root = ./root; } ''
-      ln -s "$root" "$out"
-    '')
+    (pkgs.stdenv.mkDerivation {
+      name = "bddap-raw-root";
+      src = ./root;
+      buildInputs = [ pkgs.python3 ];
+      dontUnpack = true;
+      dontBuild = true;
+      installPhase = ''
+        mkdir -p "$out"
+        cp -r "$src"/. "$out"/
+      '';
+    })
 
     alacritty
     authenticator

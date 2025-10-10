@@ -1,293 +1,222 @@
-#!/bin/sh -eu
-#
-# Originaly from sunaku
-# https://github.com/sunaku/home/blob/c472428421eb61fd858b9328c36eaee1e2176f05/bin/tmux-layout-dwindle
-# 
-# Usage: tmux-layout-dwindle [tblrhvsc]...
-#
-# Arranges panes in the current window into Binary Space Partitions of
-# dwindling size towards a corner of the screen (tl, tr, bl, br) along
-# a straight line (c) or spiral trajectory (s) while laying out branch
-# panes either vertically (v) or horizontally (h) to produce one of 16
-# possible orientations, illustrated below, of which "brvc" is default.
-#
-# Inspired by the dwindle and spiral layout concepts by Niki Yoshiuchi
-# in dwm's fibonacci patch <http://dwm.suckless.org/patches/fibonacci>.
-#
-#
-#
-#
-#                        oooo    ooo  .ooooo.
-#                         `88.  .8'  d88' `"Y8
-#                          `88..8'   888
-#                           `888'    888   .o8
-#                            `8'     `Y8bod8P'
-#
-#
-#
-#                           vertical corner
-#
-#
-#
-#         tlvc                                           trvc
-#
-#         +--+--+-----+-----------+ +-----------+-----+--+--+
-#         |\\|5 |     |           | |           |     | 5|//|
-#         +--+--+  3  |           | |           |  3  +--+--+
-#         |  4  |     |           | |           |     |  4  |
-#         +-----+-----+     1     | |     1     +-----+-----+
-#         |           |           | |           |           |
-#         |     2     |           | |           |     2     |
-#         |           |           | |           |           |
-#         +-----------+-----------+ +-----------+-----------+
-#
-#         +-----------+-----------+ +-----------+-----------+
-#         |           |           | |           |           |
-#         |     2     |           | |           |     2     |
-#         |           |           | |           |           |
-#         +-----+-----+     1     | |     1     +-----+-----+
-#         |  4  |     |           | |           |     |  4  |
-#         +--+--+  3  |           | |           |  3  +--+--+
-#         |//|5 |     |           | |           |     | 5|\\|
-#         +--+--+-----+-----------+ +-----------+-----+--+--+
-#
-#         blvc                                           brvc
-#
-#
-#
-#
-#
-#                        oooo    ooo  .oooo.o
-#                         `88.  .8'  d88(  "8
-#                          `88..8'   `"Y88b.
-#                           `888'    o.  )88b
-#                            `8'     8""888P'
-#
-#
-#
-#                           vertical spiral
-#
-#
-#
-#         tlvs                                           trvs
-#
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#         |     |  4  |           | |           |  4  |     |
-#         |  3  +--+--+           | |           +--+--+  3  |
-#         |     |\\|5 |           | |           | 5|//|     |
-#         +-----+--+--+     1     | |     1     +--+--+-----+
-#         |           |           | |           |           |
-#         |     2     |           | |           |     2     |
-#         |           |           | |           |           |
-#         +-----------+-----------+ +-----------+-----------+
-#
-#         +-----------+-----------+ +-----------+-----------+
-#         |           |           | |           |           |
-#         |     2     |           | |           |     2     |
-#         |           |           | |           |           |
-#         +-----+--+--+     1     | |     1     +--+--+-----+
-#         |     |//|5 |           | |           | 5|\\|     |
-#         |  3  +--+--+           | |           +--+--+  3  |
-#         |     |  4  |           | |           |  4  |     |
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#
-#         blvs                                           brvs
-#
-#
-#
-#                        oooo
-#                        `888
-#                         888 .oo.    .ooooo.
-#                         888P"Y88b  d88' `"Y8
-#                         888   888  888
-#                         888   888  888   .o8
-#                        o888o o888o `Y8bod8P'
-#
-#
-#
-#                          horizontal corner
-#
-#
-#
-#         tlhc                                           trhc
-#
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#         | \\\ |     |           | |           |     | /// |
-#         +-----+  4  |           | |           |  4  +-----+
-#         |  5  |     |           | |           |     |  5  |
-#         +-----+-----+     2     | |     2     +-----+-----+
-#         |           |           | |           |           |
-#         |     3     |           | |           |     3     |
-#         |           |           | |           |           |
-#         +-----------+-----------+ +-----------+-----------+
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |           1           | |           1           |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         +-----------------------+ +-----------------------+
-#
-#         +-----------------------+ +-----------------------+
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |           1           | |           1           |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         +-----------+-----------+ +-----------+-----------+
-#         |           |           | |           |           |
-#         |     3     |           | |           |     3     |
-#         |           |           | |           |           |
-#         +-----+-----+     2     | |     2     +-----+-----+
-#         |  5  |     |           | |           |     |  5  |
-#         +-----+  4  |           | |           |  4  +-----+
-#         | /// |     |           | |           |     | \\\ |
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#
-#         blhc                                           brhc
-#
-#
-#
-#                        oooo
-#                        `888
-#                         888 .oo.    .oooo.o
-#                         888P"Y88b  d88(  "8
-#                         888   888  `"Y88b.
-#                         888   888  o.  )88b
-#                        o888o o888o 8""888P'
-#
-#
-#
-#                          horizontal spiral
-#
-#
-#
-#         tlhs                                           trhs
-#
-#         +-----------+-----------+ +-----------+-----------+
-#         |           |           | |           |           |
-#         |     3     |           | |           |     3     |
-#         |           |           | |           |           |
-#         +-----+-----+     2     | |     2     +-----+-----+
-#         |     | \\\ |           | |           | /// |     |
-#         |  4  +-----+           | |           +-----+  4  |
-#         |     |  5  |           | |           |  5  |     |
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |           1           | |           1           |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         +-----------------------+ +-----------------------+
-#
-#         +-----------------------+ +-----------------------+
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |           1           | |           1           |
-#         |                       | |                       |
-#         |                       | |                       |
-#         |                       | |                       |
-#         +-----+-----+-----------+ +-----------+-----+-----+
-#         |     |  5  |           | |           |  5  |     |
-#         |  4  +-----+           | |           +-----+  4  |
-#         |     | /// |           | |           | \\\ |     |
-#         +-----+-----+     2     | |     2     +-----+-----+
-#         |           |           | |           |           |
-#         |     3     |           | |           |     3     |
-#         |           |           | |           |           |
-#         +-----------+-----------+ +-----------+-----------+
-#
-#         blhs                                           brhs
-#
-#
-#
-#
-# Written in 2016 by Suraj N. Kurapati <https://github.com/sunaku>
-# Documented at <https://sunaku.github.io/tmux-layout-dwindle.html>
+#!/usr/bin/env python3
+"""Arrange tmux panes in a dwindling binary partition layout.
 
-# parse any orientation flags specified among the command-line arguments
-case "$*" in
-  (*t*)   corner_tb=+ spiral_tb=        ;; # top
-  (*b*|*) corner_tb=  spiral_tb=+       ;; # bottom
-esac
-case "$*" in
-  (*l*)   corner_lr=+ spiral_lr=        ;; # left
-  (*r*|*) corner_lr=  spiral_lr=+       ;; # right
-esac
-case "$*" in
-  (*h*)   modulo_hv=0 is_vertical=false ;; # horizontal
-  (*v*|*) modulo_hv=1 is_vertical=true  ;; # vertical
-esac
-case "$*" in
-  (*s*)   is_spiral=true                ;; # spiral
-  (*c*|*) is_spiral=false               ;; # corner
-esac
+The original implementation was a POSIX shell script from Suraj N. Kurapati
+(https://github.com/sunaku/home).  This rewrite keeps the behaviour but fixes
+issues such as the broken "tlvc" orientation while avoiding external helper
+commands.
 
-# gather information about the current state of the window and its panes
-set -- $(tmux list-panes -F '#{pane_id}')
-selected_pane=$(tmux display-message -p '#{pane_id}')
-historic_pane=$(tmux last-pane 2>/dev/null \;\
-                     display-message -p '#{pane_id}' \;\
-                     last-pane) ||: # exit 1 - no last pane
-window_height=$(tmux display-message -p '#{window_height}')
+This was ported by AI.
+"""
 
-# execute all tmux commands in one shot to avoid flickering and slowness
-exec tmux $({
+import subprocess
+import sys
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence
 
-  # flatten current layout, stacking all panes vertically like pancakes
-  echo select-layout even-vertical
 
-  # transform pane stack into binary space partitions of dwindling size
-  count=1
-  for pane_id; do
-    if [ $count -eq $# ]; then
-      break # skip last pane because .+1 wraps around to the first pane
-    elif [ $(( count % 2 )) -eq $modulo_hv ]; then
-      move_h=+
-      if $is_spiral && [ $(( count % 5 )) -gt 2 ]
-      then move_b=$spiral_lr
-      else move_b=$corner_lr
-      fi
-    else
-      move_h=
-      if $is_spiral && [ $(( count % 5 )) -gt 2 ]
-      then move_b=$spiral_tb
-      else move_b=$corner_tb
-      fi
-    fi
-    echo resize-pane -t $pane_id -y $window_height # make room for move
-    echo select-pane -t $pane_id # for relative pane addressing in move
-    echo move-pane -d -s .+1 -t . ${move_h:+-h} ${move_b:+-b} # move it
-    count=$(( count + 1 ))
-  done
+_ALLOWED_FLAGS = frozenset("tblrhvsc")
 
-  # divide available space evenly among panes (binary space partitions)
-  branch_height=$window_height
-  count=1
-  for pane_id; do
-    if [ $count -eq $# ] && ! $is_vertical; then
-      break # skip last pane because it will already be sized correctly
-    elif [ $(( count % 2 )) -eq 1 ]; then
-      # every other pane is a branch in the binary space partition tree
-      parent_height=$branch_height
-      branch_height=$(( branch_height / 2 ))
-      if $is_vertical
-      then resize_y=$parent_height
-      else resize_y=$branch_height
-      fi
-      echo resize-pane -t $pane_id -y $resize_y
-    fi
-    count=$(( count + 1 ))
-  done
 
-  # restore pane selection back to how it was before we did any of this
-  test -n "$historic_pane" && echo select-pane -t $historic_pane
-  echo select-pane -t $selected_pane
+@dataclass(frozen=True)
+class Orientation:
+    corner_tb: bool
+    spiral_tb: bool
+    corner_lr: bool
+    spiral_lr: bool
+    modulo_hv: int
+    is_vertical: bool
+    is_spiral: bool
 
-} | sed 's/$/ ;/')
+    @classmethod
+    def from_flags(cls, flags: Sequence[str]) -> Orientation:
+        flag_string = "".join(flags).lower()
+        unknown = sorted(set(flag_string) - _ALLOWED_FLAGS)
+        if unknown:
+            raise ValueError(f"invalid flag(s): {', '.join(unknown)}")
+
+        top = "t" in flag_string
+        bottom = "b" in flag_string
+        if top and bottom:
+            raise ValueError("flags 't' and 'b' are mutually exclusive")
+
+        left = "l" in flag_string
+        right = "r" in flag_string
+        if left and right:
+            raise ValueError("flags 'l' and 'r' are mutually exclusive")
+
+        horizontal = "h" in flag_string
+        vertical = "v" in flag_string
+        if horizontal and vertical:
+            raise ValueError("flags 'h' and 'v' are mutually exclusive")
+
+        corner = "c" in flag_string
+        spiral = "s" in flag_string
+        if corner and spiral:
+            raise ValueError("flags 'c' and 's' are mutually exclusive")
+
+        corner_tb = top
+        spiral_tb = not top
+
+        corner_lr = left
+        spiral_lr = not left
+
+        modulo_hv = 0 if horizontal else 1
+        is_vertical = not horizontal
+        is_spiral = spiral
+
+        return cls(
+            corner_tb=corner_tb,
+            spiral_tb=spiral_tb,
+            corner_lr=corner_lr,
+            spiral_lr=spiral_lr,
+            modulo_hv=modulo_hv,
+            is_vertical=is_vertical,
+            is_spiral=is_spiral,
+        )
+
+
+def tmux_capture(args: Sequence[str], *, suppress_stderr: bool = False) -> str:
+    result = subprocess.run(
+        ["tmux", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL if suppress_stderr else None,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def tmux_capture_optional(args: Sequence[str]) -> str:
+    result = subprocess.run(
+        ["tmux", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def list_panes() -> List[str]:
+    output = tmux_capture(["list-panes", "-F", "#{pane_id}"])
+    return [pane for pane in output.split() if pane]
+
+
+def get_historic_pane() -> str:
+    return tmux_capture_optional(
+        [
+            "last-pane",
+            ";",
+            "display-message",
+            "-p",
+            "#{pane_id}",
+            ";",
+            "last-pane",
+        ]
+    )
+
+
+def batch_tmux(commands: Iterable[Sequence[str]]) -> None:
+    flattened: List[str] = []
+    for command in commands:
+        if not command:
+            continue
+        if flattened:
+            flattened.append(";")
+        flattened.extend(command)
+    if not flattened:
+        return
+    subprocess.run(["tmux", *flattened], check=True)
+
+
+def should_place_before(
+    orientation: Orientation,
+    step_index: int,
+    *,
+    split_is_horizontal: bool,
+) -> bool:
+    use_spiral_branch = orientation.is_spiral and step_index % 5 > 2
+    if split_is_horizontal:
+        return orientation.spiral_lr if use_spiral_branch else orientation.corner_lr
+    return orientation.spiral_tb if use_spiral_branch else orientation.corner_tb
+
+
+def build_commands(
+    pane_ids: Sequence[str],
+    orientation: Orientation,
+    window_height: int,
+    historic_pane: str,
+    selected_pane: str,
+) -> List[List[str]]:
+    commands: List[List[str]] = [["select-layout", "even-vertical"]]
+    pane_count = len(pane_ids)
+
+    for index, pane_id in enumerate(pane_ids[:-1], start=1):
+        split_is_horizontal = index % 2 == orientation.modulo_hv
+        place_before = should_place_before(
+            orientation,
+            index,
+            split_is_horizontal=split_is_horizontal,
+        )
+
+        commands.append(["resize-pane", "-t", pane_id, "-y", str(window_height)])
+        commands.append(["select-pane", "-t", pane_id])
+
+        join_command: List[str] = ["join-pane", "-d", "-s", ".+1", "-t", "."]
+        join_command.append("-h" if split_is_horizontal else "-v")
+        if place_before:
+            join_command.append("-b")
+        commands.append(join_command)
+
+    branch_height = window_height
+    for index, pane_id in enumerate(pane_ids, start=1):
+        if index == pane_count and not orientation.is_vertical:
+            break
+        if index % 2 == 1:
+            parent_height = branch_height
+            branch_height = max(branch_height // 2, 1)
+            resize_y = parent_height if orientation.is_vertical else branch_height
+            commands.append(["resize-pane", "-t", pane_id, "-y", str(resize_y)])
+
+    if historic_pane:
+        commands.append(["select-pane", "-t", historic_pane])
+    commands.append(["select-pane", "-t", selected_pane])
+    return commands
+
+
+def main(argv: Sequence[str]) -> int:
+    try:
+        orientation = Orientation.from_flags(argv)
+    except ValueError as exc:
+        print(f"tmux-layout-dwindle: {exc}", file=sys.stderr)
+        return 2
+
+    pane_ids = list_panes()
+    if len(pane_ids) <= 1:
+        return 0
+
+    window_height_raw = tmux_capture(["display-message", "-p", "#{window_height}"])
+    try:
+        window_height = int(window_height_raw)
+    except ValueError as exc:  # pragma: no cover - tmux should always provide an integer
+        raise RuntimeError(
+            f"invalid window height reported by tmux: {window_height_raw}"
+        ) from exc
+
+    selected_pane = tmux_capture(["display-message", "-p", "#{pane_id}"])
+    historic_pane = get_historic_pane()
+
+    commands = build_commands(
+        pane_ids,
+        orientation,
+        window_height,
+        historic_pane,
+        selected_pane,
+    )
+    batch_tmux(commands)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
