@@ -19,6 +19,10 @@ in { config, ... }: {
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = with pkgs; [
+    (pkgs.runCommand "bddap-raw-root" { root = ./root; } ''
+      ln -s "$root" "$out"
+    '')
+
     alacritty
     authenticator
     nixpkgs-unstable.bambu-studio
@@ -147,7 +151,7 @@ in { config, ... }: {
               file=sys.stderr
           )
           sys.exit(0)
-      
+
       writer = csv.DictWriter(sys.stdout, fieldnames=data[0].keys())
       writer.writeheader()
       for row in data:
