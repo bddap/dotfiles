@@ -99,6 +99,8 @@
   (setf (alist-get mode apheleia-mode-alist) (list formatter)))
 (assign-formatter 'c++-mode 'clang-format)
 (assign-formatter 'c-mode 'clang-format)
+(assign-formatter 'c++-ts-mode 'clang-format)
+(assign-formatter 'c-ts-mode 'clang-format)
 (assign-formatter 'html-mode 'prettier)
 (assign-formatter 'js-json-mode 'prettier)
 (assign-formatter 'js-mode 'prettier)
@@ -172,6 +174,8 @@
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.pyw\\'" . python-ts-mode))
 (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.cmake\\'" . cmake-ts-mode))
+(add-to-list 'auto-mode-alist '("CMakeLists\\.txt\\'" . cmake-ts-mode))
 
 (defun increment-number-at-point ()
   (interactive)
