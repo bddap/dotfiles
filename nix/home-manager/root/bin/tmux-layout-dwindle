@@ -14,7 +14,6 @@ import sys
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence
 
-
 _ALLOWED_FLAGS = frozenset("tblrhvsc")
 
 
@@ -76,11 +75,10 @@ class Orientation:
         )
 
 
-def tmux_capture(args: Sequence[str], *, suppress_stderr: bool = False) -> str:
+def tmux_capture(args: Sequence[str]) -> str:
     result = subprocess.run(
         ["tmux", *args],
         stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL if suppress_stderr else None,
         text=True,
         check=True,
     )
@@ -145,11 +143,13 @@ def should_place_before(
 def build_commands(
     pane_ids: Sequence[str],
     orientation: Orientation,
-    window_height: int,
+    window_extent: int,
     historic_pane: str,
     selected_pane: str,
 ) -> List[List[str]]:
-    commands: List[List[str]] = [["select-layout", "even-vertical"]]
+    layout_name = "even-vertical" if orientation.is_vertical else "even-horizontal"
+    resize_flag = "-y" if orientation.is_vertical else "-x"
+    commands: List[List[str]] = [["select-layout", layout_name]]
     pane_count = len(pane_ids)
 
     for index, pane_id in enumerate(pane_ids[:-1], start=1):
@@ -160,7 +160,7 @@ def build_commands(
             split_is_horizontal=split_is_horizontal,
         )
 
-        commands.append(["resize-pane", "-t", pane_id, "-y", str(window_height)])
+        commands.append(["resize-pane", "-t", pane_id, resize_flag, str(window_extent)])
         commands.append(["select-pane", "-t", pane_id])
 
         join_command: List[str] = ["move-pane", "-d", "-s", ".+1", "-t", "."]
@@ -170,15 +170,17 @@ def build_commands(
             join_command.append("-b")
         commands.append(join_command)
 
-    branch_height = window_height
+    branch_extent = window_extent
     for index, pane_id in enumerate(pane_ids, start=1):
         if index == pane_count and not orientation.is_vertical:
             break
         if index % 2 == 1:
-            parent_height = branch_height
-            branch_height = max(branch_height // 2, 1)
-            resize_y = parent_height if orientation.is_vertical else branch_height
-            commands.append(["resize-pane", "-t", pane_id, "-y", str(resize_y)])
+            parent_extent = branch_extent
+            branch_extent = max(branch_extent // 2, 1)
+            resize_value = parent_extent if orientation.is_vertical else branch_extent
+            commands.append(
+                ["resize-pane", "-t", pane_id, resize_flag, str(resize_value)]
+            )
 
     if historic_pane:
         commands.append(["select-pane", "-t", historic_pane])
@@ -197,12 +199,17 @@ def main(argv: Sequence[str]) -> int:
     if len(pane_ids) <= 1:
         return 0
 
-    window_height_raw = tmux_capture(["display-message", "-p", "#{window_height}"])
+    dimension_key = "height" if orientation.is_vertical else "width"
+    window_extent_raw = tmux_capture(
+        ["display-message", "-p", f"#{{window_{dimension_key}}}"]
+    )
     try:
-        window_height = int(window_height_raw)
-    except ValueError as exc:  # pragma: no cover - tmux should always provide an integer
+        window_extent = int(window_extent_raw)
+    except (
+        ValueError
+    ) as exc:  # pragma: no cover - tmux should always provide an integer
         raise RuntimeError(
-            f"invalid window height reported by tmux: {window_height_raw}"
+            f"invalid window {dimension_key} reported by tmux: {window_extent_raw}"
         ) from exc
 
     selected_pane = tmux_capture(["display-message", "-p", "#{pane_id}"])
@@ -211,7 +218,7 @@ def main(argv: Sequence[str]) -> int:
     commands = build_commands(
         pane_ids,
         orientation,
-        window_height,
+        window_extent,
         historic_pane,
         selected_pane,
     )
