@@ -352,6 +352,8 @@ The overlay will display the transform prompt until the results arrive."
 (bddap-bind "M-=" 'increment-number-at-point)
 (bddap-bind "C-c f" 'project-find-file)
 (bddap-bind "C-c C-l" 'copilot-accept-completion)
+(bddap-bind "C-c C-k" 'copilot-accept-completion-by-line)
+(bddap-bind "M-a" 'copilot-accept-completion-by-word)
 (bddap-bind "C-c C-o" 'copilot-mode)
 (bddap-bind "C-c e" 'explainshell)
 (bddap-bind "C-c C-f" 'apheleia-format-buffer)
