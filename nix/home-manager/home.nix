@@ -46,6 +46,7 @@ in { config, ... }: {
     entr
     firefox
     fish
+    fx # interactive json/yaml document explorer
     fzf
     git
     gh
@@ -101,6 +102,7 @@ in { config, ... }: {
     dig
     lazydocker
     bddap.codex
+    walk # tui file browser
     wget
     wl-clipboard # wayland clipboard gets up wl-copy and wl-paste
 
