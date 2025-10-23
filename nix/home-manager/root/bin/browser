@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+import os
+import sys
+import tempfile
+import webbrowser
+
+html = sys.stdin.read()
+
+fd, path = tempfile.mkstemp(suffix=".html")
+os.close(fd)
+url = "file://" + path
+
+with open(path, "w") as fp:
+    fp.write(html)
+
+try:
+    webbrowser.open(url)
+finally:
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass

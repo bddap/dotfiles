@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# "tiled" has no limit on expandability
+tmux select-layout tiled
+
+while IFS= read -r line; do
+    # after each command is done it will re-layout
+    tmux split-window -d bash -c "${line} ; tmux select-layout tiled"
+    # refresh layout after launching all commands
+    tmux select-layout tiled
+done

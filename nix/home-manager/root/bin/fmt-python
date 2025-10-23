@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v isort >/dev/null 2>&1; then
+    isort_cmd="isort --stdout --profile black -"
+else
+    isort_cmd="cat"
+fi
+
+ruff format - | $isort_cmd

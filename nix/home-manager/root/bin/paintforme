@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p /tmp/aghnuiwenfuiwnuiosiue
+
+if command -v cog >/dev/null 2>&1; then
+    cog predict r8.im/afiaka87/pyglide@sha256:6ce94eff1c99e4eedd5f1139f1f984631cbcdf7dae5714c3d66cefc108637fe0 \
+        -i prompt="$1" \
+        -i batch_size=1 \
+        -i side_x=64 \
+        -i side_y=64 \
+        -i guidance_scale=4 \
+        -i upsample_temp=0.996 \
+        -i timestep_respacing=50 \
+        -i seed=0 \
+        -o /tmp/aghnuiwenfuiwnuiosiue/out.png
+
+    viu /tmp/aghnuiwenfuiwnuiosiue/out.png
+else
+    echo "Error: cog command not found. Please install cog separately." >&2
+    exit 1
+fi

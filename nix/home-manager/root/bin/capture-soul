@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fswebcam --no-banner - \
+    | convert jpg:- -set colorspace Gray -separate -average jpg:- \
+    | viu -
