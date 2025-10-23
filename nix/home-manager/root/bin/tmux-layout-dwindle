@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Arrange tmux panes in a dwindling binary partition layout.
+"""
+Arrange tmux panes in a dwindling binary partition layout.
 
-The original implementation was a POSIX shell script from Suraj N. Kurapati
-(https://github.com/sunaku/home).  This rewrite keeps the behaviour but fixes
-issues such as the broken "tlvc" orientation while avoiding external helper
-commands.
+Original logic by Suraj N. Kurapati (https://github.com/sunaku/home).
 
-This was ported by AI.
+This script doesn't work. Some day soon I will fix it up.
 """
 
 import subprocess
@@ -15,6 +13,29 @@ from dataclasses import dataclass
 from typing import Iterable, List, Sequence
 
 _ALLOWED_FLAGS = frozenset("tblrhvsc")
+
+
+def select(haystack: str, default: str, override: str) -> bool:
+    assert (default not in haystack) or (override not in haystack)
+    return override in haystack
+
+
+@dataclass(frozen=True)
+class Config:
+    up: bool
+    right: bool
+    spiral: bool
+
+    @staticmethod
+    def from_flags(flags: str) -> "Config":
+        unknown_flags = sorted(set(flags) - _ALLOWED_FLAGS)
+        if unknown_flags:
+            raise ValueError(f"Invalid flag(s): {', '.join(unknown_flags)}")
+        return Config(
+            up=select(flags, "b", "t"),
+            right=select(flags, "l", "r"),
+            spiral=select(flags, "c", "s"),
+        )
 
 
 @dataclass(frozen=True)
@@ -30,36 +51,34 @@ class Orientation:
     @classmethod
     def from_flags(cls, flags: Sequence[str]) -> "Orientation":
         flag_string = "".join(flags).lower()
-        unknown = sorted(set(flag_string) - _ALLOWED_FLAGS)
-        if unknown:
-            raise ValueError(f"invalid flag(s): {', '.join(unknown)}")
+        unknown_flags = sorted(set(flag_string) - _ALLOWED_FLAGS)
+        if unknown_flags:
+            raise ValueError(f"Invalid flag(s): {', '.join(unknown_flags)}")
 
         top = "t" in flag_string
         bottom = "b" in flag_string
         if top and bottom:
-            raise ValueError("flags 't' and 'b' are mutually exclusive")
+            raise ValueError("Flags 't' and 'b' are mutually exclusive.")
 
         left = "l" in flag_string
         right = "r" in flag_string
         if left and right:
-            raise ValueError("flags 'l' and 'r' are mutually exclusive")
+            raise ValueError("Flags 'l' and 'r' are mutually exclusive.")
 
         horizontal = "h" in flag_string
         vertical = "v" in flag_string
         if horizontal and vertical:
-            raise ValueError("flags 'h' and 'v' are mutually exclusive")
+            raise ValueError("Flags 'h' and 'v' are mutually exclusive.")
 
         corner = "c" in flag_string
         spiral = "s" in flag_string
         if corner and spiral:
-            raise ValueError("flags 'c' and 's' are mutually exclusive")
+            raise ValueError("Flags 'c' and 's' are mutually exclusive.")
 
         corner_tb = top
         spiral_tb = not top
-
         corner_lr = left
         spiral_lr = not left
-
         modulo_hv = 0 if horizontal else 1
         is_vertical = not horizontal
         is_spiral = spiral
@@ -85,34 +104,27 @@ def tmux_capture(args: Sequence[str]) -> str:
     return result.stdout.strip()
 
 
-def tmux_capture_optional(args: Sequence[str]) -> str:
-    result = subprocess.run(
-        ["tmux", *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-        check=False,
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
-
 def list_panes() -> List[str]:
-    output = tmux_capture(["list-panes", "-F", "#{pane_id}"])
-    return [pane for pane in output.split() if pane]
+    return tmux_capture(["list-panes", "-F", "#{pane_id}"]).split()
 
 
-def get_historic_pane() -> str:
-    return tmux_capture_optional(
-        [
-            "last-pane",
-            ";",
-            "display-message",
-            "-p",
-            "#{pane_id}",
-            ";",
-            "last-pane",
-        ]
-    )
+def re_order_panes_by_history():
+    history = tmux_capture(["list-panes", "-F", "#{pane_id} #{pane_active} #{pane_at_top}"])
+    panes = []
+    active_pane = None
+    for line in history.splitlines():
+        parts = line.split()
+        pane_id = parts[0]
+        is_active = parts[1] == "1"
+        is_top = parts[2] == "1"
+        if is_active:
+            active_pane = pane_id
+        elif not is_top:
+            panes.append(pane_id)
+    if active_pane:
+        panes.insert(0, active_pane)
+    return panes
+    
 
 
 def batch_tmux(commands: Iterable[Sequence[str]]) -> None:
@@ -123,17 +135,16 @@ def batch_tmux(commands: Iterable[Sequence[str]]) -> None:
         if flattened:
             flattened.append(";")
         flattened.extend(command)
-    if not flattened:
-        return
-    subprocess.run(["tmux", *flattened], check=True)
+    if flattened:
+        subprocess.run(["tmux", *flattened], check=True)
 
 
 def should_place_before(
     orientation: Orientation,
     step_index: int,
-    *,
     split_is_horizontal: bool,
 ) -> bool:
+    # Step sequence for spiral check: if step_index % 5 > 2, use a varying branch
     use_spiral_branch = orientation.is_spiral and step_index % 5 > 2
     if split_is_horizontal:
         return orientation.spiral_lr if use_spiral_branch else orientation.corner_lr
@@ -155,20 +166,18 @@ def build_commands(
     for index, pane_id in enumerate(pane_ids[:-1], start=1):
         split_is_horizontal = index % 2 == orientation.modulo_hv
         place_before = should_place_before(
-            orientation,
-            index,
-            split_is_horizontal=split_is_horizontal,
+            orientation, index, split_is_horizontal=split_is_horizontal
         )
 
         commands.append(["resize-pane", "-t", pane_id, resize_flag, str(window_extent)])
         commands.append(["select-pane", "-t", pane_id])
 
-        join_command: List[str] = ["move-pane", "-d", "-s", ".+1", "-t", "."]
+        join_cmd: List[str] = ["move-pane", "-d", "-s", ".+1", "-t", "."]
         if split_is_horizontal:
-            join_command.append("-h")
+            join_cmd.append("-h")
         if place_before:
-            join_command.append("-b")
-        commands.append(join_command)
+            join_cmd.append("-b")
+        commands.append(join_cmd)
 
     branch_extent = window_extent
     for index, pane_id in enumerate(pane_ids, start=1):
@@ -177,9 +186,9 @@ def build_commands(
         if index % 2 == 1:
             parent_extent = branch_extent
             branch_extent = max(branch_extent // 2, 1)
-            resize_value = parent_extent if orientation.is_vertical else branch_extent
+            resize_val = parent_extent if orientation.is_vertical else branch_extent
             commands.append(
-                ["resize-pane", "-t", pane_id, resize_flag, str(resize_value)]
+                ["resize-pane", "-t", pane_id, resize_flag, str(resize_val)]
             )
 
     if historic_pane:
@@ -189,38 +198,23 @@ def build_commands(
 
 
 def main(argv: Sequence[str]) -> int:
-    try:
-        orientation = Orientation.from_flags(argv)
-    except ValueError as exc:
-        print(f"tmux-layout-dwindle: {exc}", file=sys.stderr)
-        return 2
+    orientation = Orientation.from_flags(argv)
 
     pane_ids = list_panes()
     if len(pane_ids) <= 1:
         return 0
 
-    dimension_key = "height" if orientation.is_vertical else "width"
+    dim_key = "height" if orientation.is_vertical else "width"
     window_extent_raw = tmux_capture(
-        ["display-message", "-p", f"#{{window_{dimension_key}}}"]
+        ["display-message", "-p", f"#{{window_{dim_key}}}"]
     )
-    try:
-        window_extent = int(window_extent_raw)
-    except (
-        ValueError
-    ) as exc:  # pragma: no cover - tmux should always provide an integer
-        raise RuntimeError(
-            f"invalid window {dimension_key} reported by tmux: {window_extent_raw}"
-        ) from exc
+    window_extent = int(window_extent_raw)
 
     selected_pane = tmux_capture(["display-message", "-p", "#{pane_id}"])
     historic_pane = get_historic_pane()
 
     commands = build_commands(
-        pane_ids,
-        orientation,
-        window_extent,
-        historic_pane,
-        selected_pane,
+        pane_ids, orientation, window_extent, historic_pane, selected_pane
     )
     batch_tmux(commands)
     return 0

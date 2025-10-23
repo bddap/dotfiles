@@ -78,6 +78,7 @@
 ;; eglot configuration
 (setq eglot-autoshutdown t) ;; shutdown language server after closing last file
 (setq eglot-confirm-server-initiated-edits nil) ;; don't ask for confirmation on server edits
+(add-hook 'eglot-managed-mode-hook (lambda () (eglot-inlay-hints-mode -1)))
 
 (straight-use-package 'apheleia)
 (require 'apheleia)
