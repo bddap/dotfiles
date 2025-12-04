@@ -89,6 +89,7 @@ in { config, ... }: {
     uv
     vlc
     xclip
+    yaml-language-server
     yj
     zoom-us
     copilot-language-server

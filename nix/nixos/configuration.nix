@@ -11,8 +11,8 @@ in {
     initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device =
       "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
 
-    # disable tmpfs for /tmp, its limited size causes pain
-    tmp.useTmpfs = false;
+    # # disable tmpfs for /tmp, its limited size causes pain
+    # tmp.useTmpfs = false;
   };
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -22,6 +22,8 @@ in {
   # steam wants this
   hardware.graphics.enable32Bit = true;
 
+  hardware.keyboard.zsa.enable = true;
+  
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";

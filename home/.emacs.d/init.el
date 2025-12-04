@@ -74,6 +74,8 @@
 (add-hook 'js-mode-hook #'eglot-ensure)
 (add-hook 'nix-mode-hook #'eglot-ensure)
 (add-hook 'python-ts-mode-hook #'eglot-ensure)
+(add-hook 'yaml-mode-hook #'eglot-ensure)
+(add-hook 'yaml-ts-mode-hook #'eglot-ensure)
 
 ;; eglot configuration
 (setq eglot-autoshutdown t) ;; shutdown language server after closing last file
@@ -95,6 +97,7 @@
 (declare-formatter 'shfmt '("beautysh" "-"))
 (declare-formatter 'taplo '("taplo" "fmt" "-"))
 (declare-formatter 'terraform-fmt '("terraform" "fmt" "-"))
+(declare-formatter 'rustfmt '("rustfmt" "--edition" "2024"))
 
 (defun assign-formatter (mode formatter)
   (setf (alist-get mode apheleia-mode-alist) (list formatter)))
@@ -134,6 +137,7 @@
 (straight-use-package 'company)
 (setq company-tooltip-align-annotations t)
 (setq company-minimum-prefix-length 1000) ;; don't offer autocomplete unless "C-c l" is pressed
+(global-company-mode)
 
 (straight-use-package
  '(copilot :type git
