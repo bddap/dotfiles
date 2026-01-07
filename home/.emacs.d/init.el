@@ -97,7 +97,7 @@
 (declare-formatter 'shfmt '("beautysh" "-"))
 (declare-formatter 'taplo '("taplo" "fmt" "-"))
 (declare-formatter 'terraform-fmt '("terraform" "fmt" "-"))
-(declare-formatter 'rustfmt '("rustfmt" "--edition" "2024"))
+(declare-formatter 'rustfmt '("rustfmt" "--edition" "2021"))
 
 (defun assign-formatter (mode formatter)
   (setf (alist-get mode apheleia-mode-alist) (list formatter)))

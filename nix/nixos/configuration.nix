@@ -3,19 +3,17 @@ let pkgs = import ../nix { };
 in {
   imports = [ ./hardware-configuration.nix ];
 
+  # virtualisation.libvirtd.enable = true;
+
   boot = {
     loader.systemd-boot.enable = true;
     loader.efi.canTouchEfiVariables = true;
-
-    # how did this get here? Shouldn't this be in hardware-configuration.nix?
-    initrd.luks.devices."luks-f78f0095-dcc0-4b51-b602-c0689384506f".device =
-      "/dev/disk/by-uuid/f78f0095-dcc0-4b51-b602-c0689384506f";
 
     # # disable tmpfs for /tmp, its limited size causes pain
     # tmp.useTmpfs = false;
   };
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "nixos";
   hardware.bluetooth.enable = true;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
@@ -23,7 +21,7 @@ in {
   hardware.graphics.enable32Bit = true;
 
   hardware.keyboard.zsa.enable = true;
-  
+
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";
@@ -53,7 +51,7 @@ in {
     enable = true;
 
     # does this belong in hardware-configuration.nix?
-    videoDrivers = [ "nvidia" ];
+    videoDrivers = [ "nvidia" "amdgpu" "intel" ];
 
     displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
@@ -87,7 +85,11 @@ in {
   users.users.a = {
     isNormalUser = true;
     description = "a";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      # "libvirtd" "kvm"
+    ];
     packages = [ pkgs.home-manager ];
     shell = pkgs.fish;
   };

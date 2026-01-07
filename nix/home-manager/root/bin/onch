@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-rg -l . | entr -rc "$@"
+rg --files | entr -rc "$@"
