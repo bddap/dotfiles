@@ -3,7 +3,7 @@ let pkgs = import ../nix { };
 in {
   imports = [ ./hardware-configuration.nix ];
 
-  # virtualisation.libvirtd.enable = true;
+  virtualisation.libvirtd.enable = true;
 
   boot = {
     loader.systemd-boot.enable = true;
@@ -81,15 +81,12 @@ in {
 
   programs.fish.enable = true;
   programs.nix-ld.enable = true;
+  programs.virt-manager.enable = true;
 
   users.users.a = {
     isNormalUser = true;
     description = "a";
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-      # "libvirtd" "kvm"
-    ];
+    extraGroups = [ "networkmanager" "wheel" "libvirtd" "kvm" ];
     packages = [ pkgs.home-manager ];
     shell = pkgs.fish;
   };
@@ -130,4 +127,14 @@ in {
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "23.11"; # Did you read the comment?
+
+  services.udev.extraRules = ''
+    # Framework Laptop 16 - LED Matrix
+    SUBSYSTEMS=="usb", ATTRS{idVendor}=="32ac", ATTRS{idProduct}=="0020", MODE="0660", TAG+="uaccess"
+
+    # # Framework Laptop 16 - LED Matrix (CDC ACM serial)
+    # SUBSYSTEM=="tty", KERNEL=="ttyACM*", ATTRS{idVendor}=="32ac", ATTRS{idProduct}=="0020", MODE="0660", TAG+="uaccess"
+
+  '';
+
 }

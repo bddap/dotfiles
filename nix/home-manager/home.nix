@@ -35,6 +35,7 @@ in { config, ... }: {
     authenticator
     nixpkgs-unstable.bambu-studio
     openscad
+    bat
     beautysh
     cached-nix-shell
     colorized-logs
