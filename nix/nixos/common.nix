@@ -1,8 +1,6 @@
 { ... }:
 let pkgs = import ../nix { };
 in {
-  imports = [ ./hardware-configuration.nix ];
-
   virtualisation.libvirtd.enable = true;
 
   boot = {
@@ -13,7 +11,6 @@ in {
     # tmp.useTmpfs = false;
   };
 
-  networking.hostName = "nixos";
   hardware.bluetooth.enable = true;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
