@@ -3,14 +3,13 @@
 # Install a fully functional NixOS system to an attached disk.
 #
 # Usage:
-#   sudo HOSTNAME=myserver SSH_PUBKEY='ssh-ed25519 AAAA...' ./install-to-disk /dev/sdX
+#   sudo HOSTNAME=myserver ./install-to-disk /dev/sdX
 #
 # What it does:
 #   1. Partitions and formats the target disk (GPT: 512M EFI + ext4 root)
 #   2. Mounts it under /mnt
 #   3. Builds the NixOS system configuration (server.nix)
 #   4. Runs nixos-install to write the system closure to disk
-#   5. Bakes in your SSH public key for passwordless login
 #
 # After completion, move the disk to the target machine and boot it.
 # SSH in with: ssh a@<ip>
@@ -49,16 +48,6 @@ if [ -z "${HOSTNAME:-}" ]; then
 fi
 
 export HOSTNAME
-
-# ── SSH public key ──────────────────────────────────────────────────────
-
-if [ -z "${SSH_PUBKEY:-}" ]; then
-    echo "Warning: SSH_PUBKEY not set. The installed system will not have an authorized key."
-    echo "         To include one: sudo HOSTNAME=$HOSTNAME SSH_PUBKEY='ssh-ed25519 AAAA...' $0 $DISK"
-    echo ""
-fi
-
-export SSH_PUBKEY="${SSH_PUBKEY:-}"
 
 # ── Safety check ────────────────────────────────────────────────────────
 
@@ -139,9 +128,6 @@ echo ""
 echo "You can now:"
 echo "  1. Remove the disk and put it in the target machine"
 echo "  2. Boot and SSH in: ssh a@<ip>"
-if [ -n "$SSH_PUBKEY" ]; then
-    echo "     (your SSH key has been authorized)"
-fi
 echo ""
 echo "User: a (in wheel group)"
 echo "Hostname: $HOSTNAME"

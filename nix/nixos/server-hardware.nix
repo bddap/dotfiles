@@ -1,13 +1,11 @@
 # Hardware configuration for install-to-disk.
 #
 # Generic hardware support + partition-label-based fileSystems
-# matching the disko layout. SSH_PUBKEY env var is baked in at eval time.
+# matching the disko layout.
 
 { lib, modulesPath, ... }:
 
-let
-  sshPubKey = builtins.getEnv "SSH_PUBKEY";
-in {
+{
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
 
   # ── Filesystems (match disko partition labels) ────────────────────────
@@ -23,9 +21,22 @@ in {
 
   # ── Kernel modules for generic hardware ───────────────────────────────
   boot.initrd.availableKernelModules = [
-    "nvme" "xhci_pci" "ahci" "usbhid" "usb_storage" "sd_mod"
-    "sata_nv" "sata_sil" "sata_sis" "ehci_pci" "ohci_pci" "uhci_hcd"
-    "virtio_pci" "virtio_blk" "virtio_scsi" "virtio_net"
+    "nvme"
+    "xhci_pci"
+    "ahci"
+    "usbhid"
+    "usb_storage"
+    "sd_mod"
+    "sata_nv"
+    "sata_sil"
+    "sata_sis"
+    "ehci_pci"
+    "ohci_pci"
+    "uhci_hcd"
+    "virtio_pci"
+    "virtio_blk"
+    "virtio_scsi"
+    "virtio_net"
     "thunderbolt"
   ];
 
@@ -37,6 +48,7 @@ in {
   hardware.nvidia.open = true;
 
   # ── SSH authorized key ────────────────────────────────────────────────
-  users.users.a.openssh.authorizedKeys.keys =
-    lib.optional (sshPubKey != "") sshPubKey;
+  users.users.a.openssh.authorizedKeys.keys = [
+    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1ogr/Xw90r5VjFSwScZM1U7NKOiPyl8+/sG/nBBPzd39+TLCOyC/DRAk8U/RRbLKYzhNI0q78njhuDYmv0ce4PUwn47ZDD5Sn1cwCLasqHjLVsBD5YzTKI9BLHE6zoxSqzw8fjdmN0cPYoDXdkYIs1rDoWw3uqtk+QWaiAkxQyZ4YFacWrctHbKVbq2uiMSEdnNLJqqVA914C06N73baUZqUU1178Gc71qJlA2a/N23jOCwul4A2RwcSmCaAMepilInKTv2xKDkfSFZPF6ZT7i+35CcKphc4i8IeO5unBQK3R/Xw6DCYxRxin35qdE5sSDQLJNLimvP8P2X2bgEc/ andrew@dirksen.com"
+  ];
 }

@@ -33,7 +33,7 @@ fi
 # ── Env defaults for configs that read from env ─────────────────────────
 
 export HOSTNAME="${HOSTNAME:-$(hostname)}"
-export SSH_PUBKEY="${SSH_PUBKEY:-}"
+
 
 # ── NIX_PATH setup ──────────────────────────────────────────────────────
 
@@ -57,6 +57,5 @@ if [ -n "$ACTION" ]; then
         NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
         NIXOS_CONFIG="$NIXOS_CONFIG" \
         HOSTNAME="$HOSTNAME" \
-        SSH_PUBKEY="$SSH_PUBKEY" \
         nixos-rebuild "$ACTION"
 fi
