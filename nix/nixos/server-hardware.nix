@@ -47,8 +47,5 @@
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.nvidia.open = true;
 
-  # ── SSH authorized key ────────────────────────────────────────────────
-  users.users.a.openssh.authorizedKeys.keys = [
-    "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1ogr/Xw90r5VjFSwScZM1U7NKOiPyl8+/sG/nBBPzd39+TLCOyC/DRAk8U/RRbLKYzhNI0q78njhuDYmv0ce4PUwn47ZDD5Sn1cwCLasqHjLVsBD5YzTKI9BLHE6zoxSqzw8fjdmN0cPYoDXdkYIs1rDoWw3uqtk+QWaiAkxQyZ4YFacWrctHbKVbq2uiMSEdnNLJqqVA914C06N73baUZqUU1178Gc71qJlA2a/N23jOCwul4A2RwcSmCaAMepilInKTv2xKDkfSFZPF6ZT7i+35CcKphc4i8IeO5unBQK3R/Xw6DCYxRxin35qdE5sSDQLJNLimvP8P2X2bgEc/ andrew@dirksen.com"
-  ];
+
 }

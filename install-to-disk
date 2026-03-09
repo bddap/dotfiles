@@ -10,6 +10,18 @@
 #   2. Mounts it under /mnt
 #   3. Builds the NixOS system configuration (server.nix)
 #   4. Runs nixos-install to write the system closure to disk
+#   5. Runs ./provision (if present) to do post-install setup
+#
+# The provision script (not checked in) is called with /mnt as its
+# first argument. It should be idempotent. Example:
+#
+#   #!/usr/bin/env bash
+#   MOUNTPOINT="$1"
+#   mkdir -p "$MOUNTPOINT/home/a/.ssh"
+#   cp ~/.ssh/id_rsa.pub "$MOUNTPOINT/home/a/.ssh/authorized_keys"
+#   chown -R 1000:100 "$MOUNTPOINT/home/a/.ssh"
+#   chmod 700 "$MOUNTPOINT/home/a/.ssh"
+#   chmod 600 "$MOUNTPOINT/home/a/.ssh/authorized_keys"
 #
 # After completion, move the disk to the target machine and boot it.
 # SSH in with: ssh a@<ip>
@@ -69,65 +81,71 @@ NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath' --n
 export NIX_PATH
 export NIXPKGS_ALLOW_UNFREE=1
 
-# ── Step 1: Partition and format with disko ─────────────────────────────
+# ── Install ─────────────────────────────────────────────────────────────
 
-echo ""
-echo "==> Partitioning and formatting $DISK..."
+do_install() {
+    echo ""
+    echo "==> Partitioning and formatting $DISK..."
 
-DISKO_SRC="$(nix-instantiate --eval -E 'builtins.toString (import ./nix/nix/sources.nix).disko' | tr -d '"')"
+    DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix --argstr disk "$DISK")"
 
-DISKO_FORMAT_MOUNT="$(nix-build --no-out-link -E "
-  let
-    pkgs = import ./nix/nix {};
-    disko = import $DISKO_SRC {};
-    diskoConfig = import ./nix/nixos/disko.nix { disk = \"$DISK\"; };
-  in
-    disko._cliFormatMount diskoConfig pkgs
-")"
+    echo "Running disko format+mount script..."
+    "$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
 
-echo "Running disko format+mount script..."
-"$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
+    echo "Disk partitioned and mounted at /mnt."
+    echo ""
+    lsblk "$DISK"
+    echo ""
 
-echo "Disk partitioned and mounted at /mnt."
-echo ""
-lsblk "$DISK"
-echo ""
+    echo "==> Building NixOS system configuration..."
 
-# ── Step 2: Build the NixOS system configuration ───────────────────────
+    NIXOS_CONFIG="$(realpath nix/nixos/server.nix)"
+    export NIXOS_CONFIG
 
-echo "==> Building NixOS system configuration..."
+    SYSTEM=$(nix-build '<nixpkgs/nixos>' \
+        -A system \
+        --no-out-link \
+        -I "nixos-config=$NIXOS_CONFIG")
 
-NIXOS_CONFIG="$(realpath nix/nixos/server.nix)"
-export NIXOS_CONFIG
+    echo "System closure built: $SYSTEM"
 
-SYSTEM=$(nix-build '<nixpkgs/nixos>' \
-    -A system \
-    --no-out-link \
-    -I "nixos-config=$NIXOS_CONFIG")
+    echo ""
+    echo "==> Installing NixOS to /mnt..."
 
-echo "System closure built: $SYSTEM"
+    nixos-install \
+        --root /mnt \
+        --system "$SYSTEM" \
+        --no-root-password \
+        --no-channel-copy
 
-# ── Step 3: Install to disk ─────────────────────────────────────────────
+    # ── Provision hook ──────────────────────────────────────────────────
+    if [ -x ./provision ]; then
+        echo ""
+        echo "==> Running provision script..."
+        ./provision /mnt
+    fi
+}
 
-echo ""
-echo "==> Installing NixOS to /mnt..."
+if do_install; then
+    echo ""
+    echo "==> Unmounting..."
+    umount -R /mnt
 
-nixos-install \
-    --root /mnt \
-    --system "$SYSTEM" \
-    --no-root-password \
-    --no-channel-copy
-
-echo ""
-echo "==> Unmounting..."
-umount -R /mnt
-
-echo ""
-echo "==> Installation complete!"
-echo ""
-echo "You can now:"
-echo "  1. Remove the disk and put it in the target machine"
-echo "  2. Boot and SSH in: ssh a@<ip>"
-echo ""
-echo "User: a (in wheel group)"
-echo "Hostname: $HOSTNAME"
+    echo ""
+    echo "==> Installation complete!"
+    echo ""
+    echo "You can now:"
+    echo "  1. Remove the disk and put it in the target machine"
+    echo "  2. Boot and SSH in: ssh a@<ip>"
+    echo ""
+    echo "User: a (in wheel group)"
+    echo "Hostname: $HOSTNAME"
+else
+    echo ""
+    echo "==> Installation FAILED."
+    if mountpoint -q /mnt; then
+        echo "==> Unmounting /mnt..."
+        umount -R /mnt
+    fi
+    exit 1
+fi
