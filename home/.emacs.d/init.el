@@ -44,20 +44,20 @@
   "Return Terraform project if a nearest `.terraform/` is found above DIR."
   (when-let ((root (locate-dominating-file dir ".terraform")))
     (cons 'terraform root)))
-(defun project-try-cargo (dir)
-  "Return Cargo project if a nearest `Cargo.toml` is found above DIR."
-  (when-let ((root (locate-dominating-file dir "Cargo.toml")))
-    (cons 'cargo root)))
+;; (defun project-try-cargo (dir)
+;;   "Return Cargo project if a nearest `Cargo.toml` is found above DIR."
+;;   (when-let ((root (locate-dominating-file dir "Cargo.toml")))
+;;     (cons 'cargo root)))
 (cl-defmethod project-root ((project (head terraform)))
   (cdr project))
-(cl-defmethod project-root ((project (head cargo)))
-  (cdr project))
+;; (cl-defmethod project-root ((project (head cargo)))
+;;   (cdr project))
 (add-hook 'terraform-mode-hook
           (lambda ()
             (add-hook 'project-find-functions #'project-try-terraform nil t)))
-(add-hook 'rust-mode-hook
-          (lambda ()
-            (add-hook 'project-find-functions #'project-try-cargo nil t)))
+;; (add-hook 'rust-mode-hook
+;;           (lambda ()
+;;             (add-hook 'project-find-functions #'project-try-cargo nil t)))
 
 ;; use eglot for these languages
 (add-hook 'rust-mode-hook #'eglot-ensure)
@@ -97,7 +97,7 @@
 (declare-formatter 'shfmt '("beautysh" "-"))
 (declare-formatter 'taplo '("taplo" "fmt" "-"))
 (declare-formatter 'terraform-fmt '("terraform" "fmt" "-"))
-(declare-formatter 'rustfmt '("rustfmt" "--edition" "2021"))
+(declare-formatter 'rustfmt '("rustfmt" "--edition" "2024"))
 
 (defun assign-formatter (mode formatter)
   (setf (alist-get mode apheleia-mode-alist) (list formatter)))

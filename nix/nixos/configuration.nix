@@ -22,6 +22,9 @@ in {
 
   hardware.keyboard.zsa.enable = true;
 
+  hardware.nvidia-container-toolkit.enable = true;
+  hardware.nvidia-container-toolkit.mount-nvidia-executables = true;
+
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";
