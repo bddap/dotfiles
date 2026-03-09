@@ -29,6 +29,10 @@ in {
     "thunderbolt"
   ];
 
+  # Don't touch EFI variables during install-to-disk (would write to host's NVRAM).
+  # The target machine boots via fallback path (EFI/BOOT/BOOTX64.EFI).
+  boot.loader.efi.canTouchEfiVariables = false;
+
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.nvidia.open = true;
 

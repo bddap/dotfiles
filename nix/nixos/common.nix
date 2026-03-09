@@ -5,7 +5,6 @@ in {
 
   boot = {
     loader.systemd-boot.enable = true;
-    loader.efi.canTouchEfiVariables = true;
 
     # # disable tmpfs for /tmp, its limited size causes pain
     # tmp.useTmpfs = false;

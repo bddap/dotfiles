@@ -40,7 +40,7 @@ export SSH_PUBKEY="${SSH_PUBKEY:-}"
 # NIX_PATH and channels are gross, we ignore them and build up channels of our own
 # we only need to do this because home-manager assumes certain channels are present
 unset NIX_PATH
-NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
+NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
 NIXOS_CONFIG="$(realpath "$CONFIG_FILE")"
