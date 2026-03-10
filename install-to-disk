@@ -61,6 +61,11 @@ fi
 
 export HOSTNAME
 
+# ── Initial password ────────────────────────────────────────────────────
+
+INITIAL_PASSWORD="$(head -c 15 /dev/urandom | xxd -p | head -c 20)"
+export INITIAL_PASSWORD_HASH="$(echo "$INITIAL_PASSWORD" | mkpasswd -m sha-512 -s)"
+
 # ── Safety check ────────────────────────────────────────────────────────
 
 echo ""
@@ -138,8 +143,11 @@ if do_install; then
     echo "  1. Remove the disk and put it in the target machine"
     echo "  2. Boot and SSH in: ssh a@<ip>"
     echo ""
-    echo "User: a (in wheel group)"
     echo "Hostname: $HOSTNAME"
+    echo "User:     a (in wheel group)"
+    echo "Password: $INITIAL_PASSWORD"
+    echo ""
+    echo "Change it after first login with: passwd"
 else
     echo ""
     echo "==> Installation FAILED."
