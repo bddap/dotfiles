@@ -64,7 +64,7 @@ export HOSTNAME
 # ── Initial password ────────────────────────────────────────────────────
 
 INITIAL_PASSWORD="$(head -c 15 /dev/urandom | xxd -p | head -c 20)"
-export INITIAL_PASSWORD_HASH="$(echo "$INITIAL_PASSWORD" | mkpasswd -m sha-512 -s)"
+export INITIAL_PASSWORD_HASH="$(printf '%s' "$INITIAL_PASSWORD" | mkpasswd -m sha-512 -s)"
 
 # ── Safety check ────────────────────────────────────────────────────────
 
@@ -86,74 +86,86 @@ NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath' --n
 export NIX_PATH
 export NIXPKGS_ALLOW_UNFREE=1
 
-# ── Install ─────────────────────────────────────────────────────────────
+# ── Cleanup on failure ──────────────────────────────────────────────────
 
-do_install() {
-    echo ""
-    echo "==> Partitioning and formatting $DISK..."
-
-    DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix --argstr disk "$DISK")"
-
-    echo "Running disko format+mount script..."
-    "$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
-
-    echo "Disk partitioned and mounted at /mnt."
-    echo ""
-    lsblk "$DISK"
-    echo ""
-
-    echo "==> Building NixOS system configuration..."
-
-    NIXOS_CONFIG="$(realpath nix/nixos/server.nix)"
-    export NIXOS_CONFIG
-
-    SYSTEM=$(nix-build '<nixpkgs/nixos>' \
-        -A system \
-        --no-out-link \
-        -I "nixos-config=$NIXOS_CONFIG")
-
-    echo "System closure built: $SYSTEM"
-
-    echo ""
-    echo "==> Installing NixOS to /mnt..."
-
-    nixos-install \
-        --root /mnt \
-        --system "$SYSTEM" \
-        --no-root-password \
-        --no-channel-copy
-
-    # ── Provision hook ──────────────────────────────────────────────────
-    if [ -x ./provision ]; then
-        echo ""
-        echo "==> Running provision script..."
-        ./provision /mnt
-    fi
-}
-
-if do_install; then
-    echo ""
-    echo "==> Unmounting..."
-    umount -R /mnt
-
-    echo ""
-    echo "==> Installation complete!"
-    echo ""
-    echo "You can now:"
-    echo "  1. Remove the disk and put it in the target machine"
-    echo "  2. Boot and SSH in: ssh a@<ip>"
-    echo ""
-    echo "Hostname: $HOSTNAME"
-    echo "User:     a (in wheel group)"
-    echo "Password: $INITIAL_PASSWORD"
-    echo ""
-    echo "Change it after first login with: passwd"
-else
-    echo ""
-    echo "==> Installation FAILED."
+cleanup() {
     if mountpoint -q /mnt; then
         echo "==> Unmounting /mnt..."
         umount -R /mnt
     fi
+}
+trap cleanup EXIT
+
+# ── Step 1: Partition and format with disko ─────────────────────────────
+
+echo ""
+echo "==> Partitioning and formatting $DISK..."
+
+DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix --argstr disk "$DISK")"
+
+echo "Running disko format+mount script..."
+"$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
+
+# ── Verify mount before proceeding ──────────────────────────────────────
+
+if ! mountpoint -q /mnt; then
+    echo "Error: /mnt is not mounted after disko. Aborting."
     exit 1
 fi
+
+echo "Disk partitioned and mounted at /mnt."
+echo ""
+lsblk "$DISK"
+echo ""
+
+# ── Step 2: Build the NixOS system configuration ───────────────────────
+
+echo "==> Building NixOS system configuration..."
+
+NIXOS_CONFIG="$(realpath nix/nixos/server.nix)"
+export NIXOS_CONFIG
+
+SYSTEM=$(nix-build '<nixpkgs/nixos>' \
+    -A system \
+    --no-out-link \
+    -I "nixos-config=$NIXOS_CONFIG")
+
+echo "System closure built: $SYSTEM"
+
+# ── Step 3: Install to disk ─────────────────────────────────────────────
+
+echo ""
+echo "==> Installing NixOS to /mnt..."
+
+nixos-install \
+    --root /mnt \
+    --system "$SYSTEM" \
+    --no-root-password \
+    --no-channel-copy
+
+# ── Step 4: Provision hook ──────────────────────────────────────────────
+
+if [ -x ./provision ]; then
+    echo ""
+    echo "==> Running provision script..."
+    ./provision /mnt
+fi
+
+# ── Done ────────────────────────────────────────────────────────────────
+
+# cleanup trap handles unmount
+trap - EXIT
+umount -R /mnt
+
+echo ""
+echo "==> Installation complete!"
+echo ""
+echo "You can now:"
+echo "  1. Remove the disk and put it in the target machine"
+echo "  2. Boot and SSH in: ssh a@<ip>"
+echo ""
+echo "Hostname: $HOSTNAME"
+echo "User:     a (in wheel group)"
+echo "Password: $INITIAL_PASSWORD"
+echo ""
+echo "Change it after first login with: passwd"
