@@ -15,6 +15,10 @@ in {
 
   security.sudo.wheelNeedsPassword = false;
 
+  networking.firewall.allowedTCPPortRanges = [
+    { from = 4096; to = 4200; }
+  ];
+
   users.users.bot = {
     isNormalUser = true;
     description = "bot";
