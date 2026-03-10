@@ -4,24 +4,58 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# NIX_PATH and channels are gross, we ingnore them and build up channels of our own
-# we only need to do this becasue home-manager assumes certain channels are present
+# ── Usage ───────────────────────────────────────────────────────────────
+
+CONFIG="${1:-}"
+ACTION="${2:-}"
+
+if [ -z "$CONFIG" ]; then
+    echo "Usage: $0 <config> [action]"
+    echo ""
+    echo "  config:  name of a nix/nixos/<config>.nix entry point"
+    echo "           e.g. physical, server"
+    echo "  action:  optional nixos-rebuild action (switch, boot, test, etc.)"
+    echo ""
+    echo "Examples:"
+    echo "  $0 physical              # build only"
+    echo "  $0 physical switch       # build and switch"
+    echo "  $0 server switch         # build and switch (reads HOSTNAME from env/system)"
+    exit 1
+fi
+
+CONFIG_FILE="nix/nixos/${CONFIG}.nix"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: $CONFIG_FILE not found"
+    exit 1
+fi
+
+# ── Env defaults for configs that read from env ─────────────────────────
+
+export HOSTNAME="${HOSTNAME:-$(hostname)}"
+
+
+# ── NIX_PATH setup ──────────────────────────────────────────────────────
+
+# NIX_PATH and channels are gross, we ignore them and build up channels of our own
+# we only need to do this because home-manager assumes certain channels are present
 unset NIX_PATH
-NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
+NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
-NIXOS_CONFIG="$(realpath nix/nixos/configuration.nix)"
+NIXOS_CONFIG="$(realpath "$CONFIG_FILE")"
 NIXPKGS_ALLOW_UNFREE=1
 
 export NIXOS_CONFIG
 export NIXPKGS_ALLOW_UNFREE
 nixos-rebuild build
 
-if [ -n "${1+x}" ]; then
-    # sudo seems to clear NIXOS_CONFIG
+if [ -n "$ACTION" ]; then
+    # sudo clears env vars
     sudo env \
         NIX_PATH="$NIX_PATH" \
         NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
         NIXOS_CONFIG="$NIXOS_CONFIG" \
-        nixos-rebuild "$1"
+        HOSTNAME="$HOSTNAME" \
+        nixos-rebuild "$ACTION"
 fi

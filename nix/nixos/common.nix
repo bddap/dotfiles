@@ -1,19 +1,15 @@
 { ... }:
 let pkgs = import ../nix { };
 in {
-  imports = [ ./hardware-configuration.nix ];
-
   virtualisation.libvirtd.enable = true;
 
   boot = {
     loader.systemd-boot.enable = true;
-    loader.efi.canTouchEfiVariables = true;
 
     # # disable tmpfs for /tmp, its limited size causes pain
     # tmp.useTmpfs = false;
   };
 
-  networking.hostName = "nixos";
   hardware.bluetooth.enable = true;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 

@@ -103,6 +103,8 @@ in { config, ... }: {
     kdePackages.kolourpaint
     dig
     lazydocker
+    mkpasswd
+    unixtools.xxd
     bddap.codex
     walk # tui file browser
     wget

@@ -1,4 +1,16 @@
 {
+    "disko": {
+        "branch": "master",
+        "description": "Declarative disk partitioning and formatting using nix",
+        "homepage": "https://github.com/nix-community/disko",
+        "owner": "nix-community",
+        "repo": "disko",
+        "rev": "7b9f7f88ab3b339f8142dc246445abb3c370d3d3",
+        "sha256": "02k1rx0ph625bd71wyfdr2w6zr73adnd36b19zhgb8pcajb4f6cj",
+        "type": "tarball",
+        "url": "https://github.com/nix-community/disko/archive/7b9f7f88ab3b339f8142dc246445abb3c370d3d3.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "crane": {
         "branch": "master",
         "description": "A Nix library for building cargo projects. Never build twice thanks to incremental artifact caching.",

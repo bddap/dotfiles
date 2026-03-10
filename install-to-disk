@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+
+# Install a fully functional NixOS system to an attached disk.
+#
+# Usage:
+#   sudo HOSTNAME=myserver ./install-to-disk /dev/sdX
+#
+# What it does:
+#   1. Partitions and formats the target disk (GPT: 512M EFI + ext4 root)
+#   2. Mounts it under /mnt
+#   3. Builds the NixOS system configuration (server.nix)
+#   4. Runs nixos-install to write the system closure to disk
+#   5. Runs ./provision (if present) to do post-install setup
+#
+# The provision script (not checked in) is called with /mnt as its
+# first argument. It should be idempotent. Example:
+#
+#   #!/usr/bin/env bash
+#   MOUNTPOINT="$1"
+#   mkdir -p "$MOUNTPOINT/home/a/.ssh"
+#   cp ~/.ssh/id_rsa.pub "$MOUNTPOINT/home/a/.ssh/authorized_keys"
+#   chown -R 1000:100 "$MOUNTPOINT/home/a/.ssh"
+#   chmod 700 "$MOUNTPOINT/home/a/.ssh"
+#   chmod 600 "$MOUNTPOINT/home/a/.ssh/authorized_keys"
+#
+# After completion, move the disk to the target machine and boot it.
+# SSH in with: ssh a@<ip>
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# ── Argument handling ───────────────────────────────────────────────────
+
+if [ $# -lt 1 ]; then
+    echo "Usage: sudo HOSTNAME=myserver $0 /dev/sdX"
+    echo ""
+    echo "WARNING: This will ERASE the target disk entirely."
+    exit 1
+fi
+
+DISK="$1"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Error: must run as root (sudo $0 $DISK)"
+    exit 1
+fi
+
+if [ ! -b "$DISK" ]; then
+    echo "Error: $DISK is not a block device"
+    exit 1
+fi
+
+# ── Hostname ────────────────────────────────────────────────────────────
+
+if [ -z "${HOSTNAME:-}" ]; then
+    echo "Error: HOSTNAME must be set."
+    echo "  sudo HOSTNAME=myserver $0 $DISK"
+    exit 1
+fi
+
+export HOSTNAME
+
+# ── Safety check ────────────────────────────────────────────────────────
+
+echo ""
+echo "Target disk: $DISK"
+lsblk "$DISK"
+echo ""
+echo "ALL DATA ON $DISK WILL BE DESTROYED."
+read -p "Type 'yes' to continue: " CONFIRM
+if [ "$CONFIRM" != "yes" ]; then
+    echo "Aborted."
+    exit 1
+fi
+
+# ── NIX_PATH setup ──────────────────────────────────────────────────────
+
+unset NIX_PATH
+NIX_PATH="$(cat "$(nix-build -E '(import ./nix/nix {}).bddap.shitty-nixpath' --no-out-link)")"
+export NIX_PATH
+export NIXPKGS_ALLOW_UNFREE=1
+
+# ── Cleanup on failure ──────────────────────────────────────────────────
+
+cleanup() {
+    if mountpoint -q /mnt; then
+        echo "==> Unmounting /mnt..."
+        umount -R /mnt
+    fi
+}
+trap cleanup EXIT
+
+# ── Step 1: Partition and format with disko ─────────────────────────────
+
+echo ""
+echo "==> Partitioning and formatting $DISK..."
+
+DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix --argstr disk "$DISK")"
+
+echo "Running disko format+mount script..."
+"$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
+
+# ── Verify mount before proceeding ──────────────────────────────────────
+
+if ! mountpoint -q /mnt; then
+    echo "Error: /mnt is not mounted after disko. Aborting."
+    exit 1
+fi
+
+echo "Disk partitioned and mounted at /mnt."
+echo ""
+lsblk "$DISK"
+echo ""
+
+# ── Step 2: Build the NixOS system configuration ───────────────────────
+
+echo "==> Building NixOS system configuration..."
+
+NIXOS_CONFIG="$(realpath nix/nixos/server.nix)"
+export NIXOS_CONFIG
+
+SYSTEM=$(nix-build '<nixpkgs/nixos>' \
+    -A system \
+    --no-out-link \
+    -I "nixos-config=$NIXOS_CONFIG")
+
+echo "System closure built: $SYSTEM"
+
+# ── Step 3: Install to disk ─────────────────────────────────────────────
+
+echo ""
+echo "==> Installing NixOS to /mnt..."
+
+nixos-install \
+    --root /mnt \
+    --system "$SYSTEM" \
+    --no-root-password \
+    --no-channel-copy
+
+# ── Step 4: Provision hook ──────────────────────────────────────────────
+
+if [ -x ./provision ]; then
+    echo ""
+    echo "==> Running provision script..."
+    ./provision /mnt
+fi
+
+# ── Done ────────────────────────────────────────────────────────────────
+
+trap - EXIT
+umount -R /mnt
+
+echo ""
+echo "==> Installation complete!"
+echo ""
+echo "You can now:"
+echo "  1. Remove the disk and put it in the target machine"
+echo "  2. SSH in: ssh a@<ip>"
+echo ""
+echo "Hostname: $HOSTNAME"
+echo "User:     a (in wheel group, passwordless sudo)"
