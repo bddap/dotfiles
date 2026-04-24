@@ -53,10 +53,10 @@
         "homepage": "",
         "owner": "bddap",
         "repo": "refac",
-        "rev": "3602e0b308f1b179998ee3288e37710d305ad0ad",
-        "sha256": "1rsg6n0hak9vys2zr0wvhzky18c80vlkxgcypv0fhnc0181vck2j",
+        "rev": "8469c3486ba84274dee18cdf62037155de87d9ac",
+        "sha256": "1zi4gk5aja6lazv71ybc3kbyjxkq1dp0njmkf2la52bxar26iy3l",
         "type": "tarball",
-        "url": "https://github.com/bddap/refac/archive/3602e0b308f1b179998ee3288e37710d305ad0ad.tar.gz",
+        "url": "https://github.com/bddap/refac/archive/8469c3486ba84274dee18cdf62037155de87d9ac.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
