@@ -6,6 +6,10 @@ in {
   boot = {
     loader.systemd-boot.enable = true;
 
+    # CVE-2026-31431 (algif_aead): default linux_6_12 has no backport yet.
+    # Pin to 6.18 LTS, which carries the fix from 6.18.22 onward.
+    kernelPackages = pkgs.linuxPackages_6_18;
+
     # # disable tmpfs for /tmp, its limited size causes pain
     # tmp.useTmpfs = false;
   };
