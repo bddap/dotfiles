@@ -117,6 +117,11 @@ in {
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
+  # Suspend on lid close even when an external monitor is attached.
+  # Default is "ignore" when docked, which leaves the laptop running
+  # in the briefcase.
+  services.logind.lidSwitchDocked = "suspend";
+
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
   # networking.firewall.allowedUDPPorts = [ ... ];
