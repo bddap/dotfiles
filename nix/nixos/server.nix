@@ -15,6 +15,7 @@ in {
 
   security.sudo.wheelNeedsPassword = false;
 
+  networking.firewall.allowedTCPPorts = [ 25565 ];
   networking.firewall.allowedTCPPortRanges = [
     { from = 4096; to = 4200; }
   ];
