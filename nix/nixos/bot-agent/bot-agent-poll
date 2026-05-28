@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# bot-agent-poll — detect pending inbound events for the bddap-bot assistant.
+#
+# Detection ONLY (read-only, idempotent). It does not consume/handle anything —
+# the agent fetches message bodies and replies itself with gh/curl, and advances
+# the Telegram offset / marks GitHub threads read after handling. Keeping detect
+# and handle separate avoids two callers hitting Telegram getUpdates at once
+# (which returns 409 Conflict).
+#
+# Usage:
+#   bot-agent-poll           one-shot check; prints a summary of what's pending
+#   bot-agent-poll --wait    block until something is pending, then print + exit
+#
+# Exit status: 0 if something is pending, 1 if nothing (works with `Monitor` and
+# with `until bot-agent-poll; do ...; done`). Run `--wait` in the BACKGROUND so
+# you stay responsive; it exits as soon as an event appears, so it never races
+# your own getUpdates call while you handle the event.
+#
+# Env: TELEGRAM_BOT_TOKEN (optional), GITHUB_ALLOWED_LOGINS (default: bddap),
+#      AGENT_STATE_DIR (default: ~/.local/state/bot-agent), POLL_INTERVAL (default: 5)
+#
+# You (the agent) own this file and may edit it. Canonical copy:
+#   ~/repos/bddap/dotfiles/nix/nixos/bot-agent/bot-agent-poll  (PR changes there)
+
+set -uo pipefail
+
+STATE_DIR="${AGENT_STATE_DIR:-$HOME/.local/state/bot-agent}"
+INTERVAL="${POLL_INTERVAL:-5}"
+mkdir -p "$STATE_DIR"
+
+check() {
+  local pending=0 tg=0 ghc=0 off
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+    off="$(cat "$STATE_DIR/tg-offset" 2>/dev/null || echo 0)"
+    tg="$(curl -s --max-time 10 \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${off}&timeout=0&limit=100" \
+          | jq '.result | length' 2>/dev/null || echo 0)"
+  fi
+  ghc="$(gh api notifications --jq '[.[] | select(.reason=="mention")] | length' 2>/dev/null || echo 0)"
+
+  [ "${tg:-0}" -gt 0 ]  && { echo "telegram: ${tg} pending update(s) (offset $(cat "$STATE_DIR/tg-offset" 2>/dev/null || echo 0))"; pending=1; }
+  [ "${ghc:-0}" -gt 0 ] && { echo "github: ${ghc} unread mention(s)"; pending=1; }
+  [ "$pending" -eq 1 ]
+}
+
+if [ "${1:-}" = "--wait" ]; then
+  while ! check; do sleep "$INTERVAL"; done
+else
+  check
+fi
