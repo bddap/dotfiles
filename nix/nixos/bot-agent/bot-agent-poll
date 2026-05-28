@@ -53,7 +53,7 @@ check() {
     last="$(cat "$STATE_DIR/gmail-last-check" 2>/dev/null || echo 0)"
     if [ "$((now - last))" -ge "$GMAIL_INTERVAL" ]; then
       echo "$now" > "$STATE_DIR/gmail-last-check"
-      wm="$(cat "$STATE_DIR/gmail-last-uid" 2>/dev/null || echo 0)"
+      wm="$(cat "$STATE_DIR/gmail-last-uid" 2>/dev/null || echo 0)"; wm="${wm//[^0-9]/}"; wm="${wm:-0}"
       # `UID N:*` always returns the last message even if its UID < N, so filter > wm.
       gm="$(curl -s --max-time 15 --url "imaps://imap.gmail.com:993/INBOX" \
               --user "$GMAIL_USER:$GMAIL_APP_PASSWORD" \
