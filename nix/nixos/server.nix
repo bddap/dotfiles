@@ -7,6 +7,7 @@ in {
   imports = [
     ./common.nix
     ./server-hardware.nix
+    ./bot-agent
   ];
 
   networking.hostName =
@@ -23,5 +24,8 @@ in {
   users.users.bot = {
     isNormalUser = true;
     description = "bot";
+    # wheel => passwordless sudo (security.sudo.wheelNeedsPassword = false above).
+    # bot runs the long-running assistant agents and maintains this machine.
+    extraGroups = [ "wheel" "networkmanager" "libvirtd" "kvm" ];
   };
 }
