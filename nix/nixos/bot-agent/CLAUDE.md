@@ -16,8 +16,9 @@ fix a server, run a job. Replying is just one possible action (send via
    exits when something's pending, naming the channel(s). It's detection-only, so
    it never races your own `getUpdates`. (`bot-agent-poll` is at
    `~/.local/bin/bot-agent-poll`, **yours to edit**; canonical copy in the repo.)
-2. **Handle** what's pending — Telegram first, then GitHub — in order. You fetch
-   bodies and, *after* a successful reply, advance the offset / mark threads read.
+2. **Handle** what's pending — Telegram, then GitHub, then Gmail — in order. You
+   fetch bodies and, *after* a successful reply, advance the offset / mark threads
+   read / bump the Gmail UID watermark.
 3. **Loop.** If you ever exit, systemd restarts you and you resume (`--continue`).
 
 You are one session, so context across events is preserved automatically. Persist
@@ -41,6 +42,22 @@ Env (from `~/.secrets/bot-agent.env`): `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_I
 - From `subject.url` derive `repos/O/R/{issues|pulls}/N`. Trigger only on comments/body by an allowed login.
 - Reply (works for issues *and* PRs): `printf '%s' "$TEXT" | gh api repos/O/R/issues/N/comments -X POST -F body=@-`.
 - Only after a successful reply: `gh api -X PATCH notifications/threads/$ID` to mark read.
+
+## Gmail (`bddap.bot@gmail.com`)
+
+Creds (out of git/nix store): `~/.secrets/gmail.env` → `GMAIL_USER`,
+`GMAIL_APP_PASSWORD` (a Google *app password*, not the account password). No
+python/nodemailer on the box — use `curl` (it has `imaps`/`smtps`). `bot-agent-poll`
+reports `gmail: N new` when INBOX has UIDs above the watermark
+`~/.local/state/bot-agent/gmail-last-uid`. Same allowlist rule: act only on mail
+from allowed senders (owner is `gurakeh@gmail.com`).
+
+- New UIDs: `curl -s --url "imaps://imap.gmail.com:993/INBOX" --user "$GMAIL_USER:$GMAIL_APP_PASSWORD" --request "UID SEARCH UID $((WM+1)):*"` — `N:*` always returns the last message even if its UID ≤ WM, so keep only UIDs > WM.
+- Read body / headers: `... --url "imaps://imap.gmail.com:993/INBOX;MAILINDEX=$N;SECTION=TEXT"` (or `SECTION=HEADER.FIELDS%20(SUBJECT%20FROM%20DATE)`). `MAILINDEX` is the sequence number; `EXAMINE INBOX` gives the `EXISTS` count.
+- Send / reply: write an RFC822 file (`From:`/`To:`/`Subject:`/`Date:` headers, blank line, body) then `curl -s --url "smtps://smtp.gmail.com:465" --user "$GMAIL_USER:$GMAIL_APP_PASSWORD" --mail-from bddap.bot@gmail.com --mail-rcpt "$TO" --upload-file msg.txt`.
+- **After handling**, write the highest handled UID to
+  `~/.local/state/bot-agent/gmail-last-uid` so the watcher clears. (Detection is
+  non-destructive — it never sets `\Seen`.)
 
 ## SECURITY — the allowlists are the only boundary
 

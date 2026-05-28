@@ -3,9 +3,9 @@
 #
 # Detection ONLY (read-only, idempotent). It does not consume/handle anything —
 # the agent fetches message bodies and replies itself with gh/curl, and advances
-# the Telegram offset / marks GitHub threads read after handling. Keeping detect
-# and handle separate avoids two callers hitting Telegram getUpdates at once
-# (which returns 409 Conflict).
+# the Telegram offset / marks GitHub threads read / bumps the Gmail UID watermark
+# after handling. Keeping detect and handle separate avoids two callers hitting
+# Telegram getUpdates at once (which returns 409 Conflict).
 #
 # Usage:
 #   bot-agent-poll           one-shot check; prints a summary of what's pending
@@ -17,7 +17,9 @@
 # your own getUpdates call while you handle the event.
 #
 # Env: TELEGRAM_BOT_TOKEN (optional), GITHUB_ALLOWED_LOGINS (default: bddap),
-#      AGENT_STATE_DIR (default: ~/.local/state/bot-agent), POLL_INTERVAL (default: 5)
+#      AGENT_STATE_DIR (default: ~/.local/state/bot-agent), POLL_INTERVAL (default: 5),
+#      GMAIL_INTERVAL (default: 30; Gmail is polled at most this often).
+# Gmail creds (optional): ~/.secrets/gmail.env -> GMAIL_USER, GMAIL_APP_PASSWORD.
 #
 # You (the agent) own this file and may edit it. Canonical copy:
 #   ~/repos/bddap/dotfiles/nix/nixos/bot-agent/bot-agent-poll  (PR changes there)
@@ -28,8 +30,12 @@ STATE_DIR="${AGENT_STATE_DIR:-$HOME/.local/state/bot-agent}"
 INTERVAL="${POLL_INTERVAL:-5}"
 mkdir -p "$STATE_DIR"
 
+# Optional Gmail watcher credentials (kept out of git and the nix store).
+[ -f "$HOME/.secrets/gmail.env" ] && { set -a; . "$HOME/.secrets/gmail.env"; set +a; }
+GMAIL_INTERVAL="${GMAIL_INTERVAL:-30}"
+
 check() {
-  local pending=0 tg=0 ghc=0 off
+  local pending=0 tg=0 ghc=0 gm=0 off
   if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
     off="$(cat "$STATE_DIR/tg-offset" 2>/dev/null || echo 0)"
     tg="$(curl -s --max-time 10 \
@@ -38,8 +44,28 @@ check() {
   fi
   ghc="$(gh api notifications --jq '[.[] | select(.reason=="mention")] | length' 2>/dev/null || echo 0)"
 
+  # Gmail: count new messages (UID above the watermark). Throttled to at most
+  # once per GMAIL_INTERVAL, and non-destructive (does not touch \Seen). The
+  # agent bumps $STATE_DIR/gmail-last-uid to the highest handled UID afterwards.
+  if [ -n "${GMAIL_USER:-}" ] && [ -n "${GMAIL_APP_PASSWORD:-}" ]; then
+    local now last wm
+    now="$(date +%s)"
+    last="$(cat "$STATE_DIR/gmail-last-check" 2>/dev/null || echo 0)"
+    if [ "$((now - last))" -ge "$GMAIL_INTERVAL" ]; then
+      echo "$now" > "$STATE_DIR/gmail-last-check"
+      wm="$(cat "$STATE_DIR/gmail-last-uid" 2>/dev/null || echo 0)"
+      # `UID N:*` always returns the last message even if its UID < N, so filter > wm.
+      gm="$(curl -s --max-time 15 --url "imaps://imap.gmail.com:993/INBOX" \
+              --user "$GMAIL_USER:$GMAIL_APP_PASSWORD" \
+              --request "UID SEARCH UID $((wm + 1)):*" 2>/dev/null \
+            | awk -v wm="$wm" '/^\* SEARCH/{for(i=3;i<=NF;i++) if($i+0>wm) c++} END{print c+0}')"
+      gm="${gm:-0}"
+    fi
+  fi
+
   [ "${tg:-0}" -gt 0 ]  && { echo "telegram: ${tg} pending update(s) (offset $(cat "$STATE_DIR/tg-offset" 2>/dev/null || echo 0))"; pending=1; }
   [ "${ghc:-0}" -gt 0 ] && { echo "github: ${ghc} unread mention(s)"; pending=1; }
+  [ "${gm:-0}" -gt 0 ]  && { echo "gmail: ${gm} new message(s) to ${GMAIL_USER} (UID > $(cat "$STATE_DIR/gmail-last-uid" 2>/dev/null || echo 0))"; pending=1; }
   [ "$pending" -eq 1 ]
 }
 
