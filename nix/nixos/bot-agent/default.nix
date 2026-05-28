@@ -28,9 +28,11 @@ in {
       PATH = lib.mkForce fullPath;
       AGENT_STATE_DIR = "/home/bot/.local/state/bot-agent";
       GITHUB_ALLOWED_LOGINS = "bddap";
-      # Known-good default of the editable event-detection helper; the launcher
-      # installs it to ~/.local/bin/bot-agent-poll if absent (agent may edit).
+      # Known-good defaults of the agent's editable assets; the launcher installs
+      # each to the bot's home only if absent (agent may then edit freely).
       BOT_AGENT_POLL_SRC = "${./bot-agent-poll}";
+      BOT_AGENT_CLAUDEMD_SRC = "${./CLAUDE.md}";
+      BOT_AGENT_SKILL_SRC = "${./skills/agent-docs/SKILL.md}";
     };
     serviceConfig = {
       User = "bot";
