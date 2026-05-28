@@ -15,6 +15,7 @@ let
   toolPath = lib.makeBinPath [
     pkgs.nodejs pkgs.gh pkgs.git pkgs.coreutils pkgs.gnugrep pkgs.gnused
     pkgs.gawk pkgs.curl pkgs.jq pkgs.bash pkgs.util-linux pkgs.openssh pkgs.nix
+    pkgs.bubblewrap # sandbox for run-untrusted (build/test untrusted 3rd-party code)
   ];
   fullPath = "/run/wrappers/bin:/home/bot/.local/bin:${toolPath}:/run/current-system/sw/bin";
 in {
@@ -31,6 +32,7 @@ in {
       # Known-good defaults of the agent's editable assets; the launcher installs
       # each to the bot's home only if absent (agent may then edit freely).
       BOT_AGENT_POLL_SRC = "${./bot-agent-poll}";
+      BOT_AGENT_RUNUNTRUSTED_SRC = "${./run-untrusted}";
       BOT_AGENT_CLAUDEMD_SRC = "${./CLAUDE.md}";
       BOT_AGENT_SKILL_SRC = "${./skills/agent-docs/SKILL.md}";
     };

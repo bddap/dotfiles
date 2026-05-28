@@ -12,6 +12,8 @@ cd "$HOME"
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/skills/agent-docs"
 [ -f "$HOME/.local/bin/bot-agent-poll" ] || [ -z "${BOT_AGENT_POLL_SRC:-}" ] || \
   install -m 0755 "$BOT_AGENT_POLL_SRC" "$HOME/.local/bin/bot-agent-poll"
+[ -f "$HOME/.local/bin/run-untrusted" ] || [ -z "${BOT_AGENT_RUNUNTRUSTED_SRC:-}" ] || \
+  install -m 0755 "$BOT_AGENT_RUNUNTRUSTED_SRC" "$HOME/.local/bin/run-untrusted"
 [ -f "$HOME/CLAUDE.md" ] || [ -z "${BOT_AGENT_CLAUDEMD_SRC:-}" ] || \
   { install -m 0644 "$BOT_AGENT_CLAUDEMD_SRC" "$HOME/CLAUDE.md"; ln -sf CLAUDE.md "$HOME/AGENTS.md"; }
 [ -f "$HOME/.claude/skills/agent-docs/SKILL.md" ] || [ -z "${BOT_AGENT_SKILL_SRC:-}" ] || \
