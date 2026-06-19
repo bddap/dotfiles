@@ -86,7 +86,7 @@ in { config, ... }: {
     taplo
     telegram-desktop
     tmux
-    bddap.zellij # patched zellij (pane-slot-binding) — see nix/nix/zellij.nix
+    bddap.zellij
     tree
     uv
     vlc
