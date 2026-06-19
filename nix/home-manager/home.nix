@@ -86,6 +86,7 @@ in { config, ... }: {
     taplo
     telegram-desktop
     tmux
+    bddap.zellij # patched zellij (pane-slot-binding) — see nix/nix/zellij.nix
     tree
     uv
     vlc
@@ -117,6 +118,19 @@ in { config, ... }: {
     fswebcam # webcam capture tool
     xorg.xkbcomp # keyboard compiler
   ];
+
+  # zellij config is generated (not stow'd) so the spiral wasm's store path can be
+  # interpolated into the plugin's `location` — KDL can't expand env vars, and the
+  # path must be the store path, not a home-relative literal. home-manager owns
+  # ~/.config/zellij/ (stow owns nothing under it, avoiding a dir-ownership clash).
+  # Only config.kdl carries the path (@wasm@); the layout references it by alias.
+  xdg.configFile = {
+    "zellij/config.kdl".source = pkgs.replaceVars ./zellij/config.kdl {
+      wasm = "${pkgs.bddap.zellij-spiral}/zellij-spiral.wasm";
+    };
+    "zellij/layouts/default.kdl".source = ./zellij/layouts/default.kdl;
+    "zellij/README.md".source = ./zellij/README.md;
+  };
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.

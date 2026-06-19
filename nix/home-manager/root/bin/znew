@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Like tmnew, but for zellij: one session per project, keyed by git root (or cwd).
+# zellij forbids '/' in session names (tmux allows it); flatten to '-' and drop the
+# leading one, else the name starts with '-' and zellij parses it as a flag.
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+name="${root//\//-}"
+exec zellij attach --create "${name#-}"

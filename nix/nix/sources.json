@@ -58,5 +58,53 @@
         "type": "tarball",
         "url": "https://github.com/bddap/refac/archive/8469c3486ba84274dee18cdf62037155de87d9ac.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "rust-overlay": {
+        "branch": "master",
+        "description": "Pure and reproducible nix overlay of binary distributed rust toolchains",
+        "homepage": "",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "4baecb43a008cd004e5220a777e1724bd8d43e43",
+        "sha256": "1i12v4r1f6rvwl6jssyjw31k0nsilwn3bdrf9160svlzxvxxzgsh",
+        "type": "tarball",
+        "url": "https://github.com/oxalica/rust-overlay/archive/4baecb43a008cd004e5220a777e1724bd8d43e43.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "zellij-fork": {
+        "branch": "pane-slot-binding",
+        "description": "Fork of zellij adding the pane-slot-binding plugin API the spiral needs",
+        "homepage": "",
+        "owner": "bddap-bot",
+        "repo": "zellij",
+        "rev": "119b86e52e8145eecf7f43970ac3af13b30db629",
+        "sha256": "1svkqs4kfinabicdl1xjn6jyv843s2rb0ndrmyhfkl0wgsmy7msv",
+        "type": "tarball",
+        "url": "https://github.com/bddap-bot/zellij/archive/119b86e52e8145eecf7f43970ac3af13b30db629.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "zellij-nixpkgs": {
+        "branch": "nixos-unstable",
+        "description": "nixpkgs pin whose zellij-unwrapped builds cleanly with the fork (matches the spiral's flake.lock)",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "sha256": "1vq77hlx8mi3z03pw2nf6r5h7473r1p9yxyf58ym3fh01zppmfln",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/567a49d1913ce81ac6e9582e3553dd90a955875f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "zellij-spiral": {
+        "branch": "master",
+        "description": "zellij plugin: focused pane takes the dominant slot of a recursive golden spiral",
+        "homepage": "",
+        "owner": "bddap-bot",
+        "repo": "zellij-spiral",
+        "rev": "f441e9de08de1b01bd377b705c9ae95b38593f64",
+        "sha256": "07slf8p1ph52dlxpvg67y1dzgdid1rsh5qwcz05px99zbipk7lra",
+        "type": "tarball",
+        "url": "https://github.com/bddap-bot/zellij-spiral/archive/f441e9de08de1b01bd377b705c9ae95b38593f64.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

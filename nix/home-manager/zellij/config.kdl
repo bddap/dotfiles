@@ -1,0 +1,46 @@
+// Keybinds modeled on ~/.tmux.conf. Only the prefix and one chord differ from
+// zellij's stock "tmux mode" (which already behaves like tmux); clear-defaults
+// stays false so everything else is inherited.
+
+keybinds {
+    // tmux's prefix is `C-\` (.tmux.conf: `set -g prefix "C-\\"`), not zellij's
+    // `Ctrl b`. Rebind everywhere except inside tmux mode, so the same chord
+    // there can send a literal Ctrl-\ to the pane (below).
+    shared_except "locked" "scroll" "search" "tmux" {
+        unbind "Ctrl b"
+        bind "Ctrl \\" { SwitchToMode "tmux"; }
+    }
+
+    tmux {
+        // `<prefix> g` (g = golden) brings the spiral to the focused tab — it
+        // re-tiles the active tab regardless of which one holds the (single,
+        // invisible) plugin pane. No config block: it inherits the `spiral`
+        // alias's, so the config matches the running instance and zellij focuses
+        // it rather than spawning a rival re-tiler.
+        bind "g" {
+            LaunchOrFocusPlugin "spiral" { move_to_focused_tab true; }
+            SwitchToMode "normal"
+        }
+        // Prefix-then-prefix sends a literal Ctrl-\ (tmux's `bind "C-\\"
+        // send-prefix`); 28 = Ctrl-\.
+        bind "Ctrl \\" { Write 28; SwitchToMode "normal"; }
+    }
+}
+
+// The spiral plugin, configured once here so the default layout and the `g`
+// keybind share identical config (zellij keys plugin identity on url+config, so
+// matching config is what lets `g` focus the running instance instead of
+// launching a second). Edit the spiral here:
+//   master_size  focused pane's share at each level; "62%" = golden ratio.
+//   start        side the focused pane sits on: Top | Bottom | Left | Right.
+//   spin         PinwheelCw|PinwheelCcw|StaircaseCw|StaircaseCcw (Pinwheel spins,
+//                Staircase zig-zags). `spin`, not `direction`: zellij reserves
+//                `direction` and strips it.
+// All 16 start×spin previews: github.com/bddap-bot/zellij-spiral/blob/master/screenshots/INDEX.md
+plugins {
+    spiral location="file:@wasm@" {
+        master_size "62%"
+        start       "Right"
+        spin        "PinwheelCw"
+    }
+}
