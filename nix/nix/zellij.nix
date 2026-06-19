@@ -1,13 +1,11 @@
-# The patched zellij + the zellij-spiral plugin wasm, as plain derivations.
-# Ported from the spiral repo's flake so `./home-manager build` produces both —
-# no flakes, no build-on-launch. `zellij-forked` goes on PATH (stock zellij would
-# put the wrong pane in the dominant slot); the wasm store path is what the zellij
-# config/layout load.
+# The patched zellij + the zellij-spiral plugin wasm, as plain derivations, so
+# `./home-manager build` produces both with no flakes and no build-on-launch.
+# `zellij` (the fork) goes on PATH — it adds the pane-slot-binding API the spiral
+# needs, which stock zellij lacks. The wasm store path is what the config loads.
 #
-# Built against the spiral's own pinned nixpkgs + rust-overlay (sources.json), not
-# the repo's main nixpkgs: that rev's zellij-unwrapped + fetchCargoVendor API are
-# what the fork's vendor hashes were computed against, so reusing it keeps the
-# hashes valid instead of chasing drift across two nixpkgs.
+# Built against the spiral's own pinned nixpkgs + rust-overlay, not the repo's
+# main nixpkgs: that rev's zellij-unwrapped + fetchCargoVendor are what the fork's
+# vendor hashes were computed against, so reusing it keeps the hashes valid.
 final:
 let
   sources = final.bddap.sources;
@@ -22,8 +20,9 @@ let
     targets = [ "wasm32-wasip1" ];
   };
 
-  # zellij-tile and zellij-utils are git crates from this fork checkout;
-  # importCargoLock keys them by "name-version" to the unpacked source hash.
+  # The unpacked-tree hash of the fork checkout. fetchFromGitHub takes it directly;
+  # importCargoLock needs the same hash for every git crate it resolves out of that
+  # one checkout (zellij-tile and its zellij-utils dep).
   forkHash = "sha256-W9fjq34c0Omgr7lZsLLQg6DtpbGyB9pYXMpGN4nGc+s=";
   forkSrc = pkgs.fetchFromGitHub {
     owner = "bddap-bot";
@@ -44,16 +43,7 @@ let
         "zellij-utils-0.45.0" = forkHash;
       };
     };
-
-    # All native: these drive build scripts in the dep tree (prost & friends),
-    # compiled for the host during the otherwise-wasm build — not wasm inputs.
-    nativeBuildInputs = [
-      rustWasm
-      pkgs.rustPlatform.cargoSetupHook
-      pkgs.pkg-config
-      pkgs.protobuf
-      pkgs.gcc
-    ];
+    nativeBuildInputs = [ rustWasm pkgs.rustPlatform.cargoSetupHook ];
 
     buildPhase = ''
       runHook preBuild
@@ -78,25 +68,20 @@ let
   # reads cargoHash from the raw function argument, which overrideAttrs (a fixpoint
   # over the result) can't reach — so an overridden cargoHash is silently ignored.
   # A prebuilt cargoDeps takes the recipe's `cargoDeps != null` branch instead.
-  zellij-fork-deps = pkgs.rustPlatform.fetchCargoVendor {
-    name = "zellij-fork-deps";
-    src = forkSrc;
-    hash = "sha256-PLHoJcjyjd1jX/ZPf/Mh6n5VEQ2/Q4RZrZShm8yAeDM=";
-  };
   zellij-forked-unwrapped = pkgs.zellij-unwrapped.overrideAttrs (_: {
     version = "0.45.0-pane-slot-binding";
     src = forkSrc;
-    cargoDeps = zellij-fork-deps;
+    cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+      name = "zellij-fork-deps";
+      src = forkSrc;
+      hash = "sha256-PLHoJcjyjd1jX/ZPf/Mh6n5VEQ2/Q4RZrZShm8yAeDM=";
+    };
     # Our version string carries the fork suffix; the upstream --version check
     # expects a plain semver, so skip it.
     doInstallCheck = false;
   });
-  zellij-forked = pkgs.zellij.override {
-    zellij-unwrapped = zellij-forked-unwrapped;
-  };
 in {
   inherit zellij-spiral;
-  # The fork is the `zellij` everything else uses; expose under both names so
-  # home.packages can take it as the plain `zellij`.
-  zellij = zellij-forked;
+  # The fork is the `zellij` everything else uses.
+  zellij = pkgs.zellij.override { zellij-unwrapped = zellij-forked-unwrapped; };
 }

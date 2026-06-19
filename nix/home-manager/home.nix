@@ -129,7 +129,6 @@ in { config, ... }: {
       wasm = "${pkgs.bddap.zellij-spiral}/zellij-spiral.wasm";
     };
     "zellij/layouts/default.kdl".source = ./zellij/layouts/default.kdl;
-    "zellij/README.md".source = ./zellij/README.md;
   };
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
