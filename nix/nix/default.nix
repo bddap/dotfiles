@@ -13,6 +13,7 @@ let
           "nixpkgs=${sources.nixpkgs}:home-manager=${final.home-manager.src}";
       };
       codex = import ./codex.nix final;
+      inherit (import ./zellij.nix final) zellij zellij-spiral;
     };
   };
   pkgs = import sources.nixpkgs { overlays = [ overlay ]; config.allowUnfree = true; };

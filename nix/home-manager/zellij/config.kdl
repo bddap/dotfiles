@@ -1,0 +1,39 @@
+// Keybinds modeled on ~/.tmux.conf. Only the prefix and one chord differ from
+// zellij's stock "tmux mode" (which already behaves like tmux); clear-defaults
+// stays false so everything else is inherited.
+
+keybinds {
+    // tmux's prefix is `C-\` (.tmux.conf: `set -g prefix "C-\\"`), not zellij's
+    // `Ctrl b`. Rebind everywhere except inside tmux mode, so the same chord
+    // there can send a literal Ctrl-\ to the pane (below).
+    shared_except "locked" "scroll" "search" "tmux" {
+        unbind "Ctrl b"
+        bind "Ctrl \\" { SwitchToMode "tmux"; }
+    }
+
+    tmux {
+        // Prefix-then-prefix sends a literal Ctrl-\ (tmux's `bind "C-\\"
+        // send-prefix`); 28 = Ctrl-\.
+        bind "Ctrl \\" { Write 28; SwitchToMode "normal"; }
+    }
+}
+
+// No manual spiral keybind: the plugin re-tiles on every focus/pane change on its
+// own (it stays subscribed even while hidden), so there is nothing to trigger by
+// hand. A `LaunchOrFocusPlugin "spiral"` here would only *un-hide* the running
+// render-nothing plugin into a visible pane (splitting the layout), never help.
+
+// The spiral plugin. Edit the spiral here:
+//   master_size  focused pane's share at each level; "62%" = golden ratio.
+//   start        side the focused pane sits on: Top | Bottom | Left | Right.
+//   spin         PinwheelCw|PinwheelCcw|StaircaseCw|StaircaseCcw (Pinwheel spins,
+//                Staircase zig-zags). `spin`, not `direction`: zellij reserves
+//                `direction` and strips it.
+// All 16 start×spin previews: github.com/bddap-bot/zellij-spiral/blob/master/screenshots/INDEX.md
+plugins {
+    spiral location="file:@wasm@" {
+        master_size "62%"
+        start       "Right"
+        spin        "PinwheelCw"
+    }
+}

@@ -1,0 +1,13 @@
+// Default layout: plain `zellij` loads the golden-spiral plugin here. The plugin
+// and its knobs (master_size/start/spin) are the `spiral` alias in ../config.kdl;
+// this just places it.
+
+layout {
+    pane
+    pane
+    // borderless: the plugin renders nothing. It hides itself on load and re-tiles
+    // the tab on every focus/pane change from the background.
+    pane borderless=true {
+        plugin location="spiral"
+    }
+}
