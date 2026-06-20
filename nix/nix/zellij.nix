@@ -23,7 +23,7 @@ let
   # The unpacked-tree hash of the fork checkout. fetchFromGitHub takes it directly;
   # importCargoLock needs the same hash for every git crate it resolves out of that
   # one checkout (zellij-tile and its zellij-utils dep).
-  forkHash = "sha256-W9fjq34c0Omgr7lZsLLQg6DtpbGyB9pYXMpGN4nGc+s=";
+  forkHash = "sha256-1JHkuxNYDv/pshs8ErF98b3M5nuAB750CXs+B4mNxJE=";
   forkSrc = pkgs.fetchFromGitHub {
     owner = "bddap-bot";
     repo = "zellij";

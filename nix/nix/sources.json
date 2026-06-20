@@ -77,10 +77,10 @@
         "homepage": "",
         "owner": "bddap-bot",
         "repo": "zellij",
-        "rev": "119b86e52e8145eecf7f43970ac3af13b30db629",
-        "sha256": "1svkqs4kfinabicdl1xjn6jyv843s2rb0ndrmyhfkl0wgsmy7msv",
+        "rev": "7969518483be55cb2fbe2b1385a3493c9e324975",
+        "sha256": "14f4in4hfgkv15sbw1w0ggkcrggignqi4g0vnblzy3jq2fxy94fl",
         "type": "tarball",
-        "url": "https://github.com/bddap-bot/zellij/archive/119b86e52e8145eecf7f43970ac3af13b30db629.tar.gz",
+        "url": "https://github.com/bddap-bot/zellij/archive/7969518483be55cb2fbe2b1385a3493c9e324975.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "zellij-nixpkgs": {
@@ -101,10 +101,10 @@
         "homepage": "",
         "owner": "bddap-bot",
         "repo": "zellij-spiral",
-        "rev": "f441e9de08de1b01bd377b705c9ae95b38593f64",
-        "sha256": "07slf8p1ph52dlxpvg67y1dzgdid1rsh5qwcz05px99zbipk7lra",
+        "rev": "cdfeb4a43845d1f32790996c825c3dd2a29da8c4",
+        "sha256": "1h8gws5q7877wrs6dz1wg95dzkamlsbmh9x4cvd3nk93f8abfzhv",
         "type": "tarball",
-        "url": "https://github.com/bddap-bot/zellij-spiral/archive/f441e9de08de1b01bd377b705c9ae95b38593f64.tar.gz",
+        "url": "https://github.com/bddap-bot/zellij-spiral/archive/cdfeb4a43845d1f32790996c825c3dd2a29da8c4.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

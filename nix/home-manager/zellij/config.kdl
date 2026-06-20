@@ -12,25 +12,18 @@ keybinds {
     }
 
     tmux {
-        // `<prefix> g` (g = golden) brings the spiral to the focused tab — it
-        // re-tiles the active tab regardless of which one holds the (single,
-        // invisible) plugin pane. No config block: it inherits the `spiral`
-        // alias's, so the config matches the running instance and zellij focuses
-        // it rather than spawning a rival re-tiler.
-        bind "g" {
-            LaunchOrFocusPlugin "spiral" { move_to_focused_tab true; }
-            SwitchToMode "normal"
-        }
         // Prefix-then-prefix sends a literal Ctrl-\ (tmux's `bind "C-\\"
         // send-prefix`); 28 = Ctrl-\.
         bind "Ctrl \\" { Write 28; SwitchToMode "normal"; }
     }
 }
 
-// The spiral plugin, configured once here so the default layout and the `g`
-// keybind share identical config (zellij keys plugin identity on url+config, so
-// matching config is what lets `g` focus the running instance instead of
-// launching a second). Edit the spiral here:
+// No manual spiral keybind: the plugin re-tiles on every focus/pane change on its
+// own (it stays subscribed even while hidden), so there is nothing to trigger by
+// hand. A `LaunchOrFocusPlugin "spiral"` here would only *un-hide* the running
+// render-nothing plugin into a visible pane (splitting the layout), never help.
+
+// The spiral plugin. Edit the spiral here:
 //   master_size  focused pane's share at each level; "62%" = golden ratio.
 //   start        side the focused pane sits on: Top | Bottom | Left | Right.
 //   spin         PinwheelCw|PinwheelCcw|StaircaseCw|StaircaseCcw (Pinwheel spins,
