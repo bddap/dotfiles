@@ -4,12 +4,7 @@ set -euo pipefail
 
 cd "$(dirname $0)"
 
-if [ ! -d ~/.emacs.d ]; then
-	mkdir ~/.emacs.d
-fi
-
-stow -d ./home -t ~ .
-
-# TODO:
-#   Implement a custom replacement for stow that better fits the use case.
-#     - Don't symlink directories unless explicitly configured to do so.
+# --no-folding: create real directories and symlink only the individual files
+# into them, never symlink a whole directory. Keeps tool-managed dirs like
+# ~/.emacs.d real (straight.el writes there) instead of links back into this repo.
+stow --no-folding -d ./home -t ~ .
