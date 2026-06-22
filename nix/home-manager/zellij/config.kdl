@@ -22,6 +22,12 @@ keybinds clear-defaults=true {
         // send-prefix`); 28 = Ctrl-\.
         bind "Ctrl \\" { Write 28; SwitchToMode "normal"; }
 
+        // Abort the prefix. clear-defaults removed zellij's stock escapes, and an
+        // unbound key here is swallowed (stays in-mode), so without this an
+        // accidental prefix would strand you with only the action keys as a way
+        // out. tmux drops to normal on Esc / C-c after a stray prefix; match it.
+        bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+
         // splits: % = left/right divider, " = top/bottom (tmux's geometry)
         bind "%" { NewPane "Right"; SwitchToMode "normal"; }
         bind "\"" { NewPane "Down"; SwitchToMode "normal"; }
