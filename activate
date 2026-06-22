@@ -4,7 +4,4 @@ set -euo pipefail
 
 cd "$(dirname $0)"
 
-# --no-folding: create real directories and symlink only the individual files
-# into them, never symlink a whole directory. Keeps tool-managed dirs like
-# ~/.emacs.d real (straight.el writes there) instead of links back into this repo.
 stow --no-folding -d ./home -t ~ .
