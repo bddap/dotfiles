@@ -1,20 +1,84 @@
-// Keybinds modeled on ~/.tmux.conf. Only the prefix and one chord differ from
-// zellij's stock "tmux mode" (which already behaves like tmux); clear-defaults
-// stays false so everything else is inherited.
-
-keybinds {
-    // tmux's prefix is `C-\` (.tmux.conf: `set -g prefix "C-\\"`), not zellij's
-    // `Ctrl b`. Rebind everywhere except inside tmux mode, so the same chord
-    // there can send a literal Ctrl-\ to the pane (below).
-    shared_except "locked" "scroll" "search" "tmux" {
-        unbind "Ctrl b"
+// tmux-faithful keybinds. zellij's stock config binds many Ctrl/Alt chords
+// GLOBALLY, stealing keys (Ctrl-p/n/f/t/h/s/o/…) the shell wants. tmux binds
+// nothing globally except its prefix, so we clear EVERYTHING (clear-defaults=true)
+// and rebind only the prefix globally; every other Ctrl/Alt key falls through to
+// the running program, like tmux.
+keybinds clear-defaults=true {
+    // The one and only global capture: tmux's prefix `C-\` (.tmux.conf:
+    // `set -g prefix "C-\\"`). Excluded inside tmux mode (so the same chord there
+    // is free to send-prefix) and inside the text-entry sub-modes scroll/renametab
+    // (so it doesn't yank you out of them mid-scroll / mid-rename).
+    shared_except "tmux" "scroll" "renametab" {
         bind "Ctrl \\" { SwitchToMode "tmux"; }
     }
 
+    // Post-prefix bindings, modeled on tmux's default prefix table. Single keys,
+    // since the prefix already gated them. One-shot actions return to normal like
+    // tmux's prefix; the two mode-entries (scroll via `[`, renametab via `,`) get
+    // escape binds below. (.tmux.conf only rebinds j/s to join-pane/send-pane
+    // prompts, which zellij has no equivalent for, so hjkl stay focus moves.)
     tmux {
-        // Prefix-then-prefix sends a literal Ctrl-\ (tmux's `bind "C-\\"
+        // prefix prefix -> literal Ctrl-\ to the pane (.tmux.conf `bind "C-\\"
         // send-prefix`); 28 = Ctrl-\.
         bind "Ctrl \\" { Write 28; SwitchToMode "normal"; }
+
+        // Abort the prefix. clear-defaults removed zellij's stock escapes, and an
+        // unbound key here is swallowed (stays in-mode), so without this an
+        // accidental prefix would strand you with only the action keys as a way
+        // out. tmux drops to normal on Esc / C-c after a stray prefix; match it.
+        bind "Esc" "Ctrl c" { SwitchToMode "normal"; }
+
+        // splits: % = left/right divider, " = top/bottom (tmux's geometry)
+        bind "%" { NewPane "Right"; SwitchToMode "normal"; }
+        bind "\"" { NewPane "Down"; SwitchToMode "normal"; }
+
+        // focus: arrows + hjkl
+        bind "Left"  "h" { MoveFocus "Left";  SwitchToMode "normal"; }
+        bind "Right" "l" { MoveFocus "Right"; SwitchToMode "normal"; }
+        bind "Down"  "j" { MoveFocus "Down";  SwitchToMode "normal"; }
+        bind "Up"    "k" { MoveFocus "Up";    SwitchToMode "normal"; }
+        bind "o" { FocusNextPane; SwitchToMode "normal"; }
+
+        // panes
+        bind "z" { ToggleFocusFullscreen; SwitchToMode "normal"; }
+        bind "x" { CloseFocus; SwitchToMode "normal"; }
+        bind "Space" { NextSwapLayout; SwitchToMode "normal"; } // tmux next-layout
+
+        // tabs (tmux "windows"): new / next / prev / close, and 1-9 jump
+        bind "c" { NewTab; SwitchToMode "normal"; }
+        bind "n" { GoToNextTab; SwitchToMode "normal"; }
+        bind "p" { GoToPreviousTab; SwitchToMode "normal"; }
+        bind "&" { CloseTab; SwitchToMode "normal"; }          // tmux kill-window
+        bind "1" { GoToTab 1; SwitchToMode "normal"; }
+        bind "2" { GoToTab 2; SwitchToMode "normal"; }
+        bind "3" { GoToTab 3; SwitchToMode "normal"; }
+        bind "4" { GoToTab 4; SwitchToMode "normal"; }
+        bind "5" { GoToTab 5; SwitchToMode "normal"; }
+        bind "6" { GoToTab 6; SwitchToMode "normal"; }
+        bind "7" { GoToTab 7; SwitchToMode "normal"; }
+        bind "8" { GoToTab 8; SwitchToMode "normal"; }
+        bind "9" { GoToTab 9; SwitchToMode "normal"; }
+
+        bind "d" { Detach; }
+        bind "," { SwitchToMode "renametab"; TabNameInput 0; } // tmux rename-window
+        bind "[" { SwitchToMode "scroll"; }                   // tmux copy-mode
+    }
+
+    // Escapes for the two sub-modes tmux mode can enter. clear-defaults wiped their
+    // stock binds, so without these you'd enter the mode and be stuck with no key
+    // back to the shell.
+    scroll {
+        bind "Esc" "q" { SwitchToMode "normal"; }
+        bind "Ctrl f" "PageDown" { PageScrollDown; }
+        bind "Ctrl b" "PageUp"   { PageScrollUp; }
+        bind "j" "Down" { ScrollDown; }
+        bind "k" "Up"   { ScrollUp; }
+        bind "g" { ScrollToTop; }
+        bind "G" { ScrollToBottom; SwitchToMode "normal"; }
+    }
+    renametab {
+        bind "Enter" { SwitchToMode "normal"; }
+        bind "Esc" { UndoRenameTab; SwitchToMode "normal"; }
     }
 }
 
