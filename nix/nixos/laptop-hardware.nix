@@ -1,30 +1,16 @@
-# Hardware configuration for laptops installed via ./install-to-disk.
+# Generic hardware baseline for laptops installed via ./install-to-disk.
 #
-# Instead of a per-machine nixos-generate-config output (fs UUIDs,
-# detected modules), this uses partition labels matching the disko
-# layout (nix/nixos/disko.nix) and a superset of storage/input kernel
-# modules, so one file works on any x86_64 laptop. Machine-specific
-# tuning (e.g. a nixos-hardware profile) goes in the host file.
+# Machine-specific hardware config (filesystem/LUKS UUIDs, detected
+# modules) is generated per machine by nixos-generate-config and lives in
+# nix/nixos/local/hardware-configuration.nix (gitignored). What stays here
+# is the generic part: a superset of storage/input kernel modules and both
+# microcode vendors, so a config generated on the *installing* machine
+# still boots any x86_64 laptop.
 
 { lib, modulesPath, ... }:
 
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
-
-  # ── Filesystems (match disko partition labels) ────────────────────────
-  boot.initrd.luks.devices.cryptroot = {
-    device = "/dev/disk/by-partlabel/disk-main-luks";
-    allowDiscards = true;
-  };
-  fileSystems."/" = {
-    device = "/dev/mapper/cryptroot";
-    fsType = "ext4";
-  };
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-partlabel/disk-main-ESP";
-    fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
-  };
 
   # ── Kernel modules: generic superset, not machine-detected ───────────
   boot.initrd.availableKernelModules = [
@@ -54,5 +40,4 @@
   boot.loader.efi.canTouchEfiVariables = false;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  hardware.nvidia.open = true;
 }

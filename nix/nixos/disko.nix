@@ -3,14 +3,16 @@
 # GPT: 1G EFI System Partition + LUKS2 (ext4 root inside).
 # No swap partition (add zram/swapfile declaratively later if wanted).
 #
-# Partition labels are the contract between this file and
-# laptop-hardware.nix (which mounts by /dev/disk/by-partlabel/*):
-#   disk-main-ESP, disk-main-luks — keep them in sync.
+# The installed system mounts by filesystem UUID, from the
+# nixos-generate-config output the installer writes to
+# nix/nixos/local/hardware-configuration.nix — so this file has no
+# contract with the system config. The partition labels
+# (disk-main-ESP, disk-main-luks) are kept for operator convenience.
 # (Deliberately NOT imported into the system config: keeps disko out
-# of the system eval, at the cost of that duplicated contract.)
+# of the system eval.)
 #
 # `disk` is the target device at format time only; the installed
-# system never references it (mounts go by partlabel).
+# system never references it.
 { disk, passwordFile }: {
   disko.devices = {
     disk.main = {
@@ -34,9 +36,10 @@
             content = {
               type = "luks";
               # Format-time mapper name only. Distinct from the boot-time
-              # name (cryptroot, set in laptop-hardware.nix) so installing
-              # FROM a machine that itself runs this layout can't collide
-              # with its own /dev/mapper/cryptroot.
+              # name (cryptroot — install-to-disk renames it in the
+              # generated hardware-configuration.nix) so installing FROM a
+              # machine that itself runs this layout can't collide with
+              # its own /dev/mapper/cryptroot.
               name = "cryptroot-install";
               settings.allowDiscards = true;
               inherit passwordFile;
