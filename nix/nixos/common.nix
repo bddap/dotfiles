@@ -1,6 +1,13 @@
 { ... }:
 let pkgs = import ../nix { };
 in {
+  # Local unversioned modules (gitignored) — imported iff present.
+  # Convention: put machine-local, never-committed config in
+  # nix/nixos/local/default.nix. ./install-to-disk carries the dir
+  # to newly installed machines.
+  imports =
+    if builtins.pathExists ./local/default.nix then [ ./local ] else [ ];
+
   virtualisation.libvirtd.enable = true;
 
   boot = {
