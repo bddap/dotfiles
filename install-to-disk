@@ -56,6 +56,10 @@ if [ ! -b "$DISK" ]; then
     exit 1
 fi
 
+# Canonicalize so the ancestor comparison below works for symlinked
+# paths like /dev/disk/by-id/... too.
+DISK="$(readlink -f -- "$DISK")"
+
 DISK_TYPE="$(lsblk -ndo TYPE "$DISK")"
 if [ "$DISK_TYPE" != "disk" ] && [ "$DISK_TYPE" != "loop" ]; then
     echo "Error: $DISK is a $DISK_TYPE, not a whole disk"
@@ -64,7 +68,10 @@ fi
 
 # Refuse any disk with mounted filesystems (this alone rules out the
 # running system's disk; the ancestor check below is belt-and-braces).
-if lsblk -no MOUNTPOINTS "$DISK" | grep -q .; then
+# Guards capture into variables so a failing lsblk aborts (set -e)
+# instead of silently passing the check.
+DISK_MOUNTS="$(lsblk -no MOUNTPOINTS "$DISK")"
+if grep -q . <<< "$DISK_MOUNTS"; then
     echo "Error: $DISK has mounted filesystems:"
     lsblk "$DISK"
     exit 1
@@ -72,8 +79,18 @@ fi
 
 # Refuse the disk backing / outright, even if lsblk missed a mount.
 ROOT_SRC="$(findmnt -no SOURCE /)"
-if lsblk -snro NAME "$ROOT_SRC" | grep -qx "$(basename "$DISK")"; then
+ROOT_SRC="${ROOT_SRC%%\[*}" # strip btrfs [/subvol] suffix
+ROOT_ANCESTORS="$(lsblk -snro NAME "$ROOT_SRC")"
+if grep -qx "$(basename "$DISK")" <<< "$ROOT_ANCESTORS"; then
     echo "Error: $DISK backs the running root filesystem"
+    exit 1
+fi
+
+# Stale mapping from a crashed run (or a name collision) would make
+# disko fail after formatting; refuse up front instead.
+if [ -e /dev/mapper/cryptroot-install ]; then
+    echo "Error: /dev/mapper/cryptroot-install already exists" \
+         "(close it or reboot, then retry)"
     exit 1
 fi
 
@@ -84,23 +101,24 @@ echo "Target disk:"
 lsblk -o NAME,SIZE,TYPE,MODEL,SERIAL "$DISK"
 echo ""
 echo "ALL DATA ON $DISK WILL BE DESTROYED."
-read -rp "Type the device path ($DISK) to continue: " CONFIRM
+IFS= read -rp "Type the device path ($DISK) to continue: " CONFIRM
 if [ "$CONFIRM" != "$DISK" ]; then
     echo "Aborted."
     exit 1
 fi
 
 # ── Collect secrets up front (no prompts mid-install) ───────────────────
+# IFS= so passphrases with leading/trailing whitespace survive intact.
 
-read -rsp "LUKS passphrase for the new disk: " LUKS_PASS; echo
-read -rsp "LUKS passphrase (again): " LUKS_PASS2; echo
+IFS= read -rsp "LUKS passphrase for the new disk: " LUKS_PASS; echo
+IFS= read -rsp "LUKS passphrase (again): " LUKS_PASS2; echo
 if [ -z "$LUKS_PASS" ] || [ "$LUKS_PASS" != "$LUKS_PASS2" ]; then
     echo "Error: passphrases empty or mismatched"
     exit 1
 fi
 
-read -rsp "Password for user 'a' on the new machine: " USER_PASS; echo
-read -rsp "Password (again): " USER_PASS2; echo
+IFS= read -rsp "Password for user 'a' on the new machine: " USER_PASS; echo
+IFS= read -rsp "Password (again): " USER_PASS2; echo
 if [ -z "$USER_PASS" ] || [ "$USER_PASS" != "$USER_PASS2" ]; then
     echo "Error: passwords empty or mismatched"
     exit 1
@@ -126,28 +144,16 @@ EOF
     echo "Created $HOST_FILE — commit it after the install."
 fi
 
-# ── NIX_PATH setup (same scheme as ./nixos-build) ───────────────────────
-
-unset NIX_PATH
-NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
-export NIX_PATH
-export NIXPKGS_ALLOW_UNFREE=1
-
 # cryptsetup for cleanup, from the pinned nixpkgs (not on PATH everywhere)
-CRYPTSETUP="$(nix-build --no-out-link '<nixpkgs>' -A cryptsetup)/bin/cryptsetup"
+CRYPTSETUP="$(nix-build --no-out-link -E '(import ./nix/nix { }).cryptsetup')/bin/cryptsetup"
 
 # ── Step 1: Build the system closure (disk still untouched) ─────────────
 
 echo ""
 echo "==> Building the system closure for ${NEW_HOSTNAME}..."
 
-NIXOS_CONFIG="$(realpath "$HOST_FILE")"
-export NIXOS_CONFIG
-
-SYSTEM="$(nix-build '<nixpkgs/nixos>' \
-    -A system \
-    --no-out-link \
-    -I "nixos-config=$NIXOS_CONFIG")"
+./nixos-build "hosts/${NEW_HOSTNAME}"
+SYSTEM="$(readlink -f result)"
 
 echo "System closure built: $SYSTEM"
 
@@ -155,16 +161,16 @@ echo "System closure built: $SYSTEM"
 
 KEYFILE=""
 cleanup() {
+    # Keyfile first: nothing below may run before the secret is gone.
+    rm -f "$KEYFILE"
     if mountpoint -q /mnt; then
         echo "==> Unmounting /mnt..."
         umount -R /mnt
     fi
-    if [ -e /dev/mapper/cryptroot ]; then
-        "$CRYPTSETUP" close cryptroot
+    if [ -e /dev/mapper/cryptroot-install ]; then
+        "$CRYPTSETUP" close cryptroot-install
     fi
-    if [ -n "$KEYFILE" ]; then
-        rm -f "$KEYFILE"
-    fi
+    rm -f result
 }
 trap cleanup EXIT
 
@@ -173,7 +179,8 @@ trap cleanup EXIT
 echo ""
 echo "==> Partitioning and formatting $DISK..."
 
-KEYFILE="$(umask 077 && mktemp)"
+# Keyfile on tmpfs so the passphrase never touches the installer's disk.
+KEYFILE="$(umask 077 && mktemp -p /dev/shm)"
 printf '%s' "$LUKS_PASS" > "$KEYFILE"
 
 DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix \
@@ -217,6 +224,7 @@ if [ -d nix/nixos/local ]; then
     echo "    (carrying nix/nixos/local/ — local unversioned modules)"
 fi
 chown -R 1000:100 /mnt/home/a
+chmod 700 /mnt/home/a
 
 # ── Done ────────────────────────────────────────────────────────────────
 

@@ -8,4 +8,5 @@ let
   sources = import ../nix/sources.nix;
   disko = import sources.disko { };
   diskoConfig = import ./disko.nix { inherit disk passwordFile; };
+# _cliFormatMount is underscore-private disko API — revisit on a disko bump.
 in disko._cliFormatMount diskoConfig pkgs
