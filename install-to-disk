@@ -30,12 +30,13 @@
 # migrate by moving your hardware-configuration.nix into local/ and
 # adding a local/default.nix like the one this script generates.
 #
-# After completion: move the drive into the new laptop, boot. First boot
-# on the target needs the firmware boot menu: nixos-install/bootctl
-# writes the "Linux Boot Manager" NVRAM entry on the machine RUNNING the
-# install, not the laptop — the drive boots via the fallback
-# \EFI\BOOT\BOOTX64.EFI. Then fix boot order (or run efibootmgr) from the
-# booted system. Future rebuilds on the new machine:
+# After completion: move the drive into the new laptop and boot via the
+# firmware boot menu. There is deliberately NO NVRAM boot entry —
+# boot.loader.efi.canTouchEfiVariables = false (laptop-hardware.nix), so
+# the install never writes the installing machine's NVRAM and the drive
+# stays portable between machines; it boots via the fallback
+# \EFI\BOOT\BOOTX64.EFI. Pick the drive in the boot menu / set boot
+# order in firmware. Future rebuilds on the new machine:
 #   ./nixos-build physical switch
 
 set -euo pipefail
@@ -286,8 +287,8 @@ echo "==> Installation complete."
 echo ""
 echo "Next steps:"
 echo "  1. Move the drive into the new laptop and boot via the firmware"
-echo "     boot menu (the NVRAM entry was written on THIS machine; the"
-echo "     drive boots via fallback \\EFI\\BOOT\\BOOTX64.EFI)."
+echo "     boot menu (deliberately NO NVRAM entry — the drive boots via"
+echo "     fallback \\EFI\\BOOT\\BOOTX64.EFI; pick it / set boot order)."
 echo "     (Fresh host keys and machine-id are generated on first boot.)"
 echo "  2. Nothing to commit — nix/nixos/local/ is gitignored; the repo"
 echo "     on the new machine already carries its host config."
