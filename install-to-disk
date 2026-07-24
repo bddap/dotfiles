@@ -133,6 +133,9 @@ NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitt
 export NIX_PATH
 export NIXPKGS_ALLOW_UNFREE=1
 
+# cryptsetup for cleanup, from the pinned nixpkgs (not on PATH everywhere)
+CRYPTSETUP="$(nix-build --no-out-link '<nixpkgs>' -A cryptsetup)/bin/cryptsetup"
+
 # ── Step 1: Build the system closure (disk still untouched) ─────────────
 
 echo ""
@@ -157,7 +160,7 @@ cleanup() {
         umount -R /mnt
     fi
     if [ -e /dev/mapper/cryptroot ]; then
-        cryptsetup close cryptroot
+        "$CRYPTSETUP" close cryptroot
     fi
     if [ -n "$KEYFILE" ]; then
         rm -f "$KEYFILE"
