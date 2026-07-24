@@ -7,7 +7,9 @@
 #   sudo ./install-to-disk <hostname> /dev/sdX
 #
 # What it does:
-#   1. Partitions and formats the target disk with disko
+#   1. Wipes any existing partition table (disko's format+mount is
+#      non-destructive and would adopt a foreign GPT), then partitions
+#      and formats the target disk with disko
 #      (GPT: 1G ESP + LUKS2 ext4 root — see nix/nixos/disko.nix)
 #   2. Copies this repo to /home/a/<repo-dir-name> on the target and
 #      populates nix/nixos/local/ in that copy:
@@ -22,13 +24,18 @@
 #
 # Convention: the checked-in tree contains NO host-specific values (not
 # even a hostname). Everything machine-specific lives in nix/nixos/local/
-# (gitignored), which nix/nixos/common.nix imports iff present. On an
-# existing machine, migrate by moving your hardware-configuration.nix
-# into local/ and adding a local/default.nix like the one this script
-# generates.
+# (gitignored), which nix/nixos/common.nix imports iff present. Files in
+# local/ may freely import checked-in repo modules — host-specific VALUES
+# live in local/, shared logic stays checked in. On an existing machine,
+# migrate by moving your hardware-configuration.nix into local/ and
+# adding a local/default.nix like the one this script generates.
 #
-# After completion: move the drive into the new laptop, boot. Future
-# rebuilds on the new machine:
+# After completion: move the drive into the new laptop, boot. First boot
+# on the target needs the firmware boot menu: nixos-install/bootctl
+# writes the "Linux Boot Manager" NVRAM entry on the machine RUNNING the
+# install, not the laptop — the drive boots via the fallback
+# \EFI\BOOT\BOOTX64.EFI. Then fix boot order (or run efibootmgr) from the
+# booted system. Future rebuilds on the new machine:
 #   ./nixos-build physical switch
 
 set -euo pipefail
@@ -132,8 +139,9 @@ if [ -z "$USER_PASS" ] || [ "$USER_PASS" != "$USER_PASS2" ]; then
     exit 1
 fi
 
-# cryptsetup for cleanup, from the pinned nixpkgs (not on PATH everywhere)
+# cryptsetup/sgdisk, from the pinned nixpkgs (not on PATH everywhere)
 CRYPTSETUP="$(nix-build --no-out-link -E '(import ./nix/nix { }).cryptsetup')/bin/cryptsetup"
+SGDISK="$(nix-build --no-out-link -E '(import ./nix/nix { }).gptfdisk')/bin/sgdisk"
 
 # ── Cleanup on exit ─────────────────────────────────────────────────────
 
@@ -161,6 +169,17 @@ trap cleanup EXIT
 
 echo ""
 echo "==> Partitioning and formatting $DISK..."
+
+# Wipe any pre-existing partition table first. disko's format+mount is
+# NON-destructive: given a foreign GPT (e.g. a leftover Windows install)
+# it ADOPTS the existing partitions — relabeling a 450MiB recovery
+# partition as the ESP and a 16MiB MSR as the LUKS partition, where
+# luksFormat then fails ("too small for activation"). The wrong-target
+# guards and the explicit confirmation above have already vetted $DISK;
+# the contract is ERASES ENTIRELY, so erase it.
+"$SGDISK" --zap-all "$DISK"
+blockdev --rereadpt "$DISK"
+udevadm settle
 
 # Keyfile on tmpfs so the passphrase never touches the installer's disk.
 KEYFILE="$(umask 077 && mktemp -p /dev/shm)"
@@ -266,7 +285,9 @@ echo ""
 echo "==> Installation complete."
 echo ""
 echo "Next steps:"
-echo "  1. Move the drive into the new laptop and boot."
+echo "  1. Move the drive into the new laptop and boot via the firmware"
+echo "     boot menu (the NVRAM entry was written on THIS machine; the"
+echo "     drive boots via fallback \\EFI\\BOOT\\BOOTX64.EFI)."
 echo "     (Fresh host keys and machine-id are generated on first boot.)"
 echo "  2. Nothing to commit — nix/nixos/local/ is gitignored; the repo"
 echo "     on the new machine already carries its host config."
