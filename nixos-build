@@ -13,13 +13,12 @@ if [ -z "$CONFIG" ]; then
     echo "Usage: $0 <config> [action]"
     echo ""
     echo "  config:  name of a nix/nixos/<config>.nix entry point"
-    echo "           e.g. physical, server"
+    echo "           e.g. physical"
     echo "  action:  optional nixos-rebuild action (switch, boot, test, etc.)"
     echo ""
     echo "Examples:"
     echo "  $0 physical              # build only"
     echo "  $0 physical switch       # build and switch"
-    echo "  $0 server switch         # build and switch (reads HOSTNAME from env/system)"
     exit 1
 fi
 
@@ -29,11 +28,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: $CONFIG_FILE not found"
     exit 1
 fi
-
-# ── Env defaults for configs that read from env ─────────────────────────
-
-export HOSTNAME="${HOSTNAME:-$(hostname)}"
-
 
 # ── NIX_PATH setup ──────────────────────────────────────────────────────
 
@@ -56,6 +50,5 @@ if [ -n "$ACTION" ]; then
         NIX_PATH="$NIX_PATH" \
         NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
         NIXOS_CONFIG="$NIXOS_CONFIG" \
-        HOSTNAME="$HOSTNAME" \
         nixos-rebuild "$ACTION"
 fi

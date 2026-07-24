@@ -9,14 +9,13 @@
 # What it does:
 #   1. Partitions and formats the target disk with disko
 #      (GPT: 1G ESP + LUKS2 ext4 root — see nix/nixos/disko.nix)
-#   2. Copies this repo to /home/a/<repo-dir-name> on the target
-#   3. Populates nix/nixos/local/ in that copy — the single home for
-#      host-specific config (gitignored, never carried across machines):
+#   2. Copies this repo to /home/a/<repo-dir-name> on the target and
+#      populates nix/nixos/local/ in that copy:
 #        local/hardware-configuration.nix — nixos-generate-config output
 #        local/default.nix                — imports it + sets hostName
-#   4. Builds the full system closure from that copy
-#   5. nixos-install --system <closure> --root /mnt
-#   6. Sets the password for user `a`
+#   3. Builds the full system closure from that copy
+#   4. nixos-install --system <closure> --root /mnt
+#   5. Sets the password for user `a`
 #
 # Host keys and machine-id are NOT copied — the target generates fresh
 # ones on first boot.
@@ -200,8 +199,16 @@ nixos-generate-config --root /mnt
 rm -f /mnt/etc/nixos/configuration.nix
 mv /mnt/etc/nixos/hardware-configuration.nix "$DEST/nix/nixos/local/"
 # Boot-time mapper name is cryptroot; cryptroot-install is format-time
-# only (see nix/nixos/disko.nix).
+# only (see nix/nixos/disko.nix). Fail loudly if the LUKS stanza is
+# missing — without it the target's initrd never unlocks the root disk.
+grep -q cryptroot-install "$DEST/nix/nixos/local/hardware-configuration.nix"
 sed -i 's/cryptroot-install/cryptroot/g' \
+    "$DEST/nix/nixos/local/hardware-configuration.nix"
+# generate-config detects the INSTALLING machine: drop its CPU-vendor kvm
+# module so a cross-vendor target doesn't fail systemd-modules-load on
+# every boot. (Its detected initrd modules are harmless extras — the
+# boot-critical set is laptop-hardware.nix's generic superset.)
+sed -i -E 's/"(kvm-intel|kvm-amd)"//g' \
     "$DEST/nix/nixos/local/hardware-configuration.nix"
 
 cat > "$DEST/nix/nixos/local/default.nix" <<EOF

@@ -1,13 +1,12 @@
 # Generic hardware baseline for laptops installed via ./install-to-disk.
 #
-# Machine-specific hardware config (filesystem/LUKS UUIDs, detected
-# modules) is generated per machine by nixos-generate-config and lives in
-# nix/nixos/local/hardware-configuration.nix (gitignored). What stays here
-# is the generic part: a superset of storage/input kernel modules and both
-# microcode vendors, so a config generated on the *installing* machine
-# still boots any x86_64 laptop.
+# The machine-specific half (filesystem/LUKS UUIDs, detected modules) is
+# generated per machine into nix/nixos/local/ — see common.nix. What
+# stays here is the generic part: a superset of storage/input kernel
+# modules and both microcode vendors, so a config generated on the
+# *installing* machine still boots any x86_64 laptop.
 
-{ lib, modulesPath, ... }:
+{ modulesPath, ... }:
 
 {
   imports = [ (modulesPath + "/installer/scan/not-detected.nix") ];
@@ -38,6 +37,4 @@
   # *installing* machine's NVRAM). The target boots via the fallback path
   # (EFI/BOOT/BOOTX64.EFI), which bootctl installs by default.
   boot.loader.efi.canTouchEfiVariables = false;
-
-  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 }
