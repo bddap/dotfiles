@@ -6,7 +6,10 @@
 let
   pkgs = import ../nix { };
   sources = import ../nix/sources.nix;
-  disko = import sources.disko { };
+  # Pass lib explicitly: disko's default is `import <nixpkgs/lib>`, which
+  # would depend on ambient NIX_PATH (unpinned, or absent on machines
+  # installed by this very flow).
+  disko = import sources.disko { lib = pkgs.lib; };
   diskoConfig = import ./disko.nix { inherit disk passwordFile; };
 # _cliFormatMount is underscore-private disko API — revisit on a disko bump.
 in disko._cliFormatMount diskoConfig pkgs
