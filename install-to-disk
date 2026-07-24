@@ -201,7 +201,11 @@ mv /mnt/etc/nixos/hardware-configuration.nix "$DEST/nix/nixos/local/"
 # Boot-time mapper name is cryptroot; cryptroot-install is format-time
 # only (see nix/nixos/disko.nix). Fail loudly if the LUKS stanza is
 # missing — without it the target's initrd never unlocks the root disk.
-grep -q cryptroot-install "$DEST/nix/nixos/local/hardware-configuration.nix"
+if ! grep -q cryptroot-install "$DEST/nix/nixos/local/hardware-configuration.nix"; then
+    echo "Error: no cryptroot-install LUKS stanza in the generated" \
+         "hardware config — the target would never unlock its root disk."
+    exit 1
+fi
 sed -i 's/cryptroot-install/cryptroot/g' \
     "$DEST/nix/nixos/local/hardware-configuration.nix"
 # generate-config detects the INSTALLING machine: drop its CPU-vendor kvm
