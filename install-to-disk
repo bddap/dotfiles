@@ -26,9 +26,7 @@
 # even a hostname). Everything machine-specific lives in nix/nixos/local/
 # (gitignored), which nix/nixos/common.nix imports iff present. Files in
 # local/ may freely import checked-in repo modules — host-specific VALUES
-# live in local/, shared logic stays checked in. On an existing machine,
-# migrate by moving your hardware-configuration.nix into local/ and
-# adding a local/default.nix like the one this script generates.
+# live in local/, shared logic stays checked in.
 #
 # After completion: move the drive into the new laptop and boot via the
 # firmware boot menu. There is deliberately NO NVRAM boot entry —
