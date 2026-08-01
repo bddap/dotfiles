@@ -1,6 +1,16 @@
-{ ... }:
+{ lib, ... }:
 let pkgs = import ../nix { };
 in {
+  # Host-specific config lives in nix/nixos/local/ (gitignored) — the
+  # single home for everything machine-specific: networking.hostName, the
+  # nixos-generate-config hardware-configuration.nix, any per-machine
+  # tuning. Imported iff present. ./install-to-disk populates it on new
+  # machines; it is never carried from one machine to another.
+  imports =
+    if builtins.pathExists ./local/default.nix
+    then [ ./local/default.nix ]
+    else [ ];
+
   virtualisation.libvirtd.enable = true;
 
   boot = {
@@ -24,6 +34,10 @@ in {
 
   hardware.nvidia-container-toolkit.enable = true;
   hardware.nvidia-container-toolkit.mount-nvidia-executables = true;
+
+  # Open kernel modules (Turing+). mkDefault so a machine can override in
+  # nix/nixos/local/; driver >= 560 requires the option to be set.
+  hardware.nvidia.open = lib.mkDefault true;
 
   networking.networkmanager.enable = true;
 
@@ -53,7 +67,6 @@ in {
   services.xserver = {
     enable = true;
 
-    # does this belong in hardware-configuration.nix?
     videoDrivers = [ "nvidia" "amdgpu" "intel" ];
 
     displayManager.gdm.enable = true;

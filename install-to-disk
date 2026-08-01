@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+
+# Install this NixOS setup onto a new laptop's drive attached to this
+# (running) machine, e.g. via a USB dongle.
+#
+# Usage:
+#   sudo ./install-to-disk <hostname> /dev/sdX
+#
+# What it does:
+#   1. Wipes any existing partition table (disko's format+mount is
+#      non-destructive and would adopt a foreign GPT), then partitions
+#      and formats the target disk with disko
+#      (GPT: 1G ESP + LUKS2 ext4 root — see nix/nixos/disko.nix)
+#   2. Copies this repo to /home/a/<repo-dir-name> on the target and
+#      populates nix/nixos/local/ in that copy:
+#        local/hardware-configuration.nix — nixos-generate-config output
+#        local/default.nix                — imports it + sets hostName
+#   3. Builds the full system closure from that copy
+#   4. nixos-install --system <closure> --root /mnt
+#   5. Sets the password for user `a`
+#
+# Host keys and machine-id are NOT copied — the target generates fresh
+# ones on first boot.
+#
+# Convention: the checked-in tree contains NO host-specific values (not
+# even a hostname). Everything machine-specific lives in nix/nixos/local/
+# (gitignored), which nix/nixos/common.nix imports iff present. Files in
+# local/ may freely import checked-in repo modules — host-specific VALUES
+# live in local/, shared logic stays checked in.
+#
+# After completion: move the drive into the new laptop and boot via the
+# firmware boot menu. There is deliberately NO NVRAM boot entry —
+# boot.loader.efi.canTouchEfiVariables = false (laptop-hardware.nix), so
+# the install never writes the installing machine's NVRAM and the drive
+# stays portable between machines; it boots via the fallback
+# \EFI\BOOT\BOOTX64.EFI. Pick the drive in the boot menu / set boot
+# order in firmware. Future rebuilds on the new machine:
+#   ./nixos-build physical switch
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# ── Arguments ───────────────────────────────────────────────────────────
+
+if [ $# -ne 2 ]; then
+    echo "Usage: sudo $0 <hostname> /dev/sdX"
+    echo ""
+    echo "WARNING: This ERASES the target disk entirely."
+    exit 1
+fi
+
+NEW_HOSTNAME="$1"
+DISK="$2"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Error: must run as root (sudo $0 $NEW_HOSTNAME $DISK)"
+    exit 1
+fi
+
+if ! [[ "$NEW_HOSTNAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "Error: hostname must match ^[a-z][a-z0-9-]*$"
+    exit 1
+fi
+
+# ── Wrong-target guards ─────────────────────────────────────────────────
+
+if [ ! -b "$DISK" ]; then
+    echo "Error: $DISK is not a block device"
+    exit 1
+fi
+
+# Canonicalize so the ancestor comparison below works for symlinked
+# paths like /dev/disk/by-id/... too.
+DISK="$(readlink -f -- "$DISK")"
+
+DISK_TYPE="$(lsblk -ndo TYPE "$DISK")"
+if [ "$DISK_TYPE" != "disk" ] && [ "$DISK_TYPE" != "loop" ]; then
+    echo "Error: $DISK is a $DISK_TYPE, not a whole disk"
+    exit 1
+fi
+
+# Refuse any disk with mounted filesystems (this alone rules out the
+# running system's disk; the ancestor check below is belt-and-braces).
+# Guards capture into variables so a failing lsblk aborts (set -e)
+# instead of silently passing the check.
+DISK_MOUNTS="$(lsblk -no MOUNTPOINTS "$DISK")"
+if grep -q . <<< "$DISK_MOUNTS"; then
+    echo "Error: $DISK has mounted filesystems:"
+    lsblk "$DISK"
+    exit 1
+fi
+
+# Refuse the disk backing / outright, even if lsblk missed a mount.
+ROOT_SRC="$(findmnt -no SOURCE /)"
+ROOT_SRC="${ROOT_SRC%%\[*}" # strip btrfs [/subvol] suffix
+ROOT_ANCESTORS="$(lsblk -snro NAME "$ROOT_SRC")"
+if grep -qx "$(basename "$DISK")" <<< "$ROOT_ANCESTORS"; then
+    echo "Error: $DISK backs the running root filesystem"
+    exit 1
+fi
+
+# Stale mapping from a crashed run (or a name collision) would make
+# disko fail after formatting; refuse up front instead.
+if [ -e /dev/mapper/cryptroot-install ]; then
+    echo "Error: /dev/mapper/cryptroot-install already exists" \
+         "(close it or reboot, then retry)"
+    exit 1
+fi
+
+# ── Confirm ─────────────────────────────────────────────────────────────
+
+echo ""
+echo "Target disk:"
+lsblk -o NAME,SIZE,TYPE,MODEL,SERIAL "$DISK"
+echo ""
+echo "ALL DATA ON $DISK WILL BE DESTROYED."
+IFS= read -rp "Type the device path ($DISK) to continue: " CONFIRM
+if [ "$CONFIRM" != "$DISK" ]; then
+    echo "Aborted."
+    exit 1
+fi
+
+# ── Collect secrets up front (no prompts mid-install) ───────────────────
+# IFS= so passphrases with leading/trailing whitespace survive intact.
+
+IFS= read -rsp "LUKS passphrase for the new disk: " LUKS_PASS; echo
+IFS= read -rsp "LUKS passphrase (again): " LUKS_PASS2; echo
+if [ -z "$LUKS_PASS" ] || [ "$LUKS_PASS" != "$LUKS_PASS2" ]; then
+    echo "Error: passphrases empty or mismatched"
+    exit 1
+fi
+
+IFS= read -rsp "Password for user 'a' on the new machine: " USER_PASS; echo
+IFS= read -rsp "Password (again): " USER_PASS2; echo
+if [ -z "$USER_PASS" ] || [ "$USER_PASS" != "$USER_PASS2" ]; then
+    echo "Error: passwords empty or mismatched"
+    exit 1
+fi
+
+# cryptsetup/sgdisk, from the pinned nixpkgs (not on PATH everywhere)
+CRYPTSETUP="$(nix-build --no-out-link -E '(import ./nix/nix { }).cryptsetup')/bin/cryptsetup"
+SGDISK="$(nix-build --no-out-link -E '(import ./nix/nix { }).gptfdisk')/bin/sgdisk"
+
+# ── Cleanup on exit ─────────────────────────────────────────────────────
+
+KEYFILE=""
+DEST=""
+cleanup() {
+    # Keyfile first: nothing below may run before the secret is gone.
+    rm -f "$KEYFILE"
+    # The build's result symlink points into this machine's store —
+    # useless on the target.
+    if [ -n "$DEST" ]; then
+        rm -f "$DEST/result"
+    fi
+    if mountpoint -q /mnt; then
+        echo "==> Unmounting /mnt..."
+        umount -R /mnt
+    fi
+    if [ -e /dev/mapper/cryptroot-install ]; then
+        "$CRYPTSETUP" close cryptroot-install
+    fi
+}
+trap cleanup EXIT
+
+# ── Step 1: Partition, format, mount ────────────────────────────────────
+
+echo ""
+echo "==> Partitioning and formatting $DISK..."
+
+# Wipe any pre-existing partition table first. disko's format+mount is
+# NON-destructive: given a foreign GPT (e.g. a leftover Windows install)
+# it ADOPTS the existing partitions — relabeling a 450MiB recovery
+# partition as the ESP and a 16MiB MSR as the LUKS partition, where
+# luksFormat then fails ("too small for activation"). The wrong-target
+# guards and the explicit confirmation above have already vetted $DISK;
+# the contract is ERASES ENTIRELY, so erase it.
+"$SGDISK" --zap-all "$DISK"
+blockdev --rereadpt "$DISK"
+udevadm settle
+
+# Keyfile on tmpfs so the passphrase never touches the installer's disk.
+KEYFILE="$(umask 077 && mktemp -p /dev/shm)"
+printf '%s' "$LUKS_PASS" > "$KEYFILE"
+
+DISKO_FORMAT_MOUNT="$(nix-build --no-out-link nix/nixos/disko-format-mount.nix \
+    --argstr disk "$DISK" --argstr passwordFile "$KEYFILE")"
+"$DISKO_FORMAT_MOUNT/bin/disko-format-mount"
+
+if ! mountpoint -q /mnt; then
+    echo "Error: /mnt is not mounted after disko. Aborting."
+    exit 1
+fi
+
+lsblk "$DISK"
+
+# ── Step 2: Copy repo to the target, populate nix/nixos/local/ ──────────
+
+REPO_NAME="$(basename "$(pwd)")"
+DEST="/mnt/home/a/$REPO_NAME"
+
+echo ""
+echo "==> Copying repo to $DEST..."
+mkdir -p /mnt/home/a
+cp -a "$(pwd)" "$DEST"
+
+# local/ is machine-local: drop the carried-over copy (the installing
+# machine's own host config) and generate this machine's.
+rm -rf "$DEST/nix/nixos/local"
+mkdir -p "$DEST/nix/nixos/local"
+
+echo "==> Generating hardware configuration for ${NEW_HOSTNAME}..."
+nixos-generate-config --root /mnt
+# The repo is the single system config on the target; the stock
+# configuration.nix would shadow it on a bare `nixos-rebuild`.
+rm -f /mnt/etc/nixos/configuration.nix
+mv /mnt/etc/nixos/hardware-configuration.nix "$DEST/nix/nixos/local/"
+# Boot-time mapper name is cryptroot; cryptroot-install is format-time
+# only (see nix/nixos/disko.nix). Fail loudly if the LUKS stanza is
+# missing — without it the target's initrd never unlocks the root disk.
+if ! grep -q cryptroot-install "$DEST/nix/nixos/local/hardware-configuration.nix"; then
+    echo "Error: no cryptroot-install LUKS stanza in the generated" \
+         "hardware config — the target would never unlock its root disk."
+    exit 1
+fi
+sed -i 's/cryptroot-install/cryptroot/g' \
+    "$DEST/nix/nixos/local/hardware-configuration.nix"
+# generate-config detects the INSTALLING machine: drop its CPU-vendor kvm
+# module so a cross-vendor target doesn't fail systemd-modules-load on
+# every boot. (Its detected initrd modules are harmless extras — the
+# boot-critical set is laptop-hardware.nix's generic superset.)
+sed -i -E 's/"(kvm-intel|kvm-amd)"//g' \
+    "$DEST/nix/nixos/local/hardware-configuration.nix"
+
+cat > "$DEST/nix/nixos/local/default.nix" <<EOF
+# Host-specific config for ${NEW_HOSTNAME} — gitignored, generated by
+# ./install-to-disk. Per-machine tuning (e.g. a nixos-hardware profile)
+# goes here.
+{ ... }: {
+  imports = [
+    ../laptop-hardware.nix       # generic laptop baseline
+    ./hardware-configuration.nix # this machine (nixos-generate-config)
+  ];
+
+  networking.hostName = "${NEW_HOSTNAME}";
+}
+EOF
+
+# ── Step 3: Build the system closure from the target's copy ─────────────
+
+echo ""
+echo "==> Building the system closure for ${NEW_HOSTNAME}..."
+
+(cd "$DEST" && ./nixos-build physical)
+SYSTEM="$(readlink -f "$DEST/result")"
+
+echo "System closure built: $SYSTEM"
+
+# ── Step 4: Install ─────────────────────────────────────────────────────
+
+echo ""
+echo "==> Installing NixOS to /mnt..."
+
+nixos-install \
+    --root /mnt \
+    --system "$SYSTEM" \
+    --no-root-password \
+    --no-channel-copy
+
+# ── Step 5: Password for user 'a' ───────────────────────────────────────
+
+printf 'a:%s\n' "$USER_PASS" | nixos-enter --root /mnt -c chpasswd
+
+chown -R 1000:100 /mnt/home/a
+chmod 700 /mnt/home/a
+
+# ── Done ────────────────────────────────────────────────────────────────
+
+trap - EXIT
+cleanup
+
+echo ""
+echo "==> Installation complete."
+echo ""
+echo "Next steps:"
+echo "  1. Move the drive into the new laptop and boot via the firmware"
+echo "     boot menu (deliberately NO NVRAM entry — the drive boots via"
+echo "     fallback \\EFI\\BOOT\\BOOTX64.EFI; pick it / set boot order)."
+echo "     (Fresh host keys and machine-id are generated on first boot.)"
+echo "  2. Nothing to commit — nix/nixos/local/ is gitignored; the repo"
+echo "     on the new machine already carries its host config."
+echo ""
+echo "On the new machine, rebuild with:"
+echo "  ./nixos-build physical switch"
