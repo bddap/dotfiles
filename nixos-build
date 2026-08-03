@@ -20,6 +20,8 @@ NIXPKGS_ALLOW_UNFREE=1
 
 export NIXOS_CONFIG
 export NIXPKGS_ALLOW_UNFREE
+# Unprivileged build first: fails fast before any sudo prompt, and writes
+# the ./result symlink install-to-disk consumes.
 nixos-rebuild build
 
 if [ $# -gt 0 ]; then
