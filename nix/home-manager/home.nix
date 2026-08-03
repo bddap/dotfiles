@@ -105,7 +105,6 @@ in { ... }: {
     poetry # Python packaging tool
     python3Packages.isort # Python import sorter
     fswebcam # webcam capture tool
-    xorg.xkbcomp # keyboard compiler
   ];
 
   # zellij config is generated (not stow'd) so the spiral wasm's store path can be

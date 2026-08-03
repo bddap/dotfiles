@@ -79,6 +79,19 @@ in {
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  # Swap left alt and left ctrl everywhere (console, X, GNOME Wayland) at the
+  # evdev level, so no per-desktop or per-user setup is needed.
+  services.keyd = {
+    enable = true;
+    keyboards.default = {
+      ids = [ "*" ];
+      settings.main = {
+        leftalt = "layer(control)";
+        leftcontrol = "layer(alt)";
+      };
+    };
+  };
+
   services.displayManager.autoLogin.enable = true;
   services.displayManager.autoLogin.user = "a";
 
@@ -119,7 +132,7 @@ in {
 
   # Tried this, too much effort so gnome is manually configured for now
   # [org/gnome/desktop/input-sources]
-  # xkb-options=['terminate:ctrl_alt_bksp', 'ctrl:swap_lalt_lctl']
+  # xkb-options=['terminate:ctrl_alt_bksp']
   # [org/gnome/desktop/wm/keybindings]
   # toggle-fullscreen=['<Control><Super>f']
   # [org/gnome/nautilus/preferences]
