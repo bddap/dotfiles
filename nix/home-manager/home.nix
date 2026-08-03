@@ -1,7 +1,7 @@
 let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
-in { config, ... }: {
+in { ... }: {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "a";
@@ -40,7 +40,7 @@ in { config, ... }: {
     cached-nix-shell
     colorized-logs
     curl
-    dockerfile-language-server-nodejs
+    dockerfile-language-server
     discord
     (emacs-nox.pkgs.withPackages
       (epkgs: [ epkgs.treesit-grammars.with-all-grammars ]))

@@ -35,7 +35,7 @@
 # stays portable between machines; it boots via the fallback
 # \EFI\BOOT\BOOTX64.EFI. Pick the drive in the boot menu / set boot
 # order in firmware. Future rebuilds on the new machine:
-#   ./nixos-build physical switch
+#   ./nixos-build switch
 
 set -euo pipefail
 
@@ -252,7 +252,7 @@ EOF
 echo ""
 echo "==> Building the system closure for ${NEW_HOSTNAME}..."
 
-(cd "$DEST" && ./nixos-build physical)
+(cd "$DEST" && ./nixos-build)
 SYSTEM="$(readlink -f "$DEST/result")"
 
 echo "System closure built: $SYSTEM"
@@ -292,4 +292,4 @@ echo "  2. Nothing to commit — nix/nixos/local/ is gitignored; the repo"
 echo "     on the new machine already carries its host config."
 echo ""
 echo "On the new machine, rebuild with:"
-echo "  ./nixos-build physical switch"
+echo "  ./nixos-build switch"

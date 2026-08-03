@@ -1,3 +1,4 @@
+# The system configuration (built by ./nixos-build).
 { lib, ... }:
 let pkgs = import ../nix { };
 in {
@@ -10,6 +11,12 @@ in {
     if builtins.pathExists ./local/default.nix
     then [ ./local/default.nix ]
     else [ ];
+
+  # Placeholders so the tree evaluates on a fresh clone (no
+  # nix/nixos/local/ yet). A real machine's local/ overrides these via
+  # normal priority (mkDefault loses to any plain definition).
+  fileSystems."/" = lib.mkDefault { device = "none"; fsType = "tmpfs"; };
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
 
   virtualisation.libvirtd.enable = true;
 
@@ -69,12 +76,12 @@ in {
 
     videoDrivers = [ "nvidia" "amdgpu" "intel" ];
 
-    displayManager.gdm.enable = true;
-    desktopManager.gnome.enable = true;
-
     xkb.layout = "us";
     xkb.variant = "";
   };
+
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
 
   services.gnome.localsearch.enable = false;
 

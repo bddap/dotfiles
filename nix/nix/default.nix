@@ -1,6 +1,5 @@
 let
   sources = import ./sources.nix;
-  use_nodejs_22 = (final: prev: { nodejs = final.nodejs_22; });
   overlay = final: prev: {
     bddap = {
       sources = sources;
