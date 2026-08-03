@@ -24,7 +24,7 @@
 #
 # Convention: the checked-in tree contains NO host-specific values (not
 # even a hostname). Everything machine-specific lives in nix/nixos/local/
-# (gitignored), which nix/nixos/common.nix imports iff present. Files in
+# (gitignored), which nix/nixos/default.nix imports iff present. Files in
 # local/ may freely import checked-in repo modules — host-specific VALUES
 # live in local/, shared logic stays checked in.
 #

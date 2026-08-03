@@ -26,13 +26,9 @@ in {
     # CVE-2026-31431 (algif_aead): default linux_6_12 has no backport yet.
     # Pin to 6.18 LTS, which carries the fix from 6.18.22 onward.
     kernelPackages = pkgs.linuxPackages_6_18;
-
-    # # disable tmpfs for /tmp, its limited size causes pain
-    # tmp.useTmpfs = false;
   };
 
   hardware.bluetooth.enable = true;
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # steam wants this
   hardware.graphics.enable32Bit = true;
@@ -134,14 +130,7 @@ in {
   # [org/gtk/gtk4/settings/file-chooser]
   # show-hidden=true
 
-  # Enable the OpenSSH daemon.
   services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
