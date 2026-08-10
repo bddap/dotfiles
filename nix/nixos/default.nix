@@ -2,11 +2,12 @@
 { lib, ... }:
 let pkgs = import ../nix { };
 in {
-  # Host-specific config lives in nix/nixos/local/ (gitignored) — the
-  # single home for everything machine-specific: networking.hostName, the
-  # nixos-generate-config hardware-configuration.nix, any per-machine
-  # tuning. Imported iff present. ./install-to-disk populates it on new
-  # machines; it is never carried from one machine to another.
+  # Host-specific SYSTEM config lives in nix/nixos/local/ (gitignored):
+  # networking.hostName, the nixos-generate-config hardware-configuration.nix,
+  # any per-machine tuning. (Machine-local home-manager config has the same
+  # mechanism in nix/home-manager/local/.) Imported iff present.
+  # ./install-to-disk populates it on new machines; it is never carried from
+  # one machine to another.
   imports =
     if builtins.pathExists ./local/default.nix
     then [ ./local/default.nix ]
