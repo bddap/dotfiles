@@ -23,10 +23,12 @@
 # ones on first boot.
 #
 # Convention: the checked-in tree contains NO host-specific values (not
-# even a hostname). Everything machine-specific lives in nix/nixos/local/
-# (gitignored), which nix/nixos/default.nix imports iff present. Files in
-# local/ may freely import checked-in repo modules — host-specific VALUES
-# live in local/, shared logic stays checked in.
+# even a hostname). Everything machine-specific lives in a gitignored
+# local/ dir — nix/nixos/local/ for the system (imported iff present by
+# nix/nixos/default.nix), nix/home-manager/local/ for home-manager
+# (likewise by home.nix). Files in local/ may freely import checked-in
+# repo modules — host-specific VALUES live in local/, shared logic stays
+# checked in.
 #
 # After completion: move the drive into the new laptop and boot via the
 # firmware boot menu. There is deliberately NO NVRAM boot entry —
@@ -205,9 +207,9 @@ echo "==> Copying repo to $DEST..."
 mkdir -p /mnt/home/a
 cp -a "$(pwd)" "$DEST"
 
-# local/ is machine-local: drop the carried-over copy (the installing
+# local/ is machine-local: drop the carried-over copies (the installing
 # machine's own host config) and generate this machine's.
-rm -rf "$DEST/nix/nixos/local"
+rm -rf "$DEST/nix/nixos/local" "$DEST/nix/home-manager/local"
 mkdir -p "$DEST/nix/nixos/local"
 
 echo "==> Generating hardware configuration for ${NEW_HOSTNAME}..."

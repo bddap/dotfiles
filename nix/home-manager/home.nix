@@ -2,6 +2,15 @@ let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
 in { ... }: {
+  # Machine-local home-manager config lives in nix/home-manager/local/
+  # (gitignored) — same mechanism as nix/nixos/local/ in
+  # nix/nixos/default.nix: imported iff present, so a machine without one
+  # builds unchanged.
+  imports =
+    if builtins.pathExists ./local/default.nix
+    then [ ./local/default.nix ]
+    else [ ];
+
   home.username = "a";
   home.homeDirectory = "/home/a";
 
