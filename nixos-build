@@ -1,35 +1,13 @@
 #!/usr/bin/env bash
 
+# Build the system configuration (nix/nixos/default.nix); optionally run
+# a nixos-rebuild action:
+#   ./nixos-build          # build only
+#   ./nixos-build switch   # build and switch
+
 set -euo pipefail
 
 cd "$(dirname "$0")"
-
-# ── Usage ───────────────────────────────────────────────────────────────
-
-CONFIG="${1:-}"
-ACTION="${2:-}"
-
-if [ -z "$CONFIG" ]; then
-    echo "Usage: $0 <config> [action]"
-    echo ""
-    echo "  config:  name of a nix/nixos/<config>.nix entry point"
-    echo "           e.g. physical"
-    echo "  action:  optional nixos-rebuild action (switch, boot, test, etc.)"
-    echo ""
-    echo "Examples:"
-    echo "  $0 physical              # build only"
-    echo "  $0 physical switch       # build and switch"
-    exit 1
-fi
-
-CONFIG_FILE="nix/nixos/${CONFIG}.nix"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Error: $CONFIG_FILE not found"
-    exit 1
-fi
-
-# ── NIX_PATH setup ──────────────────────────────────────────────────────
 
 # NIX_PATH and channels are gross, we ignore them and build up channels of our own
 # we only need to do this because home-manager assumes certain channels are present
@@ -37,18 +15,20 @@ unset NIX_PATH
 NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
-NIXOS_CONFIG="$(realpath "$CONFIG_FILE")"
+NIXOS_CONFIG="$(realpath nix/nixos/default.nix)"
 NIXPKGS_ALLOW_UNFREE=1
 
 export NIXOS_CONFIG
 export NIXPKGS_ALLOW_UNFREE
+# Unprivileged build first: fails fast before any sudo prompt, and writes
+# the ./result symlink install-to-disk consumes.
 nixos-rebuild build
 
-if [ -n "$ACTION" ]; then
+if [ $# -gt 0 ]; then
     # sudo clears env vars
     sudo env \
         NIX_PATH="$NIX_PATH" \
         NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
         NIXOS_CONFIG="$NIXOS_CONFIG" \
-        nixos-rebuild "$ACTION"
+        nixos-rebuild "$@"
 fi

@@ -1,8 +1,8 @@
 # Generic hardware baseline for laptops installed via ./install-to-disk.
 #
 # The machine-specific half (filesystem/LUKS UUIDs, detected modules) is
-# generated per machine into nix/nixos/local/ — see common.nix. What
-# stays here is the generic part: a superset of storage/input kernel
+# generated per machine into nix/nixos/local/ — see nix/nixos/default.nix.
+# What stays here is the generic part: a superset of storage/input kernel
 # modules and both microcode vendors, so a config generated on the
 # *installing* machine still boots any x86_64 laptop.
 

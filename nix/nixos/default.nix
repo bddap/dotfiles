@@ -1,3 +1,4 @@
+# The system configuration (built by ./nixos-build).
 { lib, ... }:
 let pkgs = import ../nix { };
 in {
@@ -11,6 +12,12 @@ in {
     then [ ./local/default.nix ]
     else [ ];
 
+  # Placeholders so the tree evaluates on a fresh clone (no
+  # nix/nixos/local/ yet). A real machine's local/ overrides these via
+  # normal priority (mkDefault loses to any plain definition).
+  fileSystems."/" = lib.mkDefault { device = "none"; fsType = "tmpfs"; };
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+
   virtualisation.libvirtd.enable = true;
 
   boot = {
@@ -19,13 +26,9 @@ in {
     # CVE-2026-31431 (algif_aead): default linux_6_12 has no backport yet.
     # Pin to 6.18 LTS, which carries the fix from 6.18.22 onward.
     kernelPackages = pkgs.linuxPackages_6_18;
-
-    # # disable tmpfs for /tmp, its limited size causes pain
-    # tmp.useTmpfs = false;
   };
 
   hardware.bluetooth.enable = true;
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # steam wants this
   hardware.graphics.enable32Bit = true;
@@ -69,20 +72,17 @@ in {
 
     videoDrivers = [ "nvidia" "amdgpu" "intel" ];
 
-    displayManager.gdm.enable = true;
-    desktopManager.gnome.enable = true;
-
     xkb.layout = "us";
     xkb.variant = "";
   };
 
-  services.gnome.localsearch.enable = false;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
 
   services.displayManager.autoLogin.enable = true;
   services.displayManager.autoLogin.user = "a";
 
-  # maybe not needed for trackpad inpu since it's enabled by default in most desktopManager?
-  services.libinput.enable = true;
+  services.gnome.localsearch.enable = false;
 
   services.printing.enable = true;
 
@@ -127,22 +127,10 @@ in {
   # [org/gtk/gtk4/settings/file-chooser]
   # show-hidden=true
 
-  # Enable the OpenSSH daemon.
   services.openssh.enable = true;
 
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "23.11"; # Did you read the comment?
+  # Pins stateful-data defaults from the first install — don't bump.
+  system.stateVersion = "23.11";
 
   services.udev.extraRules = ''
     # Framework Laptop 16 - LED Matrix
