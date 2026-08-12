@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Build the system configuration (nix/nixos/default.nix); optionally run
-# a nixos-rebuild action:
+# Build the system configuration (nix/nixos/default.nix), printing the
+# built closure's store path on stdout; optionally run a nixos-rebuild
+# action:
 #   ./nixos-build          # build only
 #   ./nixos-build switch   # build and switch
 
@@ -15,20 +16,20 @@ unset NIX_PATH
 NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
-NIXOS_CONFIG="$(realpath nix/nixos/default.nix)"
+# Both nix-build and nixos-rebuild find the configuration via <nixos-config>.
+NIX_PATH="$NIX_PATH:nixos-config=$(realpath nix/nixos/default.nix)"
 NIXPKGS_ALLOW_UNFREE=1
 
-export NIXOS_CONFIG
 export NIXPKGS_ALLOW_UNFREE
-# Unprivileged build first: fails fast before any sudo prompt, and writes
-# the ./result symlink install-to-disk consumes.
-nixos-rebuild build
+# Unprivileged build first: fails fast before any sudo prompt. No out-link
+# — nothing writes into the checkout; the closure's store path goes to
+# stdout, which is how install-to-disk consumes it.
+nix-build --no-out-link '<nixpkgs/nixos>' -A system
 
 if [ $# -gt 0 ]; then
     # sudo clears env vars
     sudo env \
         NIX_PATH="$NIX_PATH" \
         NIXPKGS_ALLOW_UNFREE="$NIXPKGS_ALLOW_UNFREE" \
-        NIXOS_CONFIG="$NIXOS_CONFIG" \
         nixos-rebuild "$@"
 fi
