@@ -14,10 +14,9 @@ style = "Italic"
 family = "Comic Mono"
 style = "Regular"
 
-[[keyboard.bindings]]
-action = "ReceiveChar"
-key = "Backslash"
-mods = "Control"
+# No Ctrl-Backslash binding here, on purpose: a `ReceiveChar` binding is a no-op for
+# byte output, and 0x1c-vs-kitty-CSI-u is chosen by terminal mode, not by bindings —
+# so Ctrl-\ already reaches whatever's running (0x1c to tmux, CSI-u to zellij).
 
 [[keyboard.bindings]]
 action = "CreateNewWindow"
