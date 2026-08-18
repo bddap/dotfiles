@@ -145,15 +145,9 @@ SGDISK="$(nix-build --no-out-link -E '(import ./nix/nix { }).gptfdisk')/bin/sgdi
 # ── Cleanup on exit ─────────────────────────────────────────────────────
 
 KEYFILE=""
-DEST=""
 cleanup() {
     # Keyfile first: nothing below may run before the secret is gone.
     rm -f "$KEYFILE"
-    # The build's result symlink points into this machine's store —
-    # useless on the target.
-    if [ -n "$DEST" ]; then
-        rm -f "$DEST/result"
-    fi
     if mountpoint -q /mnt; then
         echo "==> Unmounting /mnt..."
         umount -R /mnt
@@ -252,8 +246,11 @@ EOF
 echo ""
 echo "==> Building the system closure for ${NEW_HOSTNAME}..."
 
-(cd "$DEST" && ./nixos-build)
-SYSTEM="$(readlink -f "$DEST/result")"
+SYSTEM="$(cd "$DEST" && ./nixos-build)"
+if [[ "$SYSTEM" != /nix/store/* ]]; then
+    echo "Error: expected a store path from nixos-build, got: $SYSTEM"
+    exit 1
+fi
 
 echo "System closure built: $SYSTEM"
 
