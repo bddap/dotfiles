@@ -247,8 +247,6 @@ echo ""
 echo "==> Building the system closure for ${NEW_HOSTNAME}..."
 
 SYSTEM="$(cd "$DEST" && ./nixos-build)"
-# The capture swallows all of nixos-build's stdout — fail loudly here if
-# that contract ever breaks, not obscurely inside nixos-install.
 if [[ "$SYSTEM" != /nix/store/* ]]; then
     echo "Error: expected a store path from nixos-build, got: $SYSTEM"
     exit 1

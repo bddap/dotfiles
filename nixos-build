@@ -16,14 +16,10 @@ unset NIX_PATH
 NIX_PATH="$(cat "$(nix-build --no-out-link -E '(import ./nix/nix {}).bddap.shitty-nixpath')")"
 export NIX_PATH
 
-# Both nix-build and nixos-rebuild find the configuration via <nixos-config>.
 NIX_PATH="$NIX_PATH:nixos-config=$(realpath nix/nixos/default.nix)"
 NIXPKGS_ALLOW_UNFREE=1
 
 export NIXPKGS_ALLOW_UNFREE
-# Unprivileged build first: fails fast before any sudo prompt. No out-link
-# — nothing writes into the checkout; the closure's store path goes to
-# stdout, which is how install-to-disk consumes it.
 nix-build --no-out-link '<nixpkgs/nixos>' -A system
 
 if [ $# -gt 0 ]; then
