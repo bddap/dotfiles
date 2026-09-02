@@ -1,4 +1,5 @@
 .DS_Store
 result
+nix/home-manager/local/
 nix/nixos/local/
 tmp/
