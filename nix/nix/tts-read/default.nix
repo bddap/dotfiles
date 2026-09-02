@@ -5,8 +5,9 @@ let
       url = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/${name}";
       inherit hash;
     };
-  python = python3.withPackages
-    (ps: [ ps.kokoro ps.spacy-models.en_core_web_sm ps.pygobject3 ps.numpy ]);
+  deps = ps: [ ps.kokoro ps.spacy-models.en_core_web_sm ps.pygobject3 ps.numpy ];
+  python = python3.withPackages deps;
+  checkPython = python3.withPackages (ps: deps ps ++ [ ps.mypy ps.pygobject-stubs ]);
 in stdenv.mkDerivation {
   pname = "tts-read";
   version = "0.1.0";
@@ -44,6 +45,7 @@ in stdenv.mkDerivation {
   doCheck = true;
   checkPhase = ''
     runHook preCheck
+    MYPY_CACHE_DIR=$TMPDIR/mypy ${checkPython}/bin/python -m mypy --strict --follow-untyped-imports tts_read.py test_tts_read.py
     HOME=$TMPDIR HF_HUB_OFFLINE=1 ${python}/bin/python -m unittest -v test_tts_read
     runHook postCheck
   '';
