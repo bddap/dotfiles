@@ -75,6 +75,7 @@ in { ... }: {
     taplo
     telegram-desktop
     tmux
+    bddap.tts-read
     bddap.zellij
     tree
     uv
@@ -117,6 +118,23 @@ in { ... }: {
       wasm = "${pkgs.bddap.zellij-spiral}/zellij-spiral.wasm";
     };
     "zellij/layouts/default.kdl".source = ./zellij/layouts/default.kdl;
+  };
+
+  xdg.autostart = {
+    enable = true;
+    entries = [ "${pkgs.bddap.tts-read}/share/applications/app.tts_read.desktop" ];
+  };
+
+  # dconf replaces this list wholesale: shortcuts added in GNOME Settings are
+  # dropped on switch, so every custom keybinding has to be declared here.
+  dconf.settings = {
+    "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings =
+      [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/tts-read/" ];
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/tts-read" = {
+      name = "Read selection aloud";
+      command = "${pkgs.bddap.tts-read}/bin/tts-read";
+      binding = "<Super>r";
+    };
   };
 
   # Let Home Manager install and manage itself.
