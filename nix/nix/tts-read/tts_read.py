@@ -27,6 +27,8 @@ SAMPLE_RATE = 24000
 DEFAULT_SPEED = 2.0
 APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
+FRAME = SAMPLE_RATE * 30 // 1000
+TOLERANCE = SAMPLE_RATE * 10 // 1000
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -80,6 +82,30 @@ def collect(results: Iterable[Result], text: str) -> Chunk:
     return (np.concatenate(audio) if audio else np.zeros(0, np.float32)), words
 
 
+def stretch(audio: Audio, speed: float) -> Audio:
+    if speed == 1.0 or len(audio) < FRAME + 2 * TOLERANCE:
+        return audio
+    hop = FRAME // 2
+    window = np.hanning(FRAME).astype(np.float32)
+    n = int(len(audio) / speed)
+    out = np.zeros(n + FRAME, np.float32)
+    weight = np.zeros(n + FRAME, np.float32)
+    previous = 0
+    for k in range(0, n, hop):
+        p = int(k * speed)
+        if k and TOLERANCE <= p <= len(audio) - FRAME - TOLERANCE:
+            target = audio[previous + hop : previous + hop + FRAME]
+            region = audio[p - TOLERANCE : p + TOLERANCE + FRAME]
+            p += int(np.argmax(np.correlate(region, target, "valid"))) - TOLERANCE
+        if p + FRAME > len(audio):
+            break
+        out[k : k + FRAME] += audio[p : p + FRAME] * window
+        weight[k : k + FRAME] += window
+        previous = p
+    out[:n] /= np.maximum(weight[:n], 1e-3)
+    return out[:n]
+
+
 def locate(
     t: int, origin: int, spans: Sequence[Span], starts: dict[int, int], chunks: Sequence[Chunk | None]
 ) -> tuple[float, Highlight]:
@@ -111,7 +137,8 @@ class Engine:
         self.pipeline.load_voice(VOICE)
 
     def synth(self, text: str, speed: float) -> Chunk:
-        return collect(self.pipeline(text, voice=VOICE, speed=speed), text)
+        audio, words = collect(self.pipeline(text, voice=VOICE), text)
+        return stretch(audio, speed), [(a, b, t0 / speed, t1 / speed) for a, b, t0, t1 in words]
 
 
 class Player:

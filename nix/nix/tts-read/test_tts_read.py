@@ -60,6 +60,28 @@ class Collect(unittest.TestCase):
         self.assertEqual([(a, b) for a, b, _, _ in words], [(2, 3)])
 
 
+class Stretch(unittest.TestCase):
+    def tone(self, seconds: float, hz: float) -> tts_read.Audio:
+        t = np.arange(int(seconds * tts_read.SAMPLE_RATE)) / tts_read.SAMPLE_RATE
+        return np.sin(2 * np.pi * hz * t).astype(np.float32)
+
+    def peak_hz(self, audio: tts_read.Audio) -> float:
+        spectrum = np.abs(np.fft.rfft(audio))
+        return float(np.argmax(spectrum) * tts_read.SAMPLE_RATE / len(audio))
+
+    def test_speed_scales_length_and_keeps_pitch(self) -> None:
+        tone = self.tone(1.0, 440.0)
+        for speed in (0.5, 1.5, 2.0, 3.0):
+            out = tts_read.stretch(tone, speed)
+            self.assertEqual(len(out), int(len(tone) / speed))
+            self.assertAlmostEqual(self.peak_hz(out), 440.0, delta=6.0)
+            self.assertLess(np.abs(out).max(), 1.5)
+
+    def test_speed_one_is_identity(self) -> None:
+        tone = self.tone(0.2, 440.0)
+        self.assertIs(tts_read.stretch(tone, 1.0), tone)
+
+
 class Locate(unittest.TestCase):
     spans: ClassVar[list[tts_read.Span]] = [(0, 9), (10, 19)]
     chunks: ClassVar[list[tts_read.Chunk | None]] = [
@@ -112,11 +134,15 @@ class Synthesis(unittest.TestCase):
             self.assertLess(t0, t1)
         self.assertLessEqual(words[-1][3], len(audio) / tts_read.SAMPLE_RATE + 0.05)
 
-    def test_speed_shortens_audio(self) -> None:
-        text = "Speed is applied at synthesis time, not by resampling, zorblax."
-        slow, _ = self.engine.synth(text, 1.0)
-        fast, _ = self.engine.synth(text, 2.0)
-        self.assertLess(len(fast), 0.7 * len(slow))
+    def test_speed_halves_audio_and_word_times(self) -> None:
+        text = "Speed is applied after synthesis by time stretching, zorblax."
+        slow, slow_words = self.engine.synth(text, 1.0)
+        fast, fast_words = self.engine.synth(text, 2.0)
+        self.assertEqual(len(fast), len(slow) // 2)
+        self.assertEqual([(a, b) for a, b, _, _ in fast_words], [(a, b) for a, b, _, _ in slow_words])
+        for (_, _, s0, s1), (_, _, f0, f1) in zip(slow_words, fast_words):
+            self.assertAlmostEqual(f0, s0 / 2)
+            self.assertAlmostEqual(f1, s1 / 2)
 
 
 if __name__ == "__main__":
