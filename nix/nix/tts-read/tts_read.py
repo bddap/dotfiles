@@ -4,25 +4,56 @@ import re
 import sys
 import threading
 import traceback
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 import gi
 
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gst", "1.0")
-from gi.repository import Gdk, GLib, Gst, Gtk
+from gi.repository import Gdk, Gio, GLib, GObject, Gst, Gtk
 
-KOKORO = dict(repo_id="hexgrad/Kokoro-82M", config="@kokoro_config@", model="@kokoro_model@")
+if TYPE_CHECKING:
+    from kokoro.pipeline import KPipeline
+
+KOKORO_REPO = "hexgrad/Kokoro-82M"
+KOKORO_CONFIG = "@kokoro_config@"
+KOKORO_MODEL = "@kokoro_model@"
 VOICE = "@kokoro_voice@"
 SAMPLE_RATE = 24000
 DEFAULT_SPEED = 2.0
 APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
-EMPTY_CHUNK = (np.zeros(0, np.float32), [])
+
+Span = tuple[int, int]
+Word = tuple[int, int, float, float]
+Audio = NDArray[np.float32]
+Chunk = tuple[Audio, list[Word]]
+Highlight = Span | None
+
+EMPTY_CHUNK: Chunk = (np.zeros(0, np.float32), [])
 
 
-def sentence_spans(text):
+class Token(Protocol):
+    @property
+    def text(self) -> str: ...
+    @property
+    def start_ts(self) -> float | None: ...
+    @property
+    def end_ts(self) -> float | None: ...
+
+
+class Result(Protocol):
+    @property
+    def tokens(self) -> Sequence[Token] | None: ...
+    @property
+    def audio(self) -> ArrayLike | None: ...
+
+
+def sentence_spans(text: str) -> list[Span]:
     spans = []
     for line in re.finditer(r"[^\n]+", text):
         for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?=\s|$)|$)", line.group()):
@@ -30,11 +61,13 @@ def sentence_spans(text):
     return spans
 
 
-def collect(results, text):
-    audio, words, offset, cursor = [], [], 0.0, 0
+def collect(results: Iterable[Result], text: str) -> Chunk:
+    audio: list[Audio] = []
+    words: list[Word] = []
+    offset, cursor = 0.0, 0
     for r in results:
         for t in r.tokens or []:
-            if t.start_ts is None or not any(c.isalnum() for c in t.text):
+            if t.start_ts is None or t.end_ts is None or not any(c.isalnum() for c in t.text):
                 continue
             at = text.find(t.text, cursor)
             if at < 0:
@@ -47,12 +80,16 @@ def collect(results, text):
     return (np.concatenate(audio) if audio else np.zeros(0, np.float32)), words
 
 
-def locate(t, origin, spans, starts, chunks):
+def locate(
+    t: int, origin: int, spans: Sequence[Span], starts: dict[int, int], chunks: Sequence[Chunk | None]
+) -> tuple[float, Highlight]:
     for j in range(origin, len(spans)):
         start = starts.get(j)
         if start is None or t < start:
             return j, None
-        audio, words = chunks[j]
+        chunk = chunks[j]
+        assert chunk is not None
+        audio, words = chunk
         duration = len(audio) * Gst.SECOND // SAMPLE_RATE
         if t < start + duration:
             s = (t - start) / Gst.SECOND
@@ -63,45 +100,50 @@ def locate(t, origin, spans, starts, chunks):
 
 
 class Engine:
-    def __init__(self):
+    def __init__(self) -> None:
         import torch
-        from kokoro import KModel, KPipeline
+        from kokoro.model import KModel
+        from kokoro.pipeline import KPipeline
 
         torch.set_num_threads(max(1, min(8, (os.cpu_count() or 2) // 2)))
-        model = KModel(**KOKORO).eval()
-        self.pipeline = KPipeline(lang_code="a", repo_id=KOKORO["repo_id"], model=model)
-        self.voice = self.pipeline.load_voice(VOICE)
+        model = KModel(repo_id=KOKORO_REPO, config=KOKORO_CONFIG, model=KOKORO_MODEL).eval()
+        self.pipeline: KPipeline = KPipeline(lang_code="a", repo_id=KOKORO_REPO, model=model)
+        self.pipeline.load_voice(VOICE)
 
-    def synth(self, text, speed):
-        return collect(self.pipeline(text, voice=self.voice, speed=speed), text)
+    def synth(self, text: str, speed: float) -> Chunk:
+        return collect(self.pipeline(text, voice=VOICE, speed=speed), text)
 
 
 class Player:
-    def __init__(self, engine, text, speed, on_done):
+    def __init__(self, engine: Engine, text: str, speed: float, on_done: Callable[[str | None], None]) -> None:
         self.engine, self.text, self.speed, self.on_done = engine, text, speed, on_done
         self.spans = sentence_spans(text)
-        self.chunks = [None] * len(self.spans)
+        self.chunks: list[Chunk | None] = [None] * len(self.spans)
         self.lock = threading.Lock()
         self.generation = 0
         self.playing = self.done = False
         self.origin = self.next_push = self.pushed_ns = 0
-        self.starts = {}
-        self.pipeline = Gst.parse_launch(
+        self.starts: dict[int, int] = {}
+        pipeline = Gst.parse_launch(
             "appsrc name=src format=time block=true max-bytes=%d"
             " ! audio/x-raw,format=F32LE,rate=%d,channels=1,layout=interleaved"
             " ! audioconvert ! audioresample ! autoaudiosink" % (SAMPLE_RATE * 4 // 5, SAMPLE_RATE)
         )
-        self.src = self.pipeline.get_by_name("src")
+        assert isinstance(pipeline, Gst.Pipeline)
+        self.pipeline = pipeline
+        src = pipeline.get_by_name("src")
+        assert src is not None
+        self.src = src
         self.src.connect("need-data", self._pump)
         self.bus = self.pipeline.get_bus()
         self.bus.add_signal_watch()
         self.handlers = [
-            self.bus.connect("message::eos", lambda *_: self._done(None)),
-            self.bus.connect("message::error", lambda _, msg: self._done(msg.parse_error()[0].message)),
+            self.bus.connect("message::eos", self._eos),
+            self.bus.connect("message::error", self._error),
         ]
         self.seek(0)
 
-    def seek(self, sentence):
+    def seek(self, sentence: int) -> None:
         self.pipeline.set_state(Gst.State.NULL)
         with self.lock:
             self.generation += 1
@@ -113,7 +155,7 @@ class Player:
         threading.Thread(target=self._synthesize, args=(self.origin, self.generation), daemon=True).start()
         self.play()
 
-    def set_speed(self, speed):
+    def set_speed(self, speed: float) -> None:
         with self.lock:
             if speed == self.speed:
                 return
@@ -122,7 +164,7 @@ class Player:
         if not self.done:
             self.seek(int(self.position()[0]))
 
-    def _synthesize(self, start, generation):
+    def _synthesize(self, start: int, generation: int) -> None:
         for j in range(start, len(self.spans)):
             with self.lock:
                 if generation != self.generation:
@@ -140,7 +182,7 @@ class Player:
                     return
                 self.chunks[j] = chunk
 
-    def _pump(self, *_):
+    def _pump(self, src: Gst.Element, length: int) -> None:
         with self.lock:
             if self.next_push >= len(self.spans):
                 self.src.emit("end-of-stream")
@@ -160,20 +202,26 @@ class Player:
             self.pushed_ns += buf.duration
         self.src.emit("push-buffer", buf)
 
-    def _done(self, error):
+    def _eos(self, bus: Gst.Bus, msg: Gst.Message) -> None:
+        self._done(None)
+
+    def _error(self, bus: Gst.Bus, msg: Gst.Message) -> None:
+        self._done(msg.parse_error()[0].message)
+
+    def _done(self, error: str | None) -> None:
         self.playing = False
         self.done = True
         self.on_done(error)
 
-    def play(self):
+    def play(self) -> None:
         self.playing = True
         self.pipeline.set_state(Gst.State.PLAYING)
 
-    def pause(self):
+    def pause(self) -> None:
         self.playing = False
         self.pipeline.set_state(Gst.State.PAUSED)
 
-    def close(self):
+    def close(self) -> None:
         with self.lock:
             self.generation += 1
             self.chunks = []
@@ -183,25 +231,32 @@ class Player:
             self.bus.disconnect(handler)
         self.src.disconnect_by_func(self._pump)
 
-    def position(self):
+    def position(self) -> tuple[float, Highlight]:
         ok, t = self.pipeline.query_position(Gst.Format.TIME)
         with self.lock:
             return locate(t if ok else 0, self.origin, self.spans, self.starts, self.chunks)
 
 
 class Window(Gtk.ApplicationWindow):
-    def __init__(self, app):
+    def __init__(self, app: "App") -> None:
         super().__init__(application=app, title="Read Aloud", default_width=640, default_height=360)
-        self.player = None
-        self.pending = None
+        self.app = app
+        self.player: Player | None = None
+        self.pending: str | None = None
         self.want_read = False
-        self.lit = None
+        self.lit: Highlight = None
         self.speed_timer = 0
         self.set_hide_on_close(True)
 
-        self.view = Gtk.TextView(editable=False, cursor_visible=False, wrap_mode=Gtk.WrapMode.WORD_CHAR)
-        for side in ("left", "right", "top", "bottom"):
-            setattr(self.view.props, f"{side}_margin", 12)
+        self.view = Gtk.TextView(
+            editable=False,
+            cursor_visible=False,
+            wrap_mode=Gtk.WrapMode.WORD_CHAR,
+            left_margin=12,
+            right_margin=12,
+            top_margin=12,
+            bottom_margin=12,
+        )
         self.buffer = self.view.get_buffer()
         self.tag = self.buffer.create_tag("current", background="#ffd54f", foreground="#000000")
         self.mark = self.buffer.create_mark(None, self.buffer.get_start_iter(), True)
@@ -211,9 +266,7 @@ class Window(Gtk.ApplicationWindow):
         scroller = Gtk.ScrolledWindow(child=self.view, vexpand=True)
 
         self.play_button = Gtk.Button(icon_name="media-playback-pause-symbolic")
-        self.play_button.connect("clicked", lambda *_: self.toggle())
-        stop = Gtk.Button(icon_name="media-playback-stop-symbolic")
-        stop.connect("clicked", lambda *_: self.close())
+        self.play_button.connect("clicked", self._play_clicked)
         self.progress = Gtk.ProgressBar(hexpand=True, valign=Gtk.Align.CENTER)
         self.speed_spin = Gtk.SpinButton.new_with_range(0.5, 3.0, 0.1)
         self.speed_spin.set_digits(1)
@@ -221,7 +274,7 @@ class Window(Gtk.ApplicationWindow):
         self.speed_spin.connect("value-changed", self._speed_changed)
 
         controls = Gtk.Box(spacing=6, margin_start=6, margin_end=6, margin_top=6, margin_bottom=6)
-        for w in (self.play_button, stop, self.progress, self.speed_spin, Gtk.Label(label="×")):
+        for w in (self.play_button, self.progress, self.speed_spin):
             controls.append(w)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.append(scroller)
@@ -231,55 +284,54 @@ class Window(Gtk.ApplicationWindow):
         keys = Gtk.EventControllerKey()
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
-        self.connect("close-request", lambda *_: self.stop())
+        self.connect("close-request", self._close_request)
         self.connect("notify::is-active", self._activated)
         self.view.add_tick_callback(self._tick)
 
-    def read_primary(self):
+    def read_primary(self) -> None:
         self.want_read = True
         if self.is_active():
             self._read()
 
-    def _activated(self, *_):
+    def _activated(self, window: Gtk.Window, pspec: GObject.ParamSpec) -> None:
         if self.want_read and self.is_active():
             self._read()
 
-    def _read(self):
+    def _read(self) -> None:
         self.want_read = False
         self.get_primary_clipboard().read_text_async(None, self._got_text)
 
-    def _got_text(self, clipboard, result):
+    def _got_text(self, clipboard: Gdk.Clipboard, result: Gio.AsyncResult) -> None:
         try:
             text = clipboard.read_text_finish(result) or ""
         except GLib.Error:
             text = ""
         self.start(text.strip())
 
-    def start(self, text):
+    def start(self, text: str) -> None:
         self.stop()
         self.buffer.set_text(text or "(nothing selected)")
         self.progress.set_fraction(0)
         if not text:
             return
-        app = self.get_application()
-        if app.failure is not None:
+        if self.app.failure is not None:
             self.set_title("Read Aloud — voice failed to load")
-            self.buffer.set_text(app.failure)
+            self.buffer.set_text(self.app.failure)
             return
-        if app.engine is None:
+        if self.app.engine is None:
             self.pending = text
             self.set_title("Read Aloud — loading voice…")
             return
         self.set_title("Read Aloud")
-        self.player = Player(app.engine, text, self.speed_spin.get_value(), self._on_done)
+        self.player = Player(self.app.engine, text, self.speed_spin.get_value(), self._on_done)
         self.play_button.set_icon_name("media-playback-pause-symbolic")
 
-    def engine_changed(self):
+    def engine_changed(self) -> None:
         if self.pending:
             text, self.pending = self.pending, None
             self.start(text)
 
-    def stop(self):
+    def stop(self) -> None:
         if self.player:
             self.player.close()
             self.player = None
@@ -287,7 +339,7 @@ class Window(Gtk.ApplicationWindow):
         self.lit = None
         self.buffer.remove_tag(self.tag, self.buffer.get_start_iter(), self.buffer.get_end_iter())
 
-    def toggle(self):
+    def toggle(self) -> None:
         if not self.player:
             return
         if self.player.playing:
@@ -298,12 +350,19 @@ class Window(Gtk.ApplicationWindow):
             self.player.play()
         self.play_button.set_icon_name("media-playback-%s-symbolic" % ("pause" if self.player.playing else "start"))
 
-    def _on_done(self, error):
+    def _on_done(self, error: str | None) -> None:
         self.play_button.set_icon_name("media-playback-start-symbolic")
         if error:
             self.set_title(f"Read Aloud — {error}")
 
-    def _clicked(self, gesture, n_press, x, y):
+    def _play_clicked(self, button: Gtk.Button) -> None:
+        self.toggle()
+
+    def _close_request(self, window: Gtk.Window) -> bool:
+        self.stop()
+        return False
+
+    def _clicked(self, gesture: Gtk.GestureClick, n_press: int, x: float, y: float) -> None:
         if not self.player or self.buffer.get_has_selection():
             return
         bx, by = self.view.window_to_buffer_coords(Gtk.TextWindowType.WIDGET, int(x), int(y))
@@ -313,20 +372,20 @@ class Window(Gtk.ApplicationWindow):
             self.player.seek(max((j for j, (a, _) in enumerate(self.player.spans) if a <= offset), default=0))
             self.play_button.set_icon_name("media-playback-pause-symbolic")
 
-    def _speed_changed(self, spin):
+    def _speed_changed(self, spin: Gtk.SpinButton) -> None:
         if self.speed_timer:
             GLib.source_remove(self.speed_timer)
         self.speed_timer = GLib.timeout_add(300, self._apply_speed)
 
-    def _apply_speed(self):
+    def _apply_speed(self) -> bool:
         self.speed_timer = 0
         if self.player:
             self.player.set_speed(self.speed_spin.get_value())
             if self.player.playing:
                 self.play_button.set_icon_name("media-playback-pause-symbolic")
-        return False
+        return GLib.SOURCE_REMOVE
 
-    def _key(self, controller, keyval, keycode, state):
+    def _key(self, controller: Gtk.EventControllerKey, keyval: int, keycode: int, state: Gdk.ModifierType) -> bool:
         if keyval == Gdk.KEY_Escape:
             self.close()
         elif keyval == Gdk.KEY_space:
@@ -335,7 +394,7 @@ class Window(Gtk.ApplicationWindow):
             return False
         return True
 
-    def _tick(self, widget, clock):
+    def _tick(self, widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
         if self.player:
             pos, word = self.player.position()
             self.progress.set_fraction(pos / len(self.player.spans))
@@ -351,19 +410,19 @@ class Window(Gtk.ApplicationWindow):
 
 
 class App(Gtk.Application):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(application_id=APP_ID)
-        self.engine = None
-        self.failure = None
-        self.window = None
+        self.engine: Engine | None = None
+        self.failure: str | None = None
+        self.window: Window | None = None
 
-    def do_startup(self):
+    def do_startup(self) -> None:
         Gtk.Application.do_startup(self)
         Gst.init(None)
         self.hold()
         threading.Thread(target=self._load_engine, daemon=True).start()
 
-    def _load_engine(self):
+    def _load_engine(self) -> None:
         try:
             engine = Engine()
         except Exception:
@@ -371,12 +430,13 @@ class App(Gtk.Application):
             return
         GLib.idle_add(self._engine_loaded, engine, None)
 
-    def _engine_loaded(self, engine, failure):
+    def _engine_loaded(self, engine: Engine | None, failure: str | None) -> bool:
         self.engine, self.failure = engine, failure
         if self.window:
             self.window.engine_changed()
+        return GLib.SOURCE_REMOVE
 
-    def do_activate(self):
+    def do_activate(self) -> None:
         if self.window is None:
             self.window = Window(self)
         self.window.present()
