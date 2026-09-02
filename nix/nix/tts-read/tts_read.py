@@ -156,13 +156,17 @@ class Player:
         self.play()
 
     def set_speed(self, speed: float) -> None:
+        if speed == self.speed:
+            return
+        sentence = int(self.position()[0])
         with self.lock:
-            if speed == self.speed:
-                return
             self.speed = speed
             self.chunks = [None] * len(self.spans)
+            self.origin = 0
+            self.starts = {}
+            self.generation += 1
         if not self.done:
-            self.seek(int(self.position()[0]))
+            self.seek(sentence)
 
     def _synthesize(self, start: int, generation: int) -> None:
         for j in range(start, len(self.spans)):
