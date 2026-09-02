@@ -83,7 +83,7 @@ def collect(results: Iterable[Result], text: str) -> Chunk:
 
 
 def stretch(audio: Audio, speed: float) -> Audio:
-    if speed == 1.0 or len(audio) < FRAME + 2 * TOLERANCE:
+    if speed == 1.0 or len(audio) < FRAME:
         return audio
     hop = FRAME // 2
     window = np.hanning(FRAME).astype(np.float32)
@@ -97,8 +97,7 @@ def stretch(audio: Audio, speed: float) -> Audio:
             target = audio[previous + hop : previous + hop + FRAME]
             region = audio[p - TOLERANCE : p + TOLERANCE + FRAME]
             p += int(np.argmax(np.correlate(region, target, "valid"))) - TOLERANCE
-        if p + FRAME > len(audio):
-            break
+        p = min(p, len(audio) - FRAME)
         out[k : k + FRAME] += audio[p : p + FRAME] * window
         weight[k : k + FRAME] += window
         previous = p

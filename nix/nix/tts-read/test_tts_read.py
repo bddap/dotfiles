@@ -77,6 +77,14 @@ class Stretch(unittest.TestCase):
             self.assertAlmostEqual(self.peak_hz(out), 440.0, delta=6.0)
             self.assertLess(np.abs(out).max(), 1.5)
 
+    def test_last_samples_reach_the_output(self) -> None:
+        for speed in (0.5, 2.0, 3.0):
+            audio = np.zeros(int(1.01 * tts_read.SAMPLE_RATE), np.float32)
+            audio[-5:] = 1.0
+            out = tts_read.stretch(audio, speed)
+            self.assertGreater(np.abs(out[-tts_read.FRAME :]).max(), 0.5)
+            self.assertEqual(np.abs(out[: -tts_read.FRAME]).max(), 0.0)
+
     def test_speed_one_is_identity(self) -> None:
         tone = self.tone(0.2, 440.0)
         self.assertIs(tts_read.stretch(tone, 1.0), tone)
