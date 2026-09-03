@@ -83,26 +83,26 @@ def collect(results: Iterable[Result], text: str) -> Chunk:
 
 
 def stretch(audio: Audio, speed: float) -> Audio:
-    if speed == 1.0 or len(audio) < FRAME:
+    n = int(len(audio) / speed)
+    if speed == 1.0 or n < FRAME:
         return audio
     hop = FRAME // 2
     window = np.hanning(FRAME).astype(np.float32)
-    n = int(len(audio) / speed)
-    out = np.zeros(n + FRAME, np.float32)
-    weight = np.zeros(n + FRAME, np.float32)
+    out = np.zeros(n, np.float32)
+    weight = np.zeros(n, np.float32)
+    last = len(audio) - FRAME
+    frames = [(k, min(int(k * speed), last)) for k in range(0, n - FRAME, hop)] + [(n - FRAME, last)]
     previous = 0
-    for k in range(0, n, hop):
-        p = int(k * speed)
-        if k and TOLERANCE <= p <= len(audio) - FRAME - TOLERANCE:
+    for k, p in frames:
+        if k and TOLERANCE <= p < last:
             target = audio[previous + hop : previous + hop + FRAME]
             region = audio[p - TOLERANCE : p + TOLERANCE + FRAME]
-            p += int(np.argmax(np.correlate(region, target, "valid"))) - TOLERANCE
-        p = min(p, len(audio) - FRAME)
+            p = min(p + int(np.argmax(np.correlate(region, target, "valid"))) - TOLERANCE, last)
         out[k : k + FRAME] += audio[p : p + FRAME] * window
         weight[k : k + FRAME] += window
         previous = p
-    out[:n] /= np.maximum(weight[:n], 1e-3)
-    return out[:n]
+    out /= np.maximum(weight, 1e-3)
+    return out
 
 
 def locate(
