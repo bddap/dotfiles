@@ -62,7 +62,7 @@ class Collect(unittest.TestCase):
 
 class Stretch(unittest.TestCase):
     def tone(self, seconds: float, hz: float) -> tts_read.Audio:
-        t = np.arange(int(seconds * tts_read.SAMPLE_RATE)) / tts_read.SAMPLE_RATE
+        t = np.arange(int(seconds * tts_read.SAMPLE_RATE) + 1) / tts_read.SAMPLE_RATE
         return np.sin(2 * np.pi * hz * t).astype(np.float32)
 
     def peak_hz(self, audio: tts_read.Audio) -> float:
