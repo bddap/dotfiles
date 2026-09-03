@@ -188,6 +188,7 @@ class Player:
         sentence = int(self.position()[0])
         with self.lock:
             self.speed = speed
+            self.starts = {}
         if not self.done:
             self.seek(sentence)
 

@@ -85,6 +85,12 @@ class Stretch(unittest.TestCase):
             self.assertGreater(np.abs(out[-tts_read.WINDOW :]).max(), 0.5)
             self.assertEqual(np.abs(out[: -2 * tts_read.WINDOW]).max(), 0.0)
 
+    def test_short_audio_keeps_the_length_contract(self) -> None:
+        short = self.tone(0.02, 440.0)
+        for speed in (0.5, 3.0):
+            out = tts_read.stretch(short, speed)
+            self.assertEqual((len(out), out.dtype), (int(len(short) / speed), np.float32))
+
     def test_speed_one_is_identity(self) -> None:
         tone = self.tone(0.2, 440.0)
         self.assertIs(tts_read.stretch(tone, 1.0), tone)
