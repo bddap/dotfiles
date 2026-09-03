@@ -27,8 +27,8 @@ SAMPLE_RATE = 24000
 DEFAULT_SPEED = 2.0
 APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
-FRAME = SAMPLE_RATE * 30 // 1000
-TOLERANCE = SAMPLE_RATE * 10 // 1000
+WINDOW = SAMPLE_RATE * 30 // 1000
+SEARCH = SAMPLE_RATE * 10 // 1000
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -83,30 +83,32 @@ def collect(results: Iterable[Result], text: str) -> Chunk:
 
 
 def stretch(audio: Audio, speed: float) -> Audio:
-    n = int(len(audio) / speed)
-    if speed == 1.0 or n < FRAME:
+    if speed == 1.0:
         return audio
-    hop = FRAME // 2
-    window = np.hanning(FRAME).astype(np.float32)
+    n = int(len(audio) / speed)
+    if min(n, len(audio)) < WINDOW:
+        return np.pad(audio, (0, max(0, n - len(audio))))[:n]
+    hop = WINDOW // 2
+    window = np.hanning(WINDOW).astype(np.float32)
     out = np.zeros(n, np.float32)
     weight = np.zeros(n, np.float32)
-    last = len(audio) - FRAME
-    frames = [(k, min(int(k * speed), last)) for k in range(0, n - FRAME, hop)] + [(n - FRAME, last)]
+    last = len(audio) - WINDOW
+    frames = [(k, min(int(k * speed), last)) for k in range(0, n - WINDOW, hop)] + [(n - WINDOW, last)]
     previous = 0
     for k, p in frames:
-        if k and TOLERANCE <= p < last:
-            target = audio[previous + hop : previous + hop + FRAME]
-            region = audio[p - TOLERANCE : p + TOLERANCE + FRAME]
-            p = min(p + int(np.argmax(np.correlate(region, target, "valid"))) - TOLERANCE, last)
-        out[k : k + FRAME] += audio[p : p + FRAME] * window
-        weight[k : k + FRAME] += window
+        if k and SEARCH <= p < last:
+            target = audio[previous + hop : previous + hop + WINDOW]
+            region = audio[p - SEARCH : p + SEARCH + WINDOW]
+            p = min(p + int(np.argmax(np.correlate(region, target, "valid"))) - SEARCH, last)
+        out[k : k + WINDOW] += audio[p : p + WINDOW] * window
+        weight[k : k + WINDOW] += window
         previous = p
     out /= np.maximum(weight, 1e-3)
     return out
 
 
 def locate(
-    t: int, origin: int, spans: Sequence[Span], starts: dict[int, int], chunks: Sequence[Chunk | None]
+    t: int, origin: int, spans: Sequence[Span], starts: dict[int, int], chunks: Sequence[Chunk | None], speed: float
 ) -> tuple[float, Highlight]:
     for j in range(origin, len(spans)):
         start = starts.get(j)
@@ -115,9 +117,9 @@ def locate(
         chunk = chunks[j]
         assert chunk is not None
         audio, words = chunk
-        duration = len(audio) * Gst.SECOND // SAMPLE_RATE
+        duration = int(len(audio) / speed) * Gst.SECOND // SAMPLE_RATE
         if t < start + duration:
-            s = (t - start) / Gst.SECOND
+            s = (t - start) / Gst.SECOND * speed
             a = spans[j][0]
             word = next(((a + w0, a + w1) for w0, w1, t0, t1 in words if t0 <= s < t1), None)
             return j + (t - start) / duration, word
@@ -135,9 +137,8 @@ class Engine:
         self.pipeline: KPipeline = KPipeline(lang_code="a", repo_id=KOKORO_REPO, model=model)
         self.pipeline.load_voice(VOICE)
 
-    def synth(self, text: str, speed: float) -> Chunk:
-        audio, words = collect(self.pipeline(text, voice=VOICE), text)
-        return stretch(audio, speed), [(a, b, t0 / speed, t1 / speed) for a, b, t0, t1 in words]
+    def synth(self, text: str) -> Chunk:
+        return collect(self.pipeline(text, voice=VOICE), text)
 
 
 class Player:
@@ -187,10 +188,6 @@ class Player:
         sentence = int(self.position()[0])
         with self.lock:
             self.speed = speed
-            self.chunks = [None] * len(self.spans)
-            self.origin = 0
-            self.starts = {}
-            self.generation += 1
         if not self.done:
             self.seek(sentence)
 
@@ -203,7 +200,7 @@ class Player:
                     continue
                 a, b = self.spans[j]
             try:
-                chunk = self.engine.synth(self.text[a:b], self.speed)
+                chunk = self.engine.synth(self.text[a:b])
             except Exception:
                 traceback.print_exc()
                 chunk = EMPTY_CHUNK
@@ -221,7 +218,7 @@ class Player:
             if chunk is None:
                 data = SILENCE
             else:
-                data = chunk[0].tobytes()
+                data = stretch(chunk[0], self.speed).tobytes()
                 self.starts[self.next_push] = self.pushed_ns
                 self.next_push += 1
                 if not data:
@@ -264,7 +261,7 @@ class Player:
     def position(self) -> tuple[float, Highlight]:
         ok, t = self.pipeline.query_position(Gst.Format.TIME)
         with self.lock:
-            return locate(t if ok else 0, self.origin, self.spans, self.starts, self.chunks)
+            return locate(t if ok else 0, self.origin, self.spans, self.starts, self.chunks, self.speed)
 
 
 class Window(Gtk.ApplicationWindow):
