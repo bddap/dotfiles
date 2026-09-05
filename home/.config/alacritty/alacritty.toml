@@ -32,3 +32,30 @@ y = 4
 
 [general]
 live_config_reload = true
+
+[colors.primary]
+background = "#E8E1D9"
+foreground = "#5A3F2A"
+
+[colors.cursor]
+cursor = "#C8553D"
+
+[colors.normal]
+black = "#422614"
+red = "#AA4A38"
+green = "#30754C"
+yellow = "#945C02"
+blue = "#4F6997"
+magenta = "#8555A3"
+cyan = "#2C717B"
+white = "#D8C3A5"
+
+[colors.bright]
+black = "#8D6C59"
+red = "#932410"
+green = "#046337"
+yellow = "#7F4E01"
+blue = "#335189"
+magenta = "#6D338E"
+cyan = "#065E68"
+white = "#FEF5EE"

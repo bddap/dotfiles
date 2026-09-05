@@ -1,0 +1,6 @@
+(
+    cmdbar_bg: Some(Reset),
+    command_fg: Some(Reset),
+    selection_bg: Some(Gray),
+    selection_fg: Some(Black),
+)

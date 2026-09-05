@@ -388,3 +388,5 @@ The overlay will display the transform prompt until the results arrive."
  '(terraform--resource-name-face ((t (:foreground "yellow"))))
  '(eglot-inlay-hint-face ((t (:foreground "gray32"))))
  )
+
+(customize-set-variable 'frame-background-mode 'light)
