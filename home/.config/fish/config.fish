@@ -134,5 +134,4 @@ end
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end
 
-alias ytob='ytop -c default-dark'
 set -x FZF_DEFAULT_OPTS --color=16

@@ -1,6 +1,4 @@
 (
-    cmdbar_bg: Some(Gray),
-    cmdbar_extra_lines_bg: Some(Gray),
-    command_fg: Some(Black),
-    disabled_fg: Some(Reset),
+    cmdbar_bg: Some(Reset),
+    command_fg: Some(Reset),
 )

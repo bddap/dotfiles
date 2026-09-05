@@ -389,4 +389,4 @@ The overlay will display the transform prompt until the results arrive."
  '(eglot-inlay-hint-face ((t (:foreground "gray32"))))
  )
 
-(setq frame-background-mode 'light)
+(customize-set-variable 'frame-background-mode 'light)
