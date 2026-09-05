@@ -60,6 +60,42 @@ class Collect(unittest.TestCase):
         self.assertEqual([(a, b) for a, b, _, _ in words], [(2, 3)])
 
 
+class Stretch(unittest.TestCase):
+    def tone(self, seconds: float, hz: float) -> tts_read.Audio:
+        t = np.arange(int(seconds * tts_read.SAMPLE_RATE) + 1) / tts_read.SAMPLE_RATE
+        return np.sin(2 * np.pi * hz * t).astype(np.float32)
+
+    def peak_hz(self, audio: tts_read.Audio) -> float:
+        spectrum = np.abs(np.fft.rfft(audio))
+        return float(np.argmax(spectrum) * tts_read.SAMPLE_RATE / len(audio))
+
+    def test_speed_scales_length_and_keeps_pitch(self) -> None:
+        tone = self.tone(1.0, 440.0)
+        for speed in (0.5, 1.5, 2.0, 3.0):
+            out = tts_read.stretch(tone, speed)
+            self.assertEqual(len(out), int(len(tone) / speed))
+            self.assertAlmostEqual(self.peak_hz(out), 440.0, delta=6.0)
+            self.assertLess(np.abs(out).max(), 1.5)
+
+    def test_last_samples_reach_the_output(self) -> None:
+        for speed in (0.5, 2.0, 3.0):
+            audio = np.zeros(int(1.01 * tts_read.SAMPLE_RATE), np.float32)
+            audio[-60:] = 1.0
+            out = tts_read.stretch(audio, speed)
+            self.assertGreater(np.abs(out[-tts_read.WINDOW :]).max(), 0.5)
+            self.assertEqual(np.abs(out[: -2 * tts_read.WINDOW]).max(), 0.0)
+
+    def test_short_audio_keeps_the_length_contract(self) -> None:
+        short = self.tone(0.02, 440.0)
+        for speed in (0.5, 3.0):
+            out = tts_read.stretch(short, speed)
+            self.assertEqual((len(out), out.dtype), (int(len(short) / speed), np.float32))
+
+    def test_speed_one_is_identity(self) -> None:
+        tone = self.tone(0.2, 440.0)
+        self.assertIs(tts_read.stretch(tone, 1.0), tone)
+
+
 class Locate(unittest.TestCase):
     spans: ClassVar[list[tts_read.Span]] = [(0, 9), (10, 19)]
     chunks: ClassVar[list[tts_read.Chunk | None]] = [
@@ -69,27 +105,32 @@ class Locate(unittest.TestCase):
     starts: ClassVar[dict[int, int]] = {0: 0, 1: int(3e9)}
 
     def test_silence_gap_between_chunks_lights_nothing(self) -> None:
-        self.assertEqual(tts_read.locate(int(2.5e9), 0, self.spans, self.starts, self.chunks), (1, None))
+        self.assertEqual(tts_read.locate(int(2.5e9), 0, self.spans, self.starts, self.chunks, 1.0), (1, None))
 
     def test_word_is_found_relative_to_its_chunk_start(self) -> None:
-        pos, word = tts_read.locate(int(3.2e9), 0, self.spans, self.starts, self.chunks)
+        pos, word = tts_read.locate(int(3.2e9), 0, self.spans, self.starts, self.chunks, 1.0)
         self.assertAlmostEqual(pos, 1.2)
         self.assertEqual(word, (10, 15))
-        self.assertEqual(tts_read.locate(int(1.5e9), 0, self.spans, self.starts, self.chunks)[1], (4, 9))
+        self.assertEqual(tts_read.locate(int(1.5e9), 0, self.spans, self.starts, self.chunks, 1.0)[1], (4, 9))
 
     def test_origin_skips_sentences_before_the_seek_point(self) -> None:
-        self.assertEqual(tts_read.locate(int(0.25e9), 1, self.spans, {1: 0}, self.chunks), (1.25, (10, 15)))
+        self.assertEqual(tts_read.locate(int(0.25e9), 1, self.spans, {1: 0}, self.chunks, 1.0), (1.25, (10, 15)))
+
+    def test_speed_scales_chunk_duration_and_word_times(self) -> None:
+        self.assertEqual(tts_read.locate(int(0.25e9), 0, self.spans, self.starts, self.chunks, 2.0), (0.25, (0, 3)))
+        self.assertEqual(tts_read.locate(int(0.75e9), 0, self.spans, self.starts, self.chunks, 2.0), (0.75, (4, 9)))
+        self.assertEqual(tts_read.locate(int(1.5e9), 0, self.spans, self.starts, self.chunks, 2.0), (1, None))
 
     def test_empty_chunk_is_stepped_over(self) -> None:
         chunks = [(np.zeros(0, np.float32), []), self.chunks[1]]
-        self.assertEqual(tts_read.locate(int(0.2e9), 0, self.spans, {0: 0, 1: 0}, chunks), (1.2, (10, 15)))
+        self.assertEqual(tts_read.locate(int(0.2e9), 0, self.spans, {0: 0, 1: 0}, chunks, 1.0), (1.2, (10, 15)))
 
     def test_unpushed_chunk_waits_and_end_is_past_last_chunk(self) -> None:
-        pos, word = tts_read.locate(int(0.5e9), 0, self.spans, {0: 0}, self.chunks)
+        pos, word = tts_read.locate(int(0.5e9), 0, self.spans, {0: 0}, self.chunks, 1.0)
         self.assertAlmostEqual(pos, 0.25)
         self.assertEqual(word, (0, 3))
-        self.assertEqual(tts_read.locate(int(2.5e9), 0, self.spans, {0: 0}, self.chunks), (1, None))
-        self.assertEqual(tts_read.locate(int(9e9), 0, self.spans, self.starts, self.chunks), (2, None))
+        self.assertEqual(tts_read.locate(int(2.5e9), 0, self.spans, {0: 0}, self.chunks, 1.0), (1, None))
+        self.assertEqual(tts_read.locate(int(9e9), 0, self.spans, self.starts, self.chunks, 1.0), (2, None))
 
 
 class Synthesis(unittest.TestCase):
@@ -101,7 +142,7 @@ class Synthesis(unittest.TestCase):
 
     def test_word_timestamps_are_monotonic_and_cover_the_sentence(self) -> None:
         text = "The quick brown fox jumps over the lazy dog."
-        audio, words = self.engine.synth(text, 2.0)
+        audio, words = self.engine.synth(text)
         self.assertEqual([text[a:b] for a, b, _, _ in words], text[:-1].split())
         self.assertGreater(len(audio) / tts_read.SAMPLE_RATE, 1.0)
         self.assertGreaterEqual(words[0][2], 0.0)
@@ -111,12 +152,6 @@ class Synthesis(unittest.TestCase):
         for _, _, t0, t1 in words:
             self.assertLess(t0, t1)
         self.assertLessEqual(words[-1][3], len(audio) / tts_read.SAMPLE_RATE + 0.05)
-
-    def test_speed_shortens_audio(self) -> None:
-        text = "Speed is applied at synthesis time, not by resampling, zorblax."
-        slow, _ = self.engine.synth(text, 1.0)
-        fast, _ = self.engine.synth(text, 2.0)
-        self.assertLess(len(fast), 0.7 * len(slow))
 
 
 if __name__ == "__main__":
