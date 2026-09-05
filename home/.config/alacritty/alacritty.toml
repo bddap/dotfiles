@@ -32,3 +32,35 @@ y = 4
 
 [general]
 live_config_reload = true
+
+[colors.primary]
+background = "#F4EDE4"
+foreground = "#6B4F3A"
+
+[colors.cursor]
+text = "#F4EDE4"
+cursor = "#C8553D"
+
+[colors.selection]
+text = "CellForeground"
+background = "#ECCEB5"
+
+[colors.normal]
+black = "#422614"
+red = "#AD4D3B"
+green = "#4C7E3C"
+yellow = "#976115"
+blue = "#3D72A6"
+magenta = "#8756A5"
+cyan = "#0E7D8A"
+white = "#D8C3A5"
+
+[colors.bright]
+black = "#997864"
+red = "#932410"
+green = "#27620B"
+yellow = "#744700"
+blue = "#085491"
+magenta = "#6D338E"
+cyan = "#065E68"
+white = "#FFFBF5"

@@ -101,3 +101,23 @@ plugins {
         spin        "PinwheelCw"
     }
 }
+
+theme "workshop"
+themes {
+    workshop {
+        text_unselected { base 0; background 7; emphasis_0 9; emphasis_1 14; emphasis_2 10; emphasis_3 13; }
+        text_selected { base 0; background 15; emphasis_0 9; emphasis_1 14; emphasis_2 10; emphasis_3 13; }
+        ribbon_unselected { base 0; background 15; emphasis_0 1; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        ribbon_selected { base 15; background 6; emphasis_0 15; emphasis_1 15; emphasis_2 15; emphasis_3 15; }
+        table_title { base 0; background 7; emphasis_0 9; emphasis_1 14; emphasis_2 10; emphasis_3 13; }
+        table_cell_unselected { base 0; background 15; emphasis_0 1; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        table_cell_selected { base 0; background 7; emphasis_0 9; emphasis_1 14; emphasis_2 10; emphasis_3 13; }
+        list_unselected { base 0; background 15; emphasis_0 1; emphasis_1 6; emphasis_2 2; emphasis_3 5; }
+        list_selected { base 0; background 7; emphasis_0 9; emphasis_1 14; emphasis_2 10; emphasis_3 13; }
+        frame_selected { base 6; emphasis_0 1; emphasis_1 3; emphasis_2 5; emphasis_3 2; }
+        frame_highlight { base 1; emphasis_0 1; emphasis_1 3; emphasis_2 5; emphasis_3 2; }
+        exit_code_success { base 2; emphasis_0 6; emphasis_1 0; emphasis_2 15; emphasis_3 5; }
+        exit_code_error { base 1; emphasis_0 3; emphasis_1 0; emphasis_2 15; emphasis_3 5; }
+        multiplayer_user_colors { player_1 5; player_2 6; player_3 0; player_4 3; player_5 1; player_6 2; player_7 9; player_8 10; player_9 12; player_10 13; }
+    }
+}

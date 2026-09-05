@@ -20,7 +20,7 @@ function fish_logo \
 
     # defaults:
     [ $outer_color  ]; or set outer_color  'red'
-    [ $medium_color ]; or set medium_color 'f70'
+    [ $medium_color ]; or set medium_color 'bryellow'
     [ $inner_color  ]; or set inner_color  'yellow'
     [ $mouth ]; or set mouth '['
     [ $eye   ]; or set eye   'O'
@@ -135,3 +135,4 @@ end
 if [ -f '$HOME/Downloads/google-cloud-sdk/path.fish.inc' ]; . '$HOME/Downloads/google-cloud-sdk/path.fish.inc'; end
 
 alias ytob='ytop -c default-dark'
+set -x FZF_DEFAULT_OPTS --color=16
