@@ -34,24 +34,20 @@ y = 4
 live_config_reload = true
 
 [colors.primary]
-background = "#F4EDE4"
-foreground = "#6B4F3A"
+background = "#E8E1D9"
+foreground = "#5A3F2A"
 
 [colors.cursor]
 cursor = "#C8553D"
 
-[colors.selection]
-text = "CellForeground"
-background = "#ECCEB5"
-
 [colors.normal]
 black = "#422614"
-red = "#AD4D3B"
-green = "#3B7F56"
-yellow = "#9E6200"
-blue = "#556F9D"
-magenta = "#8756A5"
-cyan = "#367A84"
+red = "#AA4A38"
+green = "#30754C"
+yellow = "#945C02"
+blue = "#4F6997"
+magenta = "#8555A3"
+cyan = "#2C717B"
 white = "#D8C3A5"
 
 [colors.bright]
