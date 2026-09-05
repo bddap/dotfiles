@@ -129,9 +129,17 @@ in { ... }: {
     "zellij/layouts/default.kdl".source = ./zellij/layouts/default.kdl;
   };
 
-  xdg.autostart = {
-    enable = true;
-    entries = [ "${pkgs.bddap.tts-read}/share/applications/app.tts_read.desktop" ];
+  systemd.user.services.tts-read = {
+    Unit = {
+      Description = "Read selection aloud";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.bddap.tts-read}/bin/tts-read --gapplication-service";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
   };
 
   # dconf replaces this list wholesale: shortcuts added in GNOME Settings are

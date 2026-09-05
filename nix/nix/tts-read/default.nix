@@ -35,7 +35,6 @@ in stdenv.mkDerivation {
       --replace-fail @kokoro_voice@ ${
         kokoro "voices/af_heart.pt" "sha256-CrVwm4/6sZv9hJzRHZj3W2CvdzMlOtDWexI4KhAstP8="
       }
-    substituteInPlace app.tts_read.desktop --replace-fail @out@ $out
   '';
 
   preFixup = ''
@@ -53,7 +52,6 @@ in stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     install -Dm755 tts_read.py $out/bin/tts-read
-    install -Dm644 app.tts_read.desktop $out/share/applications/app.tts_read.desktop
     runHook postInstall
   '';
 }
