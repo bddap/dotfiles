@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Read Aloud
-Comment=Reads the selected text aloud
-Exec=@out@/bin/tts-read --gapplication-service
-Icon=audio-speakers-symbolic
-NoDisplay=true
