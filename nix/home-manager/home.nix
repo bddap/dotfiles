@@ -146,8 +146,8 @@ in { ... }: {
   # dropped on switch, so every custom keybinding has to be declared here.
   dconf.settings = {
     "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings =
-      [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/tts-read/" ];
-    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/tts-read" = {
+      [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/" ];
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
       name = "Read selection aloud";
       command = "${pkgs.bddap.tts-read}/bin/tts-read";
       binding = "<Super>r";
