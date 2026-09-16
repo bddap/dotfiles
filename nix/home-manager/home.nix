@@ -12,6 +12,13 @@ let
         'OpenGL core profile version string: 3.0'
     fi
   '';
+  zoomPortalProbe = pkgs.runCommand "zoom-xdg-desktop-portal" { } ''
+    for directory in lib lib64 libexec; do
+      mkdir -p "$out/$directory"
+      ln -s ${pkgs.xdg-desktop-portal}/libexec/xdg-desktop-portal \
+        "$out/$directory/xdg-desktop-portal"
+    done
+  '';
 in { ... }: {
   # Machine-local home-manager config lives in nix/home-manager/local/
   # (gitignored) — same mechanism as nix/nixos/local/ in
@@ -104,7 +111,11 @@ in { ... }: {
     yaml-language-server
     yj
     (zoom-us.override {
-      targetPkgs = pkgs: [ (pkgs.lib.hiPrio zoomGlxinfo) pkgs.mesa-demos ];
+      targetPkgs = pkgs: [
+        (pkgs.lib.hiPrio zoomGlxinfo)
+        pkgs.mesa-demos
+        zoomPortalProbe
+      ];
     })
     copilot-language-server
     nodePackages.prettier
