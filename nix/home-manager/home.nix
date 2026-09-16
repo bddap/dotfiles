@@ -92,7 +92,7 @@ in { ... }: {
     xclip
     yaml-language-server
     yj
-    zoom-us
+    (zoom-us.override { targetPkgs = pkgs: [ pkgs.mesa-demos ]; })
     copilot-language-server
     nodePackages.prettier
     ollama-cuda
