@@ -1,6 +1,17 @@
 let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
+  zoomGlxinfo = pkgs.writeShellScriptBin "glxinfo" ''
+    output="$(${pkgs.mesa-demos}/bin/glxinfo "$@" 2>/dev/null)" || output=
+    if [[ "$output" == *"OpenGL version string: "[0-9]* ]] &&
+       [[ "$output" == *"OpenGL core profile version string: "[0-9]* ]]; then
+      printf '%s\n' "$output"
+    else
+      printf '%s\n' \
+        'OpenGL version string: 3.0' \
+        'OpenGL core profile version string: 3.0'
+    fi
+  '';
 in { ... }: {
   # Machine-local home-manager config lives in nix/home-manager/local/
   # (gitignored) — same mechanism as nix/nixos/local/ in
@@ -92,7 +103,9 @@ in { ... }: {
     xclip
     yaml-language-server
     yj
-    (zoom-us.override { targetPkgs = pkgs: [ pkgs.mesa-demos ]; })
+    (zoom-us.override {
+      targetPkgs = pkgs: [ (pkgs.lib.hiPrio zoomGlxinfo) pkgs.mesa-demos ];
+    })
     copilot-language-server
     nodePackages.prettier
     ollama-cuda
