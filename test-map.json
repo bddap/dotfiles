@@ -1,0 +1,14 @@
+{
+  "rules": [
+    {
+      "paths": ["nix/**/*.nix"],
+      "tests": ["nix-instantiate --parse {path}"],
+      "why": "Nix changes must parse before activation"
+    },
+    {
+      "paths": ["test-map.json"],
+      "tests": ["nix-shell -p jq --run 'jq empty test-map.json'"],
+      "why": "The touched-path manifest must remain valid JSON"
+    }
+  ]
+}
