@@ -144,6 +144,9 @@ in { ... }: {
 
   # dconf replaces this list wholesale: shortcuts added in GNOME Settings are
   # dropped on switch, so every custom keybinding has to be declared here.
+  # Keep paths named customN: Zoom 6.x stoi-parses the suffix while enumerating
+  # these bindings and aborts screen sharing on non-numeric names. See
+  # https://github.com/bddap/dotfiles/issues/38.
   dconf.settings = {
     "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings =
       [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/" ];
