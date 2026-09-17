@@ -17,7 +17,7 @@ let
         ''hash = "${zoomSrc.outputHash}";''
       ]
       (builtins.readFile "${pkgs.bddap.sources.nixpkgs}/pkgs/by-name/zo/zoom-us/package.nix")))
-    { };
+    { targetPkgsFixed = [ pkgs.zstd ]; };
   zoom = pkgs.zoom-us.overrideAttrs (_: (builtins.removeAttrs zoomPatched.drvAttrs
     [ "NIX_MAIN_PROGRAM" ]) // {
     passthru = zoomPatched.passthru;
