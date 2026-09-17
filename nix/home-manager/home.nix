@@ -92,7 +92,14 @@ in { config, ... }: {
     xclip
     yaml-language-server
     yj
-    zoom-us
+    (symlinkJoin {
+      name = "zoom-us-xwayland";
+      paths = [ zoom-us ];
+      nativeBuildInputs = [ makeWrapper ];
+      postBuild = ''
+        wrapProgram $out/bin/zoom --set QT_QPA_PLATFORM xcb
+      '';
+    })
     copilot-language-server
     nodePackages.prettier
     ollama-cuda
