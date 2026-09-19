@@ -2,12 +2,18 @@
 
 stdenv.mkDerivation rec {
   pname = "codex";
-  version = "0.7.0";
+  version = "0.154.0";
 
   src = fetchurl {
     url =
       "https://github.com/openai/codex/releases/download/rust-v${version}/codex-x86_64-unknown-linux-musl.tar.gz";
-    sha256 = "sha256-zzU7Fc7aHwfeP1w069SjdSivBB8TqqN5i1rs3SBZT3k=";
+    sha256 = "sha256-1+GLJZeujyQvXzHunpDe70jbye3WNNmGj7ZDXQjAfwI=";
+  };
+
+  codeModeHostSrc = fetchurl {
+    url =
+      "https://github.com/openai/codex/releases/download/rust-v${version}/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz";
+    sha256 = "sha256-po33zKI8bafN4XVnfffeYcc6I0rdEzOhJUuG1kGvAfc=";
   };
 
   phases = [ "unpackPhase" "installPhase" ];
@@ -15,12 +21,14 @@ stdenv.mkDerivation rec {
   unpackPhase = ''
     runHook preUnpack
     tar xvf $src
+    tar xvf $codeModeHostSrc
     runHook postUnpack
   '';
 
   installPhase = ''
     mkdir -p $out/bin
     cp codex-x86_64-unknown-linux-musl $out/bin/codex
+    cp codex-code-mode-host-x86_64-unknown-linux-musl $out/bin/codex-code-mode-host
   '';
 
   meta = {
