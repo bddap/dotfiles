@@ -68,12 +68,13 @@ let
         '';
       };
       home = mkOption {
-        type = types.strMatching "/[[:alnum:]._/-]*";
+        type = types.strMatching "(/[.]*[[:alnum:]_-][[:alnum:]._-]*)+";
         default = "${hostUser.home}/sandboxes/${name}";
         defaultText = "<home of hostUser>/sandboxes/<name>";
         description = ''
           Host directory mounted as /home/agent inside the sandbox: the only
           state that survives the VM; credentials and checkouts go here.
+          A normalized absolute path, not inside another sandbox's home.
           Created 0700 by hostUser if missing, so its parent must be writable
           by hostUser.
         '';
@@ -94,6 +95,11 @@ let
   collisions = field:
     lib.filterAttrs (_: names: lib.length names > 1)
       (lib.groupBy (name: toString cfg.vms.${name}.${field}) (lib.attrNames cfg.vms));
+
+  nested = lib.concatMap (outer:
+    map (inner: { inherit outer inner; })
+      (lib.filter (inner: lib.hasPrefix "${cfg.vms.${outer}.home}/" cfg.vms.${inner}.home) (lib.attrNames cfg.vms)))
+    (lib.attrNames cfg.vms);
 in
 {
   options.virtualisation.sandboxes = {
@@ -142,6 +148,10 @@ in
           assertion = false;
           message = "virtualisation.sandboxes: ${field} ${value} is used by ${lib.concatStringsSep ", " names}";
         }) (collisions field)) [ "sshPort" "home" ]
+      ++ map ({ outer, inner }: {
+        assertion = false;
+        message = "virtualisation.sandboxes: home ${cfg.vms.${inner}.home} of ${inner} is inside home ${cfg.vms.${outer}.home} of ${outer}";
+      }) nested
       ++ [
         {
           assertion = lib.all (name: builtins.match "[[:alnum:]-]+" name != null) (lib.attrNames cfg.vms);

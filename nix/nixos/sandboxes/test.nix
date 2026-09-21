@@ -156,6 +156,16 @@ let
         "virtualisation.sandboxes: home /var/lib/tester/x is used by a, b"
       ];
     };
+    testNestedHomesRejected = {
+      expr = rejected {
+        vms = {
+          a = { sshPort = 2201; home = "/var/lib/tester/x"; module = { }; };
+          b = { sshPort = 2202; home = "/var/lib/tester/x/b"; module = { }; };
+          c = { sshPort = 2203; home = "/var/lib/tester/xy"; module = { }; };
+        };
+      };
+      expected = [ "virtualisation.sandboxes: home /var/lib/tester/x/b of b is inside home /var/lib/tester/x of a" ];
+    };
     testBadNameRejected = {
       expr = rejected { vms.my_agent = { sshPort = 2201; module = { }; }; };
       expected = [ "virtualisation.sandboxes.vms: a name is the guest's host name and part of its unit name; use letters, digits and dashes" ];
@@ -177,9 +187,15 @@ let
         in (builtins.tryEval (builtins.deepSeq { inherit (a) home sshPort; } true)).success) [
         { sshPort = 2201; home = "relative/path"; }
         { sshPort = 2201; home = "/with,comma"; }
+        { sshPort = 2201; home = "/trailing/"; }
+        { sshPort = 2201; home = "/double//slash"; }
+        { sshPort = 2201; home = "/dot/./here"; }
+        { sshPort = 2201; home = "/dot/../up"; }
+        { sshPort = 2201; home = "/"; }
         { sshPort = 22; }
+        { sshPort = 2201; home = "/var/lib/tester/.hidden/a-b_c.d"; }
       ];
-      expected = [ false false false ];
+      expected = [ false false false false false false false false true ];
     };
   };
 in
