@@ -8,10 +8,10 @@ in {
   # mechanism in nix/home-manager/local/.) Imported iff present.
   # ./install-to-disk populates it on new machines; it is never carried from
   # one machine to another.
-  imports =
+  imports = [ ./sandboxes ] ++ (
     if builtins.pathExists ./local/default.nix
     then [ ./local/default.nix ]
-    else [ ];
+    else [ ]);
 
   # Placeholders so the tree evaluates on a fresh clone (no
   # nix/nixos/local/ yet). A real machine's local/ overrides these via

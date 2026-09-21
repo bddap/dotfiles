@@ -6,6 +6,14 @@
       "why": "Nix changes must parse before activation"
     },
     {
+      "paths": ["nix/nixos/sandboxes/**"],
+      "tests": [
+        "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A eval",
+        "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A vm"
+      ],
+      "why": "The sandbox module's option and unit contract is eval-tested; boot, reach, persistence, isolation and rebuild teardown run in a nested-VM NixOS test"
+    },
+    {
       "paths": ["test-map.json"],
       "tests": ["nix-shell -p jq --run 'jq empty test-map.json'"],
       "why": "The touched-path manifest must remain valid JSON"
