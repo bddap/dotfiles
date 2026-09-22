@@ -18,6 +18,7 @@ let
         imports = [ base ];
         virtualisation.memorySize = 1024;
         virtualisation.cores = 1;
+        virtualisation.diskSize = 8192;
         environment.etc.recipe.text = "beta";
         environment.systemPackages = [ pkgs.cowsay ];
       };
@@ -65,25 +66,28 @@ let
         wantedBy = [ "multi-user.target" ];
       };
     };
-    testUnitSeesOnlyTheHome = {
+    testUnitSeesOnlyTheHomeAndTheDiskDirectory = {
       expr = with declared.systemd.services.sandbox-beta.serviceConfig; {
         inherit ProtectHome BindPaths ProtectSystem NoNewPrivileges CapabilityBoundingSet;
         mounts = declared.systemd.services.sandbox-beta.unitConfig.RequiresMountsFor;
       };
       expected = {
-        mounts = "/var/lib/tester/elsewhere/beta";
+        mounts = [ "/var/lib/tester/elsewhere/beta" "/var/lib/tester/sandboxes/beta" ];
         ProtectHome = "tmpfs";
-        BindPaths = [ "/var/lib/tester/elsewhere/beta" ];
+        BindPaths = [ "/var/lib/tester/elsewhere/beta" "/var/lib/tester/sandboxes/beta" ];
         ProtectSystem = "strict";
         NoNewPrivileges = true;
         CapabilityBoundingSet = "";
       };
     };
-    testHomeDefaultsUnderTheUsersHome = { expr = alpha.home; expected = "/var/lib/tester/sandboxes/alpha"; };
-    testHomesAreCreatedPrivateAsTheUserAfterTheirMount = {
+    testHomeAndDiskDefaultUnderTheUsersHome = {
+      expr = { inherit (alpha) home disk; };
+      expected = { home = "/var/lib/tester/sandboxes/alpha/home"; disk = "/var/lib/tester/sandboxes/alpha/root.qcow2"; };
+    };
+    testHomesAndDiskDirectoriesAreCreatedPrivateAsTheUserAfterTheirMount = {
       expr = map (name: with declared.systemd.services."sandbox-home@${name}"; {
         inherit (serviceConfig) Type User;
-        install = lib.hasSuffix "/bin/install -d -m 0700 ${declared.virtualisation.sandboxes.vms.${name}.home}" serviceConfig.ExecStart;
+        install = lib.hasSuffix "/bin/install -d -m 0700 ${declared.virtualisation.sandboxes.vms.${name}.home} ${dirOf declared.virtualisation.sandboxes.vms.${name}.disk}" serviceConfig.ExecStart;
         mounts = unitConfig.RequiresMountsFor;
         vm = { inherit (declared.systemd.services."sandbox-${name}") requires after; };
         activation = declared.system.activationScripts ? sandboxes;
@@ -92,7 +96,7 @@ let
         Type = "oneshot";
         User = "tester";
         install = true;
-        mounts = declared.virtualisation.sandboxes.vms.${name}.home;
+        mounts = [ declared.virtualisation.sandboxes.vms.${name}.home (dirOf declared.virtualisation.sandboxes.vms.${name}.disk) ];
         vm = { requires = [ "sandbox-home@${name}.service" ]; after = [ "sandbox-home@${name}.service" ]; };
         activation = false;
       }) [ "alpha" "beta" ];
@@ -110,13 +114,20 @@ let
       };
       expected = { uid = 1000; wheel = true; nopasswd = true; };
     };
-    testEphemeralRootOwnStoreHeadless = {
-      expr = { inherit (alpha.guest.config.virtualisation) diskImage useNixStoreImage mountHostNixStore writableStore graphics; };
-      expected = { diskImage = null; useNixStoreImage = true; mountHostNixStore = false; writableStore = true; graphics = false; };
+    testRootAndStoreOverlayOnTheDiskOwnStoreHeadless = {
+      expr = { inherit (alpha.guest.config.virtualisation) diskImage useNixStoreImage mountHostNixStore writableStore writableStoreUseTmpfs graphics; };
+      expected = {
+        diskImage = "/var/lib/tester/sandboxes/alpha/root.qcow2";
+        useNixStoreImage = true;
+        mountHostNixStore = false;
+        writableStore = true;
+        writableStoreUseTmpfs = false;
+        graphics = false;
+      };
     };
-    testMemoryAndCoresDefaultAndOverride = {
-      expr = map (sb: { inherit (sb.guest.config.virtualisation) memorySize cores; }) [ alpha beta ];
-      expected = [ { memorySize = 4096; cores = 2; } { memorySize = 1024; cores = 1; } ];
+    testMemoryCoresDiskDefaultAndOverride = {
+      expr = map (sb: { inherit (sb.guest.config.virtualisation) memorySize cores diskSize; }) [ alpha beta ];
+      expected = [ { memorySize = 4096; cores = 2; diskSize = 32768; } { memorySize = 1024; cores = 1; diskSize = 8192; } ];
     };
     testSshKeysOnlyOnLoopback = {
       expr = with alpha.guest.config; {
@@ -155,17 +166,18 @@ let
       expr = map (sb: { inherit (sb.guest.config.networking) hostName; recipe = sb.guest.config.environment.etc.recipe.text; }) [ alpha beta ];
       expected = [ { hostName = "alpha"; recipe = "alpha"; } { hostName = "beta"; recipe = "beta"; } ];
     };
-    testCollidingSshPortOrHomeRejected = {
+    testCollidingSshPortHomeOrDiskRejected = {
       expr = rejected {
         vms = {
-          a = { sshPort = 2201; home = "/var/lib/tester/x"; module = { }; };
-          b = { sshPort = 2201; home = "/var/lib/tester/x"; module = { }; };
+          a = { sshPort = 2201; home = "/var/lib/tester/x"; disk = "/var/lib/tester/x.qcow2"; module = { }; };
+          b = { sshPort = 2201; home = "/var/lib/tester/x"; disk = "/var/lib/tester/x.qcow2"; module = { }; };
           c = { sshPort = 2203; module = { }; };
         };
       };
       expected = [
         "virtualisation.sandboxes: sshPort 2201 is used by a, b"
         "virtualisation.sandboxes: home /var/lib/tester/x is used by a, b"
+        "virtualisation.sandboxes: disk /var/lib/tester/x.qcow2 is used by a, b"
       ];
     };
     testNestedHomesRejected = {
@@ -193,10 +205,10 @@ let
       expr = (builtins.tryEval (host { virtualisation.sandboxes = { hostUser = "ghost"; vms.a = { sshPort = 2201; module = { }; }; }; }).config.virtualisation.sandboxes.vms.a.home).success;
       expected = false;
     };
-    testHomeAndPortAreTyped = {
+    testHomeDiskAndPortAreTyped = {
       expr = map (v:
         let a = (host { virtualisation.sandboxes = { hostUser = "tester"; vms.a = { module = { }; } // v; }; }).config.virtualisation.sandboxes.vms.a;
-        in (builtins.tryEval (builtins.deepSeq { inherit (a) home sshPort; } true)).success) [
+        in (builtins.tryEval (builtins.deepSeq { inherit (a) home disk sshPort; } true)).success) [
         { sshPort = 2201; home = "relative/path"; }
         { sshPort = 2201; home = "/with,comma"; }
         { sshPort = 2201; home = "/trailing/"; }
@@ -204,10 +216,11 @@ let
         { sshPort = 2201; home = "/dot/./here"; }
         { sshPort = 2201; home = "/dot/../up"; }
         { sshPort = 2201; home = "/"; }
+        { sshPort = 2201; disk = "relative.qcow2"; }
         { sshPort = 22; }
         { sshPort = 2201; home = "/var/lib/tester/.hidden/a-b_c.d"; }
       ];
-      expected = [ false false false false false false false false true ];
+      expected = [ false false false false false false false false false true ];
     };
   };
 in
@@ -220,10 +233,10 @@ in
     name = "sandboxes";
     nodes.host = { pkgs, lib, ... }: {
       imports = [ ./. ];
-      virtualisation = { memorySize = 4096; cores = 4; diskSize = 8192; };
+      virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; };
       boot.kernelParams = [ "no-kvmapf" ];
-      users.users.tester = { isNormalUser = true; uid = 1000; };
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
+      users.users.tester = { isNormalUser = true; uid = 1000; };
       environment.systemPackages = [ pkgs.socat ];
       environment.etc.sandbox-test-key = { source = keys.snakeOilPrivateKey; mode = "0600"; };
       virtualisation.sandboxes = {
@@ -240,6 +253,8 @@ in
       import shlex
 
       ssh = "ssh -q -i /etc/sandbox-test-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+      alpha_home = "/home/tester/sandboxes/alpha/home"
+      alpha_disk = "/home/tester/sandboxes/alpha/root.qcow2"
 
       def guest(port, cmd):
           return host.succeed(f"{ssh} -p {port} agent@localhost {shlex.quote(cmd)}")
@@ -250,15 +265,28 @@ in
       def pid(unit):
           return host.succeed(f"systemctl show -p MainPID --value {unit}").strip()
 
+      def disks_created(unit):
+          return host.succeed(f"journalctl -u {unit} | grep -c 'creating the virtualisation disk image' || true").strip()
+
       host.wait_for_unit("multi-user.target")
 
-      with subtest("declared sandboxes come up, each with its own recipe, homes created private"):
+      with subtest("declared sandboxes come up, each with its own recipe; homes and disk directories private, on the mounted /home"):
           host.wait_for_unit("sandbox-alpha.service")
           host.wait_for_unit("sandbox-beta.service")
-          assert host.succeed("stat -c '%U %a' /home/tester/sandboxes/alpha /home/tester/sandboxes /home/tester/elsewhere/beta").split("\n")[:3] == ["tester 700", "tester 755", "tester 700"]
-          assert host.succeed("findmnt -n -o TARGET -T /home/tester/sandboxes/alpha").strip() == "/home"
+          modes = host.succeed(f"stat -c '%U %a %n' {alpha_home} /home/tester/sandboxes/alpha /home/tester/sandboxes/beta /home/tester/elsewhere/beta /home/tester/sandboxes")
+          print(modes)
+          assert modes.split("\n")[:5] == [
+              f"tester 700 {alpha_home}",
+              "tester 700 /home/tester/sandboxes/alpha",
+              "tester 700 /home/tester/sandboxes/beta",
+              "tester 700 /home/tester/elsewhere/beta",
+              "tester 755 /home/tester/sandboxes",
+          ]
+          assert host.succeed(f"findmnt -n -o TARGET -T {alpha_home}").strip() == "/home"
           wait_ssh(2201)
           wait_ssh(2202)
+          print(host.succeed(f"ls -l {alpha_disk} /home/tester/sandboxes/beta/root.qcow2; du -sh {alpha_disk}"))
+          assert disks_created("sandbox-alpha.service") == "1"
           assert guest(2201, "cat /etc/recipe").strip() == "alpha"
           assert guest(2202, "cat /etc/recipe").strip() == "beta"
           guest(2202, "command -v cowsay")
@@ -267,34 +295,54 @@ in
       with subtest("serial console answers on the runtime socket"):
           host.wait_until_succeeds("(sleep 2; echo 'echo console-$(hostname)'; sleep 2) | timeout 10 socat - UNIX-CONNECT:/run/sandbox/alpha/console | grep console-alpha >/dev/null")
 
-      with subtest("home persists across a restart, the rest does not"):
-          guest(2201, "echo persisted > ~/marker && sudo touch /ephemeral")
-          assert host.succeed("stat -c '%u' /home/tester/sandboxes/alpha/marker").strip() == "1000"
-          host.succeed("chmod 755 /home/tester/sandboxes/alpha")
+      with subtest("home, root and store survive a restart; the home's mode is back to 0700"):
+          guest(2201, "echo persisted > ~/marker && sudo touch /root-marker")
+          blob = guest(2201, "dd if=/dev/zero of=/tmp/blob bs=1M count=64 status=none && nix-store --add /tmp/blob && rm /tmp/blob").strip()
+          print(guest(2201, "findmnt -n -o TARGET,SOURCE,FSTYPE / /nix/.rw-store /nix/store; df -h /nix/.rw-store; free -m"))
+          assert guest(2201, "findmnt -n -o FSTYPE -T /nix/.rw-store").strip() == "ext4"
+          boot1 = guest(2201, "cat /proc/sys/kernel/random/boot_id")
+          assert host.succeed(f"stat -c '%u' {alpha_home}/marker").strip() == "1000"
+          host.succeed(f"chmod 755 {alpha_home}")
           host.succeed("systemctl restart sandbox-alpha.service")
-          assert host.succeed("stat -c '%a' /home/tester/sandboxes/alpha").strip() == "700"
+          assert host.succeed(f"stat -c '%a' {alpha_home}").strip() == "700"
           wait_ssh(2201)
+          assert guest(2201, "cat /proc/sys/kernel/random/boot_id") != boot1
           assert guest(2201, "cat ~/marker").strip() == "persisted"
-          guest(2201, "test ! -e /ephemeral")
+          guest(2201, f"test -e /root-marker && test -e {blob}")
+          assert disks_created("sandbox-alpha.service") == "1"
+          print(host.succeed(f"du -sh {alpha_disk}"))
+
+      with subtest("deleting the disk gives a fresh root and store; the home stays"):
+          host.succeed("systemctl stop sandbox-alpha.service")
+          host.succeed(f"rm {alpha_disk}")
+          host.succeed("systemctl start sandbox-alpha.service")
+          wait_ssh(2201)
+          assert disks_created("sandbox-alpha.service") == "2"
+          guest(2201, f"test ! -e /root-marker && test ! -e {blob}")
+          assert guest(2201, "cat ~/marker").strip() == "persisted"
+          host.succeed(f"test -s {alpha_disk}")
 
       with subtest("only the shared home is visible from the guest"):
           host.succeed("echo unshared > /home/tester/unshared")
-          host.succeed("ln -s /etc/hostname /home/tester/sandboxes/alpha/link")
-          guest(2201, "test ! -e /home/tester && test ! -e /home/agent/../tester/unshared")
+          host.succeed(f"ln -s /etc/hostname {alpha_home}/link")
+          guest(2201, "test ! -e /home/tester && test ! -e /home/agent/../tester/unshared && test ! -e /home/agent/../root.qcow2")
           assert guest(2201, "ls /home").strip() == "agent"
           assert guest(2201, "cat ~/link").strip() == "alpha"
           guest(2201, "ln -s marker ~/guest-link")
-          host.succeed("test -L /home/tester/sandboxes/alpha/guest-link")
+          host.succeed(f"test -L {alpha_home}/guest-link")
           host.succeed("ls -d /nix/store/*-cowsay-*")
           guest(2201, "! ls -d /nix/store/*-cowsay-*")
           tags = guest(2201, "cat /sys/bus/virtio/drivers/9pnet_virtio/virtio*/mount_tag | tr '\\0' ' '").split()
           assert sorted(tags) == ["home", "shared", "xchg"], tags
 
-      with subtest("qemu itself sees only the shared home of the host"):
+      with subtest("qemu itself sees only its own sandbox directory of the host"):
           alpha_pid = pid("sandbox-alpha.service")
           host.succeed(f"nsenter -t {alpha_pid} -m true")
           assert host.succeed(f"nsenter -t {alpha_pid} -m ls /home/tester").split() == ["sandboxes"]
+          assert host.succeed(f"nsenter -t {alpha_pid} -m ls /home/tester/sandboxes").split() == ["alpha"]
+          assert sorted(host.succeed(f"nsenter -t {alpha_pid} -m ls /home/tester/sandboxes/alpha").split()) == ["home", "root.qcow2"]
           host.fail(f"nsenter -t {alpha_pid} -m test -e /home/tester/unshared")
+          host.fail(f"nsenter -t {alpha_pid} -m test -e /home/tester/elsewhere")
           host.fail(f"nsenter -t {alpha_pid} -m touch /etc/x")
 
       with subtest("a rebuild without beta stops beta and leaves alpha running"):

@@ -10,9 +10,11 @@ let
       imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
       networking.hostName = name;
       virtualisation = {
-        diskImage = null;
+        diskImage = sb.disk;
+        diskSize = lib.mkDefault 32768;
         useNixStoreImage = true;
         writableStore = true;
+        writableStoreUseTmpfs = false;
         graphics = false;
         memorySize = lib.mkDefault 4096;
         cores = lib.mkDefault 2;
@@ -54,13 +56,16 @@ let
     sb.module
   ];
 
+  path = types.strMatching "(/[.]*[[:alnum:]_-][[:alnum:]._-]*)+";
+
   sandbox = { name, config, ... }: {
     options = {
       module = mkOption {
         type = types.deferredModule;
         description = ''
           NixOS module for the guest, qemu-vm options included
-          (`virtualisation.memorySize`, `virtualisation.cores`, further
+          (`virtualisation.memorySize`, `virtualisation.cores`,
+          `virtualisation.diskSize`, further
           `virtualisation.sharedDirectories`, `virtualisation.qemu.options`).
           The guest user is `agent`, carrying the host user's uid, with
           passwordless sudo; give it
@@ -68,15 +73,29 @@ let
         '';
       };
       home = mkOption {
-        type = types.strMatching "(/[.]*[[:alnum:]_-][[:alnum:]._-]*)+";
-        default = "${hostUser.home}/sandboxes/${name}";
-        defaultText = "<home of hostUser>/sandboxes/<name>";
+        type = path;
+        default = "${hostUser.home}/sandboxes/${name}/home";
+        defaultText = "<home of hostUser>/sandboxes/<name>/home";
         description = ''
-          Host directory mounted as /home/agent inside the sandbox: the only
-          state that survives the VM; credentials and checkouts go here.
-          A normalized absolute path, not inside another sandbox's home.
-          Created by hostUser before each start, so its parent must be
-          writable by hostUser; mode 0700 is re-applied at every start.
+          Host directory mounted as /home/agent inside the sandbox;
+          credentials and checkouts go here. A normalized absolute path,
+          not inside another sandbox's home. Created by hostUser before
+          each start, so its parent must be writable by hostUser; mode 0700
+          is re-applied at every start.
+        '';
+      };
+      disk = mkOption {
+        type = path;
+        default = "${hostUser.home}/sandboxes/${name}/root.qcow2";
+        defaultText = "<home of hostUser>/sandboxes/<name>/root.qcow2";
+        description = ''
+          The sandbox's root disk, a sparse qcow2 of
+          `virtualisation.diskSize` MiB the runner creates on first start
+          and keeps across restarts and host reboots; root and the writable
+          store overlay live on it. Its directory is created 0700 by
+          hostUser like the home and is what the VM's qemu process can see
+          besides the home, so give the disk its own directory. Stop the
+          sandbox and delete the file to start over.
         '';
       };
       sshPort = mkOption {
@@ -105,7 +124,7 @@ in
   options.virtualisation.sandboxes = {
     hostUser = mkOption {
       type = types.str;
-      description = "User the sandbox VMs run as; owns their homes, and its uid is the guest user's.";
+      description = "User the sandbox VMs run as; owns their homes and disks, and its uid is the guest user's.";
     };
     vms = mkOption {
       type = types.attrsOf (types.submodule sandbox);
@@ -132,7 +151,7 @@ in
         }
       '';
       description = ''
-        Ephemeral headless NixOS VMs, one systemd service each
+        Headless NixOS VMs, one systemd service each
         (`sandbox-<name>.service`); a rebuild starts the declared ones and
         stops the removed ones. Reach a sandbox with
         `ssh -p <sshPort> agent@localhost` or on its serial console at
@@ -147,7 +166,7 @@ in
         lib.mapAttrsToList (value: names: {
           assertion = false;
           message = "virtualisation.sandboxes: ${field} ${value} is used by ${lib.concatStringsSep ", " names}";
-        }) (collisions field)) [ "sshPort" "home" ]
+        }) (collisions field)) [ "sshPort" "home" "disk" ]
       ++ map ({ outer, inner }: {
         assertion = false;
         message = "virtualisation.sandboxes: home ${cfg.vms.${inner}.home} of ${inner} is inside home ${cfg.vms.${outer}.home} of ${outer}";
@@ -165,12 +184,12 @@ in
 
     systemd.services = lib.concatMapAttrs (name: sb: {
       "sandbox-home@${name}" = {
-        description = "home of sandbox VM ${name}";
-        unitConfig.RequiresMountsFor = sb.home;
+        description = "home and disk directory of sandbox VM ${name}";
+        unitConfig.RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
         serviceConfig = {
           Type = "oneshot";
           User = cfg.hostUser;
-          ExecStart = "${pkgs.coreutils}/bin/install -d -m 0700 ${sb.home}";
+          ExecStart = "${pkgs.coreutils}/bin/install -d -m 0700 ${sb.home} ${dirOf sb.disk}";
         };
       };
       "sandbox-${name}" = {
@@ -178,7 +197,7 @@ in
         wantedBy = [ "multi-user.target" ];
         requires = [ "sandbox-home@${name}.service" ];
         after = [ "sandbox-home@${name}.service" ];
-        unitConfig.RequiresMountsFor = sb.home;
+        unitConfig.RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
         serviceConfig = {
           ExecStart = lib.getExe sb.guest.vm;
           User = cfg.hostUser;
@@ -187,7 +206,7 @@ in
           RuntimeDirectoryMode = "0700";
           PrivateTmp = true;
           ProtectHome = "tmpfs";
-          BindPaths = [ sb.home ];
+          BindPaths = [ sb.home (dirOf sb.disk) ];
           ProtectSystem = "strict";
           NoNewPrivileges = true;
           CapabilityBoundingSet = "";
