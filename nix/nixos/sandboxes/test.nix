@@ -67,18 +67,21 @@ let
       };
     };
     testUnitSeesOnlyTheHomeAndTheDiskDirectory = {
-      expr = with declared.systemd.services.sandbox-beta.serviceConfig; {
-        inherit ProtectHome BindPaths ProtectSystem NoNewPrivileges CapabilityBoundingSet;
-        mounts = declared.systemd.services.sandbox-beta.unitConfig.RequiresMountsFor;
-      };
-      expected = {
-        mounts = [ "/var/lib/tester/elsewhere/beta" "/var/lib/tester/sandboxes/beta" ];
+      expr = map (name: with declared.systemd.services."sandbox-${name}"; {
+        inherit (serviceConfig) ProtectHome BindPaths ProtectSystem NoNewPrivileges CapabilityBoundingSet;
+        mounts = unitConfig.RequiresMountsFor;
+      }) [ "alpha" "beta" ];
+      expected = map (paths: {
+        mounts = paths;
         ProtectHome = "tmpfs";
-        BindPaths = [ "/var/lib/tester/elsewhere/beta" "/var/lib/tester/sandboxes/beta" ];
+        BindPaths = paths;
         ProtectSystem = "strict";
         NoNewPrivileges = true;
         CapabilityBoundingSet = "";
-      };
+      }) [
+        [ "/var/lib/tester/sandboxes/alpha/home" "/var/lib/tester/sandboxes/alpha" ]
+        [ "/var/lib/tester/elsewhere/beta" "/var/lib/tester/sandboxes/beta" ]
+      ];
     };
     testHomeAndDiskDefaultUnderTheUsersHome = {
       expr = { inherit (alpha) home disk; };
@@ -86,17 +89,19 @@ let
     };
     testHomesAndDiskDirectoriesAreCreatedPrivateAsTheUserAfterTheirMount = {
       expr = map (name: with declared.systemd.services."sandbox-home@${name}"; {
-        inherit (serviceConfig) Type User;
-        install = lib.hasSuffix "/bin/install -d -m 0700 ${declared.virtualisation.sandboxes.vms.${name}.home} ${dirOf declared.virtualisation.sandboxes.vms.${name}.disk}" serviceConfig.ExecStart;
-        mounts = unitConfig.RequiresMountsFor;
+        service = serviceConfig;
+        inherit (unitConfig) RequiresMountsFor StartLimitIntervalSec;
         vm = { inherit (declared.systemd.services."sandbox-${name}") requires after; };
         activation = declared.system.activationScripts ? sandboxes;
       }) [ "alpha" "beta" ];
-      expected = map (name: {
-        Type = "oneshot";
-        User = "tester";
-        install = true;
-        mounts = [ declared.virtualisation.sandboxes.vms.${name}.home (dirOf declared.virtualisation.sandboxes.vms.${name}.disk) ];
+      expected = map (name: let sb = declared.virtualisation.sandboxes.vms.${name}; in {
+        service = {
+          Type = "oneshot";
+          User = "tester";
+          ExecStart = "${pkgs.coreutils}/bin/install -d -m 0700 ${sb.home} ${dirOf sb.disk}";
+        };
+        RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
+        StartLimitIntervalSec = 0;
         vm = { requires = [ "sandbox-home@${name}.service" ]; after = [ "sandbox-home@${name}.service" ]; };
         activation = false;
       }) [ "alpha" "beta" ];
@@ -115,7 +120,11 @@ let
       expected = { uid = 1000; wheel = true; nopasswd = true; };
     };
     testRootAndStoreOverlayOnTheDiskOwnStoreHeadless = {
-      expr = { inherit (alpha.guest.config.virtualisation) diskImage useNixStoreImage mountHostNixStore writableStore writableStoreUseTmpfs graphics; };
+      expr = with alpha.guest.config; {
+        inherit (virtualisation) diskImage useNixStoreImage mountHostNixStore writableStore writableStoreUseTmpfs graphics;
+        inherit (system) stateVersion;
+        verify = lib.hasInfix "/bin/nix-store --verify" boot.postBootCommands;
+      };
       expected = {
         diskImage = "/var/lib/tester/sandboxes/alpha/root.qcow2";
         useNixStoreImage = true;
@@ -123,6 +132,8 @@ let
         writableStore = true;
         writableStoreUseTmpfs = false;
         graphics = false;
+        stateVersion = "25.11";
+        verify = true;
       };
     };
     testMemoryCoresDiskDefaultAndOverride = {
@@ -166,19 +177,15 @@ let
       expr = map (sb: { inherit (sb.guest.config.networking) hostName; recipe = sb.guest.config.environment.etc.recipe.text; }) [ alpha beta ];
       expected = [ { hostName = "alpha"; recipe = "alpha"; } { hostName = "beta"; recipe = "beta"; } ];
     };
-    testCollidingSshPortHomeOrDiskRejected = {
+    testCollidingSshPortRejected = {
       expr = rejected {
         vms = {
-          a = { sshPort = 2201; home = "/var/lib/tester/x"; disk = "/var/lib/tester/x.qcow2"; module = { }; };
-          b = { sshPort = 2201; home = "/var/lib/tester/x"; disk = "/var/lib/tester/x.qcow2"; module = { }; };
+          a = { sshPort = 2201; module = { }; };
+          b = { sshPort = 2201; module = { }; };
           c = { sshPort = 2203; module = { }; };
         };
       };
-      expected = [
-        "virtualisation.sandboxes: sshPort 2201 is used by a, b"
-        "virtualisation.sandboxes: home /var/lib/tester/x is used by a, b"
-        "virtualisation.sandboxes: disk /var/lib/tester/x.qcow2 is used by a, b"
-      ];
+      expected = [ "virtualisation.sandboxes: sshPort 2201 is used by a, b" ];
     };
     testNestedHomesRejected = {
       expr = rejected {
@@ -189,6 +196,29 @@ let
         };
       };
       expected = [ "virtualisation.sandboxes: home /var/lib/tester/x/b of b is inside home /var/lib/tester/x of a" ];
+    };
+    testOverlappingHomesAndDiskDirectoriesRejected = {
+      expr = rejected {
+        vms = {
+          a = { sshPort = 2201; home = "/var/lib/tester/s/a/home"; disk = "/var/lib/tester/s/a/root.qcow2"; module = { }; };
+          b = { sshPort = 2202; home = "/var/lib/tester/s/b/home"; disk = "/var/lib/tester/s/a/b.qcow2"; module = { }; };
+          c = { sshPort = 2203; home = "/var/lib/tester/s/c"; disk = "/var/lib/tester/s/c/root.qcow2"; module = { }; };
+          d = { sshPort = 2204; home = "/var/lib/tester/s/d/home"; disk = "/var/lib/tester/s/a/home/d.qcow2"; module = { }; };
+          e = { sshPort = 2205; home = "/var/lib/tester/s/e/home"; disk = "/var/lib/tester/s/e/root.qcow2"; module = { }; };
+        };
+      };
+      expected = [
+        "virtualisation.sandboxes: disk directory /var/lib/tester/s/a of b is also disk directory /var/lib/tester/s/a of a"
+        "virtualisation.sandboxes: disk directory /var/lib/tester/s/a/home of d is inside disk directory /var/lib/tester/s/a of a"
+        "virtualisation.sandboxes: disk directory /var/lib/tester/s/a/home of d is also home /var/lib/tester/s/a/home of a"
+        "virtualisation.sandboxes: home /var/lib/tester/s/a/home of a is inside disk directory /var/lib/tester/s/a of b"
+        "virtualisation.sandboxes: disk directory /var/lib/tester/s/a/home of d is inside disk directory /var/lib/tester/s/a of b"
+        "virtualisation.sandboxes: disk directory /var/lib/tester/s/c of c is also home /var/lib/tester/s/c of c"
+      ];
+    };
+    testDiskDirectlyInTheUsersHomeRejected = {
+      expr = rejected { vms.a = { sshPort = 2201; disk = "/var/lib/tester/a.qcow2"; module = { }; }; };
+      expected = [ "virtualisation.sandboxes: disk /var/lib/tester/a.qcow2 of a lies directly in the home of tester; give it its own directory" ];
     };
     testBadNameRejected = {
       expr = rejected { vms.my_agent = { sshPort = 2201; module = { }; }; };
@@ -298,10 +328,11 @@ in
       with subtest("home, root and store survive a restart; the home's mode is back to 0700"):
           guest(2201, "echo persisted > ~/marker && sudo touch /root-marker")
           blob = guest(2201, "dd if=/dev/zero of=/tmp/blob bs=1M count=64 status=none && nix-store --add /tmp/blob && rm /tmp/blob").strip()
-          print(guest(2201, "findmnt -n -o TARGET,SOURCE,FSTYPE / /nix/.rw-store /nix/store; df -h /nix/.rw-store; free -m"))
+          print(guest(2201, "for p in / /nix/.rw-store /nix/store; do findmnt -n -o TARGET,SOURCE,FSTYPE -T $p; done; df -h /nix/.rw-store; free -m"))
           assert guest(2201, "findmnt -n -o FSTYPE -T /nix/.rw-store").strip() == "ext4"
           boot1 = guest(2201, "cat /proc/sys/kernel/random/boot_id")
           assert host.succeed(f"stat -c '%u' {alpha_home}/marker").strip() == "1000"
+          guest(2201, "sudo sync")
           host.succeed(f"chmod 755 {alpha_home}")
           host.succeed("systemctl restart sandbox-alpha.service")
           assert host.succeed(f"stat -c '%a' {alpha_home}").strip() == "700"
