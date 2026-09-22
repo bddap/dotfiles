@@ -4,7 +4,7 @@ import re
 import sys
 import threading
 import traceback
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -29,6 +29,9 @@ APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
 WINDOW = SAMPLE_RATE * 30 // 1000
 SEARCH = SAMPLE_RATE * 10 // 1000
+LIMIT = 120
+SENTENCE = re.compile(r"\S.*?(?:[.!?]+[\"”’)\]]*(?:\[[^\]]*\])*(?=\s|$)|$)")
+BREAKS = (re.compile(r"[,;:—–][\"”’)\]]*(?=\s)"), re.compile(r"\s"))
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -56,11 +59,23 @@ class Result(Protocol):
 
 
 def sentence_spans(text: str) -> list[Span]:
-    spans = []
+    spans: list[Span] = []
     for line in re.finditer(r"[^\n]+", text):
-        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?=\s|$)|$)", line.group()):
-            spans.append((line.start() + m.start(), line.start() + m.end()))
+        for m in SENTENCE.finditer(line.group()):
+            spans.extend(bounded(text, line.start() + m.start(), line.start() + m.end()))
     return spans
+
+
+def bounded(text: str, a: int, b: int) -> Iterator[Span]:
+    while b - a > LIMIT:
+        window = text[a : a + LIMIT]
+        cut = next((m.end() for p in BREAKS for m in [*p.finditer(window)][-1:]), LIMIT)
+        yield a, a + len(window[:cut].rstrip())
+        a += cut
+        while a < b and text[a].isspace():
+            a += 1
+    if a < b:
+        yield a, b
 
 
 def collect(results: Iterable[Result], text: str) -> Chunk:
