@@ -185,8 +185,8 @@ in
       }) names
       ++ [
         {
-          assertion = cfg.vms == { } || hostUser.uid != null;
-          message = "virtualisation.sandboxes: users.users.${cfg.hostUser}.uid must be set; the agent user inside each sandbox gets that uid so the shared home is owned consistently on both sides";
+          assertion = cfg.vms == { } || (hostUser.uid != null && hostUser.uid >= 1000);
+          message = "virtualisation.sandboxes: users.users.${cfg.hostUser}.uid must be set and 1000 or above; the agent user inside each sandbox is a normal user with that uid (nixos/modules/config/users-groups.nix), so the shared home is owned consistently on both sides";
         }
       ];
 

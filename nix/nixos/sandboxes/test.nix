@@ -226,12 +226,12 @@ let
       expected = map (name: [ "virtualisation.sandboxes.vms: name \"${name}\" is the guest's networking.hostName and part of its unit name; it must be a non-empty DNS label (that option's type)" ])
         [ "-alpha" "alpha-" "a.b" "" (lib.strings.replicate 64 "a") ] ++ [ [ ] [ ] ];
     };
-    testHostUserWithoutUidRejected = {
-      expr = failing (host {
+    testHostUserUidUnsetOrBelow1000Rejected = {
+      expr = map (hostUser: failing (host {
         users.users.nouid.isNormalUser = true;
-        virtualisation.sandboxes = { hostUser = "nouid"; vms.a = { sshPort = 2201; module = { }; }; };
-      }).config;
-      expected = [ "virtualisation.sandboxes: users.users.nouid.uid must be set; the agent user inside each sandbox gets that uid so the shared home is owned consistently on both sides" ];
+        virtualisation.sandboxes = { inherit hostUser; vms.a = { sshPort = 2201; module = { }; }; };
+      }).config) [ "nouid" "root" ];
+      expected = map (u: [ "virtualisation.sandboxes: users.users.${u}.uid must be set and 1000 or above; the agent user inside each sandbox is a normal user with that uid (nixos/modules/config/users-groups.nix), so the shared home is owned consistently on both sides" ]) [ "nouid" "root" ];
     };
     testUnknownHostUserRejected = {
       expr = (builtins.tryEval (host { virtualisation.sandboxes = { hostUser = "ghost"; vms.a = { sshPort = 2201; module = { }; }; }; }).config.virtualisation.sandboxes.vms.a.home).success;
