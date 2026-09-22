@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, options, lib, pkgs, ... }:
 let
   inherit (lib) mkOption types;
   cfg = config.virtualisation.sandboxes;
@@ -179,11 +179,11 @@ in
         assertion = dirOf sb.disk != hostUser.home;
         message = "virtualisation.sandboxes: disk ${sb.disk} of ${name} lies directly in the home of ${cfg.hostUser}; give it its own directory";
       }) cfg.vms
+      ++ map (name: {
+        assertion = name != "" && options.networking.hostName.type.check name;
+        message = "virtualisation.sandboxes.vms: name \"${name}\" is the guest's networking.hostName and part of its unit name; it must be a non-empty DNS label (that option's type)";
+      }) names
       ++ [
-        {
-          assertion = lib.all (name: builtins.match "[[:alnum:]-]+" name != null) names;
-          message = "virtualisation.sandboxes.vms: a name is the guest's host name and part of its unit name; use letters, digits and dashes";
-        }
         {
           assertion = cfg.vms == { } || hostUser.uid != null;
           message = "virtualisation.sandboxes: users.users.${cfg.hostUser}.uid must be set; the agent user inside each sandbox gets that uid so the shared home is owned consistently on both sides";

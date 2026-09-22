@@ -220,9 +220,11 @@ let
       expr = rejected { vms.a = { sshPort = 2201; disk = "/var/lib/tester/a.qcow2"; module = { }; }; };
       expected = [ "virtualisation.sandboxes: disk /var/lib/tester/a.qcow2 of a lies directly in the home of tester; give it its own directory" ];
     };
-    testBadNameRejected = {
-      expr = rejected { vms.my_agent = { sshPort = 2201; module = { }; }; };
-      expected = [ "virtualisation.sandboxes.vms: a name is the guest's host name and part of its unit name; use letters, digits and dashes" ];
+    testNamesMustBeHostNames = {
+      expr = map (name: rejected { vms.${name} = { sshPort = 2201; home = "/var/lib/tester/x/home"; disk = "/var/lib/tester/x/root.qcow2"; module = { }; }; })
+        [ "-alpha" "alpha-" "a.b" "" (lib.strings.replicate 64 "a") (lib.strings.replicate 63 "a") "alpha-1" ];
+      expected = map (name: [ "virtualisation.sandboxes.vms: name \"${name}\" is the guest's networking.hostName and part of its unit name; it must be a non-empty DNS label (that option's type)" ])
+        [ "-alpha" "alpha-" "a.b" "" (lib.strings.replicate 64 "a") ] ++ [ [ ] [ ] ];
     };
     testHostUserWithoutUidRejected = {
       expr = failing (host {
