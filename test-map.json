@@ -1,6 +1,11 @@
 {
   "rules": [
     {
+      "paths": ["nix/nix/tts-read/*.py"],
+      "tests": ["nix-build nix/nix/default.nix -A bddap.tts-read --no-out-link"],
+      "why": "The derivation's check phase runs mypy --strict and the unit tests"
+    },
+    {
       "paths": ["nix/**/*.nix"],
       "tests": ["nix-instantiate --parse {path}"],
       "why": "Nix changes must parse before activation"
