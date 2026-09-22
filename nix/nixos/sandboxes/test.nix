@@ -24,6 +24,9 @@ let
       };
     };
   };
+  smallAlpha = recipe: vms.alpha // {
+    module = { imports = [ base ]; virtualisation.memorySize = 1024; virtualisation.cores = 1; environment.etc.recipe.text = recipe; };
+  };
 
   host = extra: pkgs.nixos [
     ./.
@@ -274,12 +277,12 @@ in
       virtualisation.sandboxes = {
         hostUser = "tester";
         vms = {
-          alpha = vms.alpha // { module = { imports = [ vms.alpha.module ]; virtualisation.memorySize = 1024; virtualisation.cores = 1; }; };
+          alpha = smallAlpha "alpha";
           beta = vms.beta // { home = "/home/tester/elsewhere/beta"; };
         };
       };
-      specialisation.only-alpha.configuration.virtualisation.sandboxes.vms =
-        lib.mkForce { alpha = vms.alpha // { module = { imports = [ vms.alpha.module ]; virtualisation.memorySize = 1024; virtualisation.cores = 1; }; }; };
+      specialisation.only-alpha.configuration.virtualisation.sandboxes.vms = lib.mkForce { alpha = smallAlpha "alpha"; };
+      specialisation.new-alpha.configuration.virtualisation.sandboxes.vms = lib.mkForce { alpha = smallAlpha "alpha-2"; };
     };
     testScript = ''
       import shlex
@@ -388,6 +391,19 @@ in
           assert pid("sandbox-alpha.service") == alpha_pid
           host.fail(f"{ssh} -p 2202 agent@localhost true")
           guest(2201, "true")
+
+      with subtest("a rebuild that changes alpha's recipe boots the new closure over the existing root, home and store"):
+          guest(2201, "sudo touch /root-marker")
+          blob = guest(2201, "dd if=/dev/urandom of=/tmp/blob bs=1M count=64 status=none && nix-store --add /tmp/blob && rm /tmp/blob").strip()
+          guest(2201, "sudo sync")
+          out = host.succeed("/run/booted-system/specialisation/new-alpha/bin/switch-to-configuration test 2>&1")
+          print(out)
+          assert pid("sandbox-alpha.service") != alpha_pid
+          wait_ssh(2201)
+          assert guest(2201, "cat /etc/recipe").strip() == "alpha-2"
+          assert guest(2201, "cat ~/marker").strip() == "persisted"
+          guest(2201, f"test -e /root-marker && test -e {blob}")
+          assert disks_created("sandbox-alpha.service") == "2"
     '';
   };
 }
