@@ -29,9 +29,8 @@ APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
 WINDOW = SAMPLE_RATE * 30 // 1000
 SEARCH = SAMPLE_RATE * 10 // 1000
-LIMIT = 120
-SENTENCE = re.compile(r"\S.*?(?:[.!?]+[\"”’)\]]*(?:\[[^\]]*\])*(?=\s|$)|$)")
-BREAKS = (re.compile(r"[,;:—–][\"”’)\]]*(?=\s)"), re.compile(r"\s"))
+CHARS = 120
+BREAKS = (re.compile(r".*[,;:—–][\"”’)\]]*(?=\s)"), re.compile(r".*\s"))
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -61,15 +60,15 @@ class Result(Protocol):
 def sentence_spans(text: str) -> list[Span]:
     spans: list[Span] = []
     for line in re.finditer(r"[^\n]+", text):
-        for m in SENTENCE.finditer(line.group()):
-            spans.extend(bounded(text, line.start() + m.start(), line.start() + m.end()))
+        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?:\[[^\]]*\])*(?=\s|$)|$)", line.group()):
+            spans.extend(pieces(text, line.start() + m.start(), line.start() + m.end()))
     return spans
 
 
-def bounded(text: str, a: int, b: int) -> Iterator[Span]:
-    while b - a > LIMIT:
-        window = text[a : a + LIMIT]
-        cut = next((m.end() for p in BREAKS for m in [*p.finditer(window)][-1:]), LIMIT)
+def pieces(text: str, a: int, b: int) -> Iterator[Span]:
+    while b - a > CHARS:
+        window = text[a : a + CHARS]
+        cut = next((m.end() for p in BREAKS if (m := p.match(window)) and m.end() > CHARS // 3), CHARS)
         yield a, a + len(window[:cut].rstrip())
         a += cut
         while a < b and text[a].isspace():

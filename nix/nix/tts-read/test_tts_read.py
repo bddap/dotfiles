@@ -49,12 +49,22 @@ class SentenceSpans(unittest.TestCase):
         spans = tts_read.sentence_spans(text)
         self.assertEqual(" ".join(text[a:b] for a, b in spans), text)
         self.assertEqual([text[b - 1] for a, b in spans], [","] * (len(spans) - 1) + ["."])
-        self.assertLessEqual(max(b - a for a, b in spans), tts_read.LIMIT)
-        self.assertGreater(min(b - a for a, b in spans[:-1]), tts_read.LIMIT // 2)
+        self.assertLessEqual(max(b - a for a, b in spans), tts_read.CHARS)
+        self.assertGreater(min(b - a for a, b in spans[:-1]), tts_read.CHARS // 2)
 
     def test_unbreakable_run_is_cut_at_the_limit(self) -> None:
-        text = "x" * (3 * tts_read.LIMIT + 5)
-        self.assertEqual([b - a for a, b in tts_read.sentence_spans(text)], [tts_read.LIMIT] * 3 + [5])
+        text = "x" * (3 * tts_read.CHARS + 5)
+        self.assertEqual([b - a for a, b in tts_read.sentence_spans(text)], [tts_read.CHARS] * 3 + [5])
+
+    def test_clause_break_beats_a_later_space(self) -> None:
+        text = "w" * 50 + ", " + "word " * 40
+        self.assertEqual([text[a:b] for a, b in tts_read.sentence_spans(text)][0], "w" * 50 + ",")
+
+    def test_early_clause_break_does_not_leave_a_runt(self) -> None:
+        text = "However, " + "word " * 40
+        a, b = tts_read.sentence_spans(text)[0]
+        self.assertGreater(b - a, tts_read.CHARS // 3)
+        self.assertTrue(text[:b].endswith("word"))
 
 
 class Collect(unittest.TestCase):
