@@ -47,7 +47,7 @@ let
       expr = let c = (host { }).config; in { units = sandboxUnits c; failing = failing c; };
       expected = { units = [ ]; failing = [ ]; };
     };
-    testOneUnitPerSandbox = { expr = sandboxUnits declared; expected = [ "sandbox-alpha" "sandbox-beta" ]; };
+    testTwoUnitsPerSandbox = { expr = sandboxUnits declared; expected = [ "sandbox-alpha" "sandbox-beta" "sandbox-home@alpha" "sandbox-home@beta" ]; };
     testNoFailingAssertionsWhenDeclared = { expr = failing declared; expected = [ ]; };
     testUnitRunsTheGuestRunnerAsTheUser = {
       expr = with declared.systemd.services.sandbox-alpha; {
@@ -80,10 +80,22 @@ let
       };
     };
     testHomeDefaultsUnderTheUsersHome = { expr = alpha.home; expected = "/var/lib/tester/sandboxes/alpha"; };
-    testHomesAreCreatedPrivateAsTheUser = {
-      expr = map (l: lib.hasSuffix "/setpriv --reuid=tester --regid=tester --init-groups \\" l || lib.hasSuffix "/mkdir -p -m 0700 ${alpha.home}" l || lib.hasSuffix "/mkdir -p -m 0700 ${beta.home}" l)
-        (lib.filter (l: l != "") (lib.splitString "\n" declared.system.activationScripts.sandboxes.text));
-      expected = [ true true true true ];
+    testHomesAreCreatedPrivateAsTheUserAfterTheirMount = {
+      expr = map (name: with declared.systemd.services."sandbox-home@${name}"; {
+        inherit (serviceConfig) Type User;
+        install = lib.hasSuffix "/bin/install -d -m 0700 ${declared.virtualisation.sandboxes.vms.${name}.home}" serviceConfig.ExecStart;
+        mounts = unitConfig.RequiresMountsFor;
+        vm = { inherit (declared.systemd.services."sandbox-${name}") requires after; };
+        activation = declared.system.activationScripts ? sandboxes;
+      }) [ "alpha" "beta" ];
+      expected = map (name: {
+        Type = "oneshot";
+        User = "tester";
+        install = true;
+        mounts = declared.virtualisation.sandboxes.vms.${name}.home;
+        vm = { requires = [ "sandbox-home@${name}.service" ]; after = [ "sandbox-home@${name}.service" ]; };
+        activation = false;
+      }) [ "alpha" "beta" ];
     };
     testHomeIsTheOnlyHostShare = {
       expr = lib.mapAttrs (_: s: { inherit (s) source target securityModel; })
@@ -209,7 +221,9 @@ in
     nodes.host = { pkgs, lib, ... }: {
       imports = [ ./. ];
       virtualisation = { memorySize = 4096; cores = 4; diskSize = 8192; };
+      boot.kernelParams = [ "no-kvmapf" ];
       users.users.tester = { isNormalUser = true; uid = 1000; };
+      virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       environment.systemPackages = [ pkgs.socat ];
       environment.etc.sandbox-test-key = { source = keys.snakeOilPrivateKey; mode = "0600"; };
       virtualisation.sandboxes = {
@@ -242,6 +256,7 @@ in
           host.wait_for_unit("sandbox-alpha.service")
           host.wait_for_unit("sandbox-beta.service")
           assert host.succeed("stat -c '%U %a' /home/tester/sandboxes/alpha /home/tester/sandboxes /home/tester/elsewhere/beta").split("\n")[:3] == ["tester 700", "tester 755", "tester 700"]
+          assert host.succeed("findmnt -n -o TARGET -T /home/tester/sandboxes/alpha").strip() == "/home"
           wait_ssh(2201)
           wait_ssh(2202)
           assert guest(2201, "cat /etc/recipe").strip() == "alpha"
@@ -255,7 +270,9 @@ in
       with subtest("home persists across a restart, the rest does not"):
           guest(2201, "echo persisted > ~/marker && sudo touch /ephemeral")
           assert host.succeed("stat -c '%u' /home/tester/sandboxes/alpha/marker").strip() == "1000"
+          host.succeed("chmod 755 /home/tester/sandboxes/alpha")
           host.succeed("systemctl restart sandbox-alpha.service")
+          assert host.succeed("stat -c '%a' /home/tester/sandboxes/alpha").strip() == "700"
           wait_ssh(2201)
           assert guest(2201, "cat ~/marker").strip() == "persisted"
           guest(2201, "test ! -e /ephemeral")
@@ -285,6 +302,7 @@ in
           print(out)
           host.fail("systemctl is-active sandbox-beta.service")
           host.fail("systemctl cat sandbox-beta.service")
+          host.fail("systemctl cat sandbox-home@beta.service")
           host.succeed("systemctl is-active sandbox-alpha.service")
           assert pid("sandbox-alpha.service") == alpha_pid
           host.fail(f"{ssh} -p 2202 agent@localhost true")

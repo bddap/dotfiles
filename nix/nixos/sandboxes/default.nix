@@ -75,8 +75,8 @@ let
           Host directory mounted as /home/agent inside the sandbox: the only
           state that survives the VM; credentials and checkouts go here.
           A normalized absolute path, not inside another sandbox's home.
-          Created 0700 by hostUser if missing, so its parent must be writable
-          by hostUser.
+          Created by hostUser before each start, so its parent must be
+          writable by hostUser; mode 0700 is re-applied at every start.
         '';
       };
       sshPort = mkOption {
@@ -163,28 +163,36 @@ in
         }
       ];
 
-    systemd.services = lib.mapAttrs' (name: sb: lib.nameValuePair "sandbox-${name}" {
-      description = "sandbox VM ${name}";
-      wantedBy = [ "multi-user.target" ];
-      unitConfig.RequiresMountsFor = sb.home;
-      serviceConfig = {
-        ExecStart = lib.getExe sb.guest.vm;
-        User = cfg.hostUser;
-        SupplementaryGroups = [ "kvm" ];
-        RuntimeDirectory = "sandbox/${name}";
-        RuntimeDirectoryMode = "0700";
-        PrivateTmp = true;
-        ProtectHome = "tmpfs";
-        BindPaths = [ sb.home ];
-        ProtectSystem = "strict";
-        NoNewPrivileges = true;
-        CapabilityBoundingSet = "";
+    systemd.services = lib.concatMapAttrs (name: sb: {
+      "sandbox-home@${name}" = {
+        description = "home of sandbox VM ${name}";
+        unitConfig.RequiresMountsFor = sb.home;
+        serviceConfig = {
+          Type = "oneshot";
+          User = cfg.hostUser;
+          ExecStart = "${pkgs.coreutils}/bin/install -d -m 0700 ${sb.home}";
+        };
+      };
+      "sandbox-${name}" = {
+        description = "sandbox VM ${name}";
+        wantedBy = [ "multi-user.target" ];
+        requires = [ "sandbox-home@${name}.service" ];
+        after = [ "sandbox-home@${name}.service" ];
+        unitConfig.RequiresMountsFor = sb.home;
+        serviceConfig = {
+          ExecStart = lib.getExe sb.guest.vm;
+          User = cfg.hostUser;
+          SupplementaryGroups = [ "kvm" ];
+          RuntimeDirectory = "sandbox/${name}";
+          RuntimeDirectoryMode = "0700";
+          PrivateTmp = true;
+          ProtectHome = "tmpfs";
+          BindPaths = [ sb.home ];
+          ProtectSystem = "strict";
+          NoNewPrivileges = true;
+          CapabilityBoundingSet = "";
+        };
       };
     }) cfg.vms;
-
-    system.activationScripts.sandboxes = lib.stringAfter [ "users" ] (lib.concatMapStrings (sb: ''
-      ${pkgs.util-linux}/bin/setpriv --reuid=${cfg.hostUser} --regid=${hostUser.group} --init-groups \
-        ${pkgs.coreutils}/bin/mkdir -p -m 0700 ${lib.escapeShellArg sb.home}
-    '') (lib.attrValues cfg.vms));
   };
 }
