@@ -28,10 +28,9 @@ in { ... }: {
   # (gitignored) — same mechanism as nix/nixos/local/ in
   # nix/nixos/default.nix: imported iff present, so a machine without one
   # builds unchanged.
-  imports = [ ./headless.nix ] ++ (
-    if builtins.pathExists ./local/default.nix
-    then [ ./local/default.nix ]
-    else [ ]);
+  imports = [ ./headless.nix ]
+    ++ pkgs.lib.optional (builtins.pathExists ./local/default.nix)
+    ./local/default.nix;
 
   home.username = "a";
   home.homeDirectory = "/home/a";
