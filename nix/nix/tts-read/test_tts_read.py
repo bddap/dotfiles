@@ -37,35 +37,6 @@ class SentenceSpans(unittest.TestCase):
             ["First one.", "Second, with a comma!", "Third?", "A line without a terminator", "Version 2.0 shipped (quoted.)", '"Yes."'],
         )
 
-    def test_citation_after_the_period_ends_the_sentence(self) -> None:
-        text = "Hatch opened.[13] Armstrong went out.[136][137] Aldrin followed.[note 1] Done"
-        self.assertEqual(
-            [text[a:b] for a, b in tts_read.sentence_spans(text)],
-            ["Hatch opened.[13]", "Armstrong went out.[136][137]", "Aldrin followed.[note 1]", "Done"],
-        )
-
-    def test_long_sentence_is_split_at_clauses_within_the_limit(self) -> None:
-        text = "one clause of twenty-one, " * 20 + "and then the end."
-        spans = tts_read.sentence_spans(text)
-        self.assertEqual(" ".join(text[a:b] for a, b in spans), text)
-        self.assertEqual([text[b - 1] for a, b in spans], [","] * (len(spans) - 1) + ["."])
-        self.assertLessEqual(max(b - a for a, b in spans), tts_read.CHARS)
-        self.assertGreater(min(b - a for a, b in spans[:-1]), tts_read.CHARS // 2)
-
-    def test_unbreakable_run_is_cut_at_the_limit(self) -> None:
-        text = "x" * (3 * tts_read.CHARS + 5)
-        self.assertEqual([b - a for a, b in tts_read.sentence_spans(text)], [tts_read.CHARS] * 3 + [5])
-
-    def test_clause_break_beats_a_later_space(self) -> None:
-        text = "w" * 50 + ", " + "word " * 40
-        self.assertEqual([text[a:b] for a, b in tts_read.sentence_spans(text)][0], "w" * 50 + ",")
-
-    def test_early_clause_break_does_not_leave_a_runt(self) -> None:
-        text = "However, " + "word " * 40
-        a, b = tts_read.sentence_spans(text)[0]
-        self.assertGreater(b - a, tts_read.CHARS // 3)
-        self.assertTrue(text[:b].endswith("word"))
-
 
 class Collect(unittest.TestCase):
     def test_repeated_word_maps_to_successive_occurrences(self) -> None:

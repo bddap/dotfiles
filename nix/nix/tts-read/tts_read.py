@@ -4,7 +4,7 @@ import re
 import sys
 import threading
 import traceback
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -29,8 +29,6 @@ APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
 WINDOW = SAMPLE_RATE * 30 // 1000
 SEARCH = SAMPLE_RATE * 10 // 1000
-CHARS = 120
-BREAKS = (re.compile(r".*[,;:—–][\"”’)\]]*(?=\s)"), re.compile(r".*\s"))
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -58,23 +56,11 @@ class Result(Protocol):
 
 
 def sentence_spans(text: str) -> list[Span]:
-    spans: list[Span] = []
+    spans = []
     for line in re.finditer(r"[^\n]+", text):
-        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?:\[[^\]]*\])*(?=\s|$)|$)", line.group()):
-            spans.extend(pieces(text, line.start() + m.start(), line.start() + m.end()))
+        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?=\s|$)|$)", line.group()):
+            spans.append((line.start() + m.start(), line.start() + m.end()))
     return spans
-
-
-def pieces(text: str, a: int, b: int) -> Iterator[Span]:
-    while b - a > CHARS:
-        window = text[a : a + CHARS]
-        cut = next((m.end() for p in BREAKS if (m := p.match(window)) and m.end() > CHARS // 3), CHARS)
-        yield a, a + len(window[:cut].rstrip())
-        a += cut
-        while a < b and text[a].isspace():
-            a += 1
-    if a < b:
-        yield a, b
 
 
 def collect(results: Iterable[Result], text: str) -> Chunk:
