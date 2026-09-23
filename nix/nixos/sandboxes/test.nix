@@ -287,7 +287,7 @@ in
     testScript = ''
       import shlex
 
-      ssh = "ssh -q -i /etc/sandbox-test-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+      ssh = "ssh -n -q -i /etc/sandbox-test-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
       alpha_home = "/home/tester/sandboxes/alpha/home"
       alpha_disk = "/home/tester/sandboxes/alpha/root.qcow2"
 
