@@ -268,7 +268,7 @@ in
     name = "sandboxes";
     nodes.host = { pkgs, lib, ... }: {
       imports = [ ./. ];
-      virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; };
+      virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; useNixStoreImage = true; };
       boot.kernelParams = [ "no-kvmapf" ];
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       users.users.tester = { isNormalUser = true; uid = 1000; };
@@ -295,7 +295,7 @@ in
           return host.succeed(f"{ssh} -p {port} agent@localhost {shlex.quote(cmd)}")
 
       def wait_ssh(port):
-          host.wait_until_succeeds(f"{ssh} -p {port} agent@localhost true", timeout=900)
+          host.wait_until_succeeds(f"{ssh} -p {port} agent@localhost true")
 
       def pid(unit):
           return host.succeed(f"systemctl show -p MainPID --value {unit}").strip()
