@@ -6,6 +6,15 @@
       "why": "The derivation's check phase runs mypy --strict and the unit tests"
     },
     {
+      "paths": ["nix/nixos/sandboxes/**"],
+      "tests": [
+        "nix-instantiate --parse {path}",
+        "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A eval",
+        "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A vm"
+      ],
+      "why": "The sandbox module's option and unit contract is eval-tested; boot, reach, persistence, isolation and rebuild teardown run in a nested-VM NixOS test"
+    },
+    {
       "paths": ["nix/**/*.nix"],
       "tests": ["nix-instantiate --parse {path}"],
       "why": "Nix changes must parse before activation"
