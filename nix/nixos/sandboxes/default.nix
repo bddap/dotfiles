@@ -5,6 +5,12 @@ let
   hostUser = config.users.users.${cfg.hostUser}
     or (throw "virtualisation.sandboxes.hostUser: no such user ${cfg.hostUser}");
 
+  stopTimeout = 120;
+  powerdown = pkgs.writeShellScript "sandbox-powerdown" ''
+    [ -z "$MAINPID" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
+      | ${pkgs.socat}/bin/socat -t ${toString stopTimeout} - UNIX-CONNECT:"$RUNTIME_DIRECTORY"/qmp,shut-none
+  '';
+
   guest = name: sb: pkgs.nixos [
     ({ config, modulesPath, ... }: {
       imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
@@ -34,6 +40,7 @@ let
           "-serial stdio"
           "-chardev socket,id=console,path=\${RUNTIME_DIRECTORY:-$TMPDIR}/console,server=on,wait=off"
           "-serial chardev:console"
+          "-qmp unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/qmp,server=on,wait=off"
           "-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny"
         ];
       };
@@ -163,7 +170,9 @@ in
         (`sandbox-<name>.service`); a rebuild starts the declared ones and
         stops the removed ones. Reach a sandbox with
         `ssh -p <sshPort> agent@localhost` or on its serial console at
-        `/run/sandbox/<name>/console`.
+        `/run/sandbox/<name>/console`. Stopping one powers the guest off
+        through its QMP socket `/run/sandbox/<name>/qmp`; qemu gets SIGTERM
+        if the guest is still up ${toString stopTimeout} seconds later.
       '';
     };
   };
@@ -211,6 +220,8 @@ in
         unitConfig.RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
         serviceConfig = {
           ExecStart = lib.getExe sb.guest.vm;
+          ExecStop = "${powerdown}";
+          TimeoutStopSec = stopTimeout;
           User = cfg.hostUser;
           SupplementaryGroups = [ "kvm" ];
           RuntimeDirectory = "sandbox/${name}";

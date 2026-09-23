@@ -176,6 +176,20 @@ let
         autologin = "agent";
       };
     };
+    testStopPowersTheGuestOffOverQmpBeforeSigterm = {
+      expr = {
+        qmp = lib.filter (lib.hasPrefix "-qmp") alpha.guest.config.virtualisation.qemu.options;
+        inherit (declared.systemd.services.sandbox-alpha.serviceConfig) ExecStop TimeoutStopSec;
+      };
+      expected = {
+        qmp = [ "-qmp unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/qmp,server=on,wait=off" ];
+        ExecStop = "${pkgs.writeShellScript "sandbox-powerdown" ''
+          [ -z "$MAINPID" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
+            | ${pkgs.socat}/bin/socat -t 120 - UNIX-CONNECT:"$RUNTIME_DIRECTORY"/qmp,shut-none
+        ''}";
+        TimeoutStopSec = 120;
+      };
+    };
     testModuleShapesTheGuest = {
       expr = map (sb: { inherit (sb.guest.config.networking) hostName; recipe = sb.guest.config.environment.etc.recipe.text; }) [ alpha beta ];
       expected = [ { hostName = "alpha"; recipe = "alpha"; } { hostName = "beta"; recipe = "beta"; } ];
@@ -303,6 +317,10 @@ in
       def disks_created(unit):
           return host.succeed(f"journalctl -u {unit} | grep -c 'creating the virtualisation disk image' || true").strip()
 
+      def booted_clean(port):
+          replay = guest(port, "sudo dmesg | grep -i recover || true")
+          assert replay == "", replay
+
       host.wait_for_unit("multi-user.target")
 
       with subtest("declared sandboxes come up, each with its own recipe; homes and disk directories private, on the mounted /home"):
@@ -330,21 +348,22 @@ in
       with subtest("serial console answers on the runtime socket"):
           host.wait_until_succeeds("(sleep 2; echo 'echo console-$(hostname)'; sleep 2) | timeout 10 socat - UNIX-CONNECT:/run/sandbox/alpha/console | grep console-alpha >/dev/null")
 
-      with subtest("home, root and store survive a restart; the home's mode is back to 0700"):
-          guest(2201, "echo persisted > ~/marker && sudo touch /root-marker")
+      with subtest("home, root and store survive a restart right after a write, without a journal replay; the home's mode is back to 0700"):
+          guest(2201, "echo persisted > ~/marker")
           blob = guest(2201, "dd if=/dev/zero of=/tmp/blob bs=1M count=64 status=none && nix-store --add /tmp/blob && rm /tmp/blob").strip()
           print(guest(2201, "for p in / /nix/.rw-store /nix/store; do findmnt -n -o TARGET,SOURCE,FSTYPE -T $p; done; df -h /nix/.rw-store; free -m"))
           assert guest(2201, "findmnt -n -o FSTYPE -T /nix/.rw-store").strip() == "ext4"
           boot1 = guest(2201, "cat /proc/sys/kernel/random/boot_id")
           assert host.succeed(f"stat -c '%u' {alpha_home}/marker").strip() == "1000"
-          guest(2201, "sudo sync")
           host.succeed(f"chmod 755 {alpha_home}")
+          guest(2201, "echo persisted | sudo tee /root-marker")
           host.succeed("systemctl restart sandbox-alpha.service")
           assert host.succeed(f"stat -c '%a' {alpha_home}").strip() == "700"
           wait_ssh(2201)
           assert guest(2201, "cat /proc/sys/kernel/random/boot_id") != boot1
-          assert guest(2201, "cat ~/marker").strip() == "persisted"
-          guest(2201, f"test -e /root-marker && test -e {blob}")
+          booted_clean(2201)
+          assert guest(2201, "cat ~/marker /root-marker").split() == ["persisted", "persisted"]
+          guest(2201, f"test -e {blob}")
           assert disks_created("sandbox-alpha.service") == "1"
           print(host.succeed(f"du -sh {alpha_disk}"))
 
@@ -392,18 +411,23 @@ in
           host.fail(f"{ssh} -p 2202 agent@localhost true")
           guest(2201, "true")
 
-      with subtest("a rebuild that changes alpha's recipe boots the new closure over the existing root, home and store"):
-          guest(2201, "sudo touch /root-marker")
+      with subtest("a rebuild that changes alpha's recipe right after a write stops it without a journal replay and boots the new closure over the existing root, home and store"):
           blob = guest(2201, "dd if=/dev/urandom of=/tmp/blob bs=1M count=64 status=none && nix-store --add /tmp/blob && rm /tmp/blob").strip()
-          guest(2201, "sudo sync")
+          guest(2201, "echo rebuilt | sudo tee /root-marker")
           out = host.succeed("/run/booted-system/specialisation/new-alpha/bin/switch-to-configuration test 2>&1")
           print(out)
           assert pid("sandbox-alpha.service") != alpha_pid
           wait_ssh(2201)
+          booted_clean(2201)
           assert guest(2201, "cat /etc/recipe").strip() == "alpha-2"
-          assert guest(2201, "cat ~/marker").strip() == "persisted"
-          guest(2201, f"test -e /root-marker && test -e {blob}")
+          assert guest(2201, "cat ~/marker /root-marker").split() == ["persisted", "rebuilt"]
+          guest(2201, f"test -e {blob}")
           assert disks_created("sandbox-alpha.service") == "2"
+
+      with subtest("a poweroff from inside leaves the unit inactive, not failed"):
+          host.execute(f"timeout 60 {ssh} -p 2201 agent@localhost sudo systemctl poweroff")
+          host.wait_until_succeeds("systemctl show -p ActiveState --value sandbox-alpha.service | grep -Ex 'inactive|failed'")
+          assert host.succeed("systemctl show -p Result --value sandbox-alpha.service").strip() == "success"
     '';
   };
 }
