@@ -184,8 +184,9 @@ let
       expected = {
         qmp = [ "-qmp unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/qmp,server=on,wait=off" ];
         ExecStop = "${pkgs.writeShellScript "sandbox-powerdown" ''
-          [ -z "$MAINPID" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
-            | ${pkgs.socat}/bin/socat -t 120 - UNIX-CONNECT:"$RUNTIME_DIRECTORY"/qmp,shut-none
+          qmp=$RUNTIME_DIRECTORY/qmp
+          [ ! -S "$qmp" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
+            | ${pkgs.socat}/bin/socat -,ignoreeof UNIX-CONNECT:"$qmp"
         ''}";
         TimeoutStopSec = 120;
       };
@@ -317,9 +318,9 @@ in
       def disks_created(unit):
           return host.succeed(f"journalctl -u {unit} | grep -c 'creating the virtualisation disk image' || true").strip()
 
-      def booted_clean(port):
-          replay = guest(port, "sudo dmesg | grep -i recover || true")
-          assert replay == "", replay
+      def no_journal_replay(port):
+          replay = [l for l in guest(port, "sudo journalctl -b -o cat").splitlines() if "recover" in l.lower()]
+          assert replay == [], replay
 
       host.wait_for_unit("multi-user.target")
 
@@ -361,7 +362,7 @@ in
           assert host.succeed(f"stat -c '%a' {alpha_home}").strip() == "700"
           wait_ssh(2201)
           assert guest(2201, "cat /proc/sys/kernel/random/boot_id") != boot1
-          booted_clean(2201)
+          no_journal_replay(2201)
           assert guest(2201, "cat ~/marker /root-marker").split() == ["persisted", "persisted"]
           guest(2201, f"test -e {blob}")
           assert disks_created("sandbox-alpha.service") == "1"
@@ -418,16 +419,19 @@ in
           print(out)
           assert pid("sandbox-alpha.service") != alpha_pid
           wait_ssh(2201)
-          booted_clean(2201)
+          no_journal_replay(2201)
           assert guest(2201, "cat /etc/recipe").strip() == "alpha-2"
           assert guest(2201, "cat ~/marker /root-marker").split() == ["persisted", "rebuilt"]
           guest(2201, f"test -e {blob}")
           assert disks_created("sandbox-alpha.service") == "2"
 
-      with subtest("a poweroff from inside leaves the unit inactive, not failed"):
+      with subtest("with no qemu to power off, after a poweroff from inside or before qemu starts, a stop leaves the unit inactive, not failed"):
+          state = "systemctl show -p ActiveState,Result sandbox-alpha.service"
           host.execute(f"timeout 60 {ssh} -p 2201 agent@localhost sudo systemctl poweroff")
-          host.wait_until_succeeds("systemctl show -p ActiveState --value sandbox-alpha.service | grep -Ex 'inactive|failed'")
-          assert host.succeed("systemctl show -p Result --value sandbox-alpha.service").strip() == "success"
+          host.wait_until_succeeds(f"{state} | grep -Ex 'ActiveState=(inactive|failed)'")
+          assert host.succeed(state).split() == ["ActiveState=inactive", "Result=success"]
+          host.succeed("systemctl start sandbox-alpha.service && systemctl stop sandbox-alpha.service")
+          assert host.succeed(state).split() == ["ActiveState=inactive", "Result=success"]
     '';
   };
 }

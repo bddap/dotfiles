@@ -7,8 +7,9 @@ let
 
   stopTimeout = 120;
   powerdown = pkgs.writeShellScript "sandbox-powerdown" ''
-    [ -z "$MAINPID" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
-      | ${pkgs.socat}/bin/socat -t ${toString stopTimeout} - UNIX-CONNECT:"$RUNTIME_DIRECTORY"/qmp,shut-none
+    qmp=$RUNTIME_DIRECTORY/qmp
+    [ ! -S "$qmp" ] || printf '{"execute":"qmp_capabilities"}{"execute":"system_powerdown"}' \
+      | ${pkgs.socat}/bin/socat -,ignoreeof UNIX-CONNECT:"$qmp"
   '';
 
   guest = name: sb: pkgs.nixos [
