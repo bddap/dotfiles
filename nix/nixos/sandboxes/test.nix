@@ -269,7 +269,6 @@ in
     nodes.host = { pkgs, lib, ... }: {
       imports = [ ./. ];
       virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; useNixStoreImage = true; };
-      boot.kernelParams = [ "no-kvmapf" ];
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       users.users.tester = { isNormalUser = true; uid = 1000; };
       environment.systemPackages = [ pkgs.socat ];
