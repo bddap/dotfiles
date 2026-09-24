@@ -467,6 +467,7 @@ class App(Gtk.Application):
     def do_activate(self) -> None:
         if self.window is None:
             self.window = Window(self)
+        self.window.set_visible(False)
         self.window.present()
         self.window.read_primary()
 
