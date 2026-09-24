@@ -212,18 +212,18 @@ class Player:
 
     def _pump(self, src: Gst.Element, length: int) -> None:
         with self.lock:
-            if self.next_push >= len(self.spans):
-                self.src.emit("end-of-stream")
-                return
-            chunk = self.chunks[self.next_push]
-            if chunk is None:
-                data = SILENCE
-            else:
-                data = stretch(chunk[0], self.speed).tobytes()
-                self.starts[self.next_push] = self.pushed_ns
-                self.next_push += 1
-                if not data:
+            data = b""
+            while not data:
+                if self.next_push >= len(self.spans):
+                    self.src.emit("end-of-stream")
                     return
+                chunk = self.chunks[self.next_push]
+                if chunk is None:
+                    data = SILENCE
+                else:
+                    data = stretch(chunk[0], self.speed).tobytes()
+                    self.starts[self.next_push] = self.pushed_ns
+                    self.next_push += 1
             buf = Gst.Buffer.new_wrapped(data)
             buf.pts = self.pushed_ns
             buf.duration = len(data) // 4 * Gst.SECOND // SAMPLE_RATE

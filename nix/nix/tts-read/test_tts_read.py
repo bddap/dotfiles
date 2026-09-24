@@ -1,3 +1,4 @@
+import time
 import unittest
 from dataclasses import dataclass
 from typing import ClassVar
@@ -5,6 +6,7 @@ from typing import ClassVar
 import numpy as np
 
 import tts_read
+from gi.repository import GLib, Gst
 
 
 @dataclass
@@ -152,6 +154,20 @@ class Synthesis(unittest.TestCase):
         for _, _, t0, t1 in words:
             self.assertLess(t0, t1)
         self.assertLessEqual(words[-1][3], len(audio) / tts_read.SAMPLE_RATE + 0.05)
+
+    def test_image_placeholder_line_plays_through(self) -> None:
+        text = "Larger Y-axis numbers mean more efficient.\n\n\ufffc\n\nThis is a logarithmic graph."
+        self.assertEqual(self.engine.synth("\ufffc")[0].size, 0)
+        Gst.init(None)
+        ended: list[str | None] = []
+        player = tts_read.Player(self.engine, text, 3.0, ended.append)
+        context = GLib.MainContext.default()
+        deadline = time.monotonic() + 60
+        while not ended and time.monotonic() < deadline:
+            if not context.iteration(False):
+                time.sleep(0.01)
+        player.close()
+        self.assertEqual(ended, [None])
 
 
 if __name__ == "__main__":
