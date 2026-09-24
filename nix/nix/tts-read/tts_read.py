@@ -252,7 +252,6 @@ class Player:
     def close(self) -> None:
         with self.lock:
             self.generation += 1
-            self.chunks = []
         self.pipeline.set_state(Gst.State.NULL)
         self.bus.remove_signal_watch()
         for handler in self.handlers:

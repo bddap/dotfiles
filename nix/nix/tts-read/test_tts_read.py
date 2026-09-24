@@ -1,7 +1,9 @@
+import threading
 import time
 import unittest
 from dataclasses import dataclass
 from typing import ClassVar
+from unittest import mock
 
 import numpy as np
 
@@ -141,6 +143,27 @@ class Synthesis(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.engine = tts_read.Engine()
+
+    def test_close_with_need_data_in_flight_raises_nothing(self) -> None:
+        in_flight = threading.Event()
+
+        class Held(tts_read.Player):
+            def _synthesize(self, start: int, generation: int) -> None:
+                pass
+
+            def _pump(self, src: Gst.Element, length: int) -> None:
+                in_flight.set()
+                while self.pipeline.target_state != Gst.State.NULL:
+                    time.sleep(0.001)
+                super()._pump(src, length)
+
+        Gst.init(None)
+        player = Held(self.engine, "One. Two.", 1.0, lambda error: None)
+        self.assertTrue(in_flight.wait(10))
+        raised: list[BaseException] = []
+        with mock.patch("sys.excepthook", lambda kind, error, tb: raised.append(error)):
+            player.close()
+        self.assertEqual(raised, [])
 
     def test_word_timestamps_are_monotonic_and_cover_the_sentence(self) -> None:
         text = "The quick brown fox jumps over the lazy dog."
