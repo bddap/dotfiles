@@ -155,19 +155,24 @@ class Synthesis(unittest.TestCase):
             self.assertLess(t0, t1)
         self.assertLessEqual(words[-1][3], len(audio) / tts_read.SAMPLE_RATE + 0.05)
 
-    def test_image_placeholder_line_plays_through(self) -> None:
-        text = "Larger Y-axis numbers mean more efficient.\n\n\ufffc\n\nThis is a logarithmic graph."
+    def test_image_placeholder_lines_play_through(self) -> None:
         self.assertEqual(self.engine.synth("\ufffc")[0].size, 0)
         Gst.init(None)
-        ended: list[str | None] = []
-        player = tts_read.Player(self.engine, text, 3.0, ended.append)
-        context = GLib.MainContext.default()
-        deadline = time.monotonic() + 60
-        while not ended and time.monotonic() < deadline:
-            if not context.iteration(False):
-                time.sleep(0.01)
-        player.close()
-        self.assertEqual(ended, [None])
+        for text in (
+            "Larger Y-axis numbers mean more efficient.\n\n\ufffc\n\nThis is a logarithmic graph.",
+            "Larger Y-axis numbers mean more efficient.\n\n\ufffc",
+        ):
+            with self.subTest(text=text):
+                ended: list[str | None] = []
+                player = tts_read.Player(self.engine, text, 3.0, ended.append)
+                context = GLib.MainContext.default()
+                deadline = time.monotonic() + 60
+                while not ended and time.monotonic() < deadline:
+                    if not context.iteration(False):
+                        time.sleep(0.01)
+                player.close()
+                self.assertEqual(ended, [None])
+                self.assertEqual(sorted(player.starts), list(range(len(player.spans))))
 
 
 if __name__ == "__main__":

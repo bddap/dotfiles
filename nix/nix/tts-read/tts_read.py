@@ -313,21 +313,18 @@ class Window(Gtk.ApplicationWindow):
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
-        self.connect("notify::is-active", self._activated)
+        self.connect("notify::is-active", self._focus_changed)
         self.view.add_tick_callback(self._tick)
 
     def read_primary(self) -> None:
+        self.set_visible(False)
+        self.present()
         self.want_read = True
-        if self.is_active():
-            self._read()
 
-    def _activated(self, window: Gtk.Window, pspec: GObject.ParamSpec) -> None:
+    def _focus_changed(self, window: Gtk.Window, pspec: GObject.ParamSpec) -> None:
         if self.want_read and self.is_active():
-            self._read()
-
-    def _read(self) -> None:
-        self.want_read = False
-        self.get_primary_clipboard().read_text_async(None, self._got_text)
+            self.want_read = False
+            self.get_primary_clipboard().read_text_async(None, self._got_text)
 
     def _got_text(self, clipboard: Gdk.Clipboard, result: Gio.AsyncResult) -> None:
         try:
@@ -467,8 +464,6 @@ class App(Gtk.Application):
     def do_activate(self) -> None:
         if self.window is None:
             self.window = Window(self)
-        self.window.set_visible(False)
-        self.window.present()
         self.window.read_primary()
 
 
