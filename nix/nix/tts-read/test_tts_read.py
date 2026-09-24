@@ -2,8 +2,7 @@ import threading
 import time
 import unittest
 from dataclasses import dataclass
-from typing import ClassVar
-from unittest import mock
+from typing import ClassVar, override
 
 import numpy as np
 
@@ -144,26 +143,27 @@ class Synthesis(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.engine = tts_read.Engine()
 
-    def test_close_with_need_data_in_flight_raises_nothing(self) -> None:
-        in_flight = threading.Event()
+    def test_close_mid_pump_raises_nothing(self) -> None:
+        in_flight, pumped = threading.Event(), threading.Event()
 
         class Held(tts_read.Player):
+            @override
             def _synthesize(self, start: int, generation: int) -> None:
                 pass
 
+            @override
             def _pump(self, src: Gst.Element, length: int) -> None:
                 in_flight.set()
                 while self.pipeline.target_state != Gst.State.NULL:
                     time.sleep(0.001)
                 super()._pump(src, length)
+                pumped.set()
 
         Gst.init(None)
         player = Held(self.engine, "One. Two.", 1.0, lambda error: None)
         self.assertTrue(in_flight.wait(10))
-        raised: list[BaseException] = []
-        with mock.patch("sys.excepthook", lambda kind, error, tb: raised.append(error)):
-            player.close()
-        self.assertEqual(raised, [])
+        player.close()
+        self.assertTrue(pumped.is_set())
 
     def test_word_timestamps_are_monotonic_and_cover_the_sentence(self) -> None:
         text = "The quick brown fox jumps over the lazy dog."
