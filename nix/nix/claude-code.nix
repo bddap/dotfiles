@@ -5,7 +5,7 @@ claude-code-bin.overrideAttrs (finalAttrs: _: {
 
   src = fetchurl {
     url =
-      "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/${finalAttrs.version}/linux-x64/claude";
-    sha256 = "sha256-HghQPb3zwssNcG0y80CCdziNHHbvEIZz6P5CwbMikls=";
+      "https://downloads.claude.ai/claude-code-releases/${finalAttrs.version}/linux-x64/claude";
+    sha256 = "1e08503dbdf3c2cb0d706d32f3408277388d1c76ef108673e8fe42c1b322925b";
   };
 })
