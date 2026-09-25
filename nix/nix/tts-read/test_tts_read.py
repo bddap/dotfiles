@@ -1,10 +1,13 @@
+import threading
+import time
 import unittest
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, override
 
 import numpy as np
 
 import tts_read
+from gi.repository import GLib, Gst
 
 
 @dataclass
@@ -36,35 +39,6 @@ class SentenceSpans(unittest.TestCase):
             [text[a:b] for a, b in spans],
             ["First one.", "Second, with a comma!", "Third?", "A line without a terminator", "Version 2.0 shipped (quoted.)", '"Yes."'],
         )
-
-    def test_citation_after_the_period_ends_the_sentence(self) -> None:
-        text = "Hatch opened.[13] Armstrong went out.[136][137] Aldrin followed.[note 1] Done"
-        self.assertEqual(
-            [text[a:b] for a, b in tts_read.sentence_spans(text)],
-            ["Hatch opened.[13]", "Armstrong went out.[136][137]", "Aldrin followed.[note 1]", "Done"],
-        )
-
-    def test_long_sentence_is_split_at_clauses_within_the_limit(self) -> None:
-        text = "one clause of twenty-one, " * 20 + "and then the end."
-        spans = tts_read.sentence_spans(text)
-        self.assertEqual(" ".join(text[a:b] for a, b in spans), text)
-        self.assertEqual([text[b - 1] for a, b in spans], [","] * (len(spans) - 1) + ["."])
-        self.assertLessEqual(max(b - a for a, b in spans), tts_read.CHARS)
-        self.assertGreater(min(b - a for a, b in spans[:-1]), tts_read.CHARS // 2)
-
-    def test_unbreakable_run_is_cut_at_the_limit(self) -> None:
-        text = "x" * (3 * tts_read.CHARS + 5)
-        self.assertEqual([b - a for a, b in tts_read.sentence_spans(text)], [tts_read.CHARS] * 3 + [5])
-
-    def test_clause_break_beats_a_later_space(self) -> None:
-        text = "w" * 50 + ", " + "word " * 40
-        self.assertEqual([text[a:b] for a, b in tts_read.sentence_spans(text)][0], "w" * 50 + ",")
-
-    def test_early_clause_break_does_not_leave_a_runt(self) -> None:
-        text = "However, " + "word " * 40
-        a, b = tts_read.sentence_spans(text)[0]
-        self.assertGreater(b - a, tts_read.CHARS // 3)
-        self.assertTrue(text[:b].endswith("word"))
 
 
 class Collect(unittest.TestCase):
@@ -169,6 +143,28 @@ class Synthesis(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.engine = tts_read.Engine()
 
+    def test_close_mid_pump_raises_nothing(self) -> None:
+        in_flight, pumped = threading.Event(), threading.Event()
+
+        class Held(tts_read.Player):
+            @override
+            def _synthesize(self, start: int, generation: int) -> None:
+                pass
+
+            @override
+            def _pump(self, src: Gst.Element, length: int) -> None:
+                in_flight.set()
+                while self.pipeline.target_state != Gst.State.NULL:
+                    time.sleep(0.001)
+                super()._pump(src, length)
+                pumped.set()
+
+        Gst.init(None)
+        player = Held(self.engine, "One. Two.", 1.0, lambda error: None)
+        self.assertTrue(in_flight.wait(10))
+        player.close()
+        self.assertTrue(pumped.is_set())
+
     def test_word_timestamps_are_monotonic_and_cover_the_sentence(self) -> None:
         text = "The quick brown fox jumps over the lazy dog."
         audio, words = self.engine.synth(text)
@@ -181,6 +177,25 @@ class Synthesis(unittest.TestCase):
         for _, _, t0, t1 in words:
             self.assertLess(t0, t1)
         self.assertLessEqual(words[-1][3], len(audio) / tts_read.SAMPLE_RATE + 0.05)
+
+    def test_image_placeholder_lines_play_through(self) -> None:
+        self.assertEqual(self.engine.synth("\ufffc")[0].size, 0)
+        Gst.init(None)
+        for text in (
+            "Larger Y-axis numbers mean more efficient.\n\n\ufffc\n\nThis is a logarithmic graph.",
+            "Larger Y-axis numbers mean more efficient.\n\n\ufffc",
+        ):
+            with self.subTest(text=text):
+                ended: list[str | None] = []
+                player = tts_read.Player(self.engine, text, 3.0, ended.append)
+                context = GLib.MainContext.default()
+                deadline = time.monotonic() + 60
+                while not ended and time.monotonic() < deadline:
+                    if not context.iteration(False):
+                        time.sleep(0.01)
+                player.close()
+                self.assertEqual(ended, [None])
+                self.assertEqual(sorted(player.starts), list(range(len(player.spans))))
 
 
 if __name__ == "__main__":

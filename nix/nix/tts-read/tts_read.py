@@ -4,7 +4,7 @@ import re
 import sys
 import threading
 import traceback
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -29,8 +29,6 @@ APP_ID = "app.tts_read"
 SILENCE = bytes(SAMPLE_RATE // 20 * 4)
 WINDOW = SAMPLE_RATE * 30 // 1000
 SEARCH = SAMPLE_RATE * 10 // 1000
-CHARS = 120
-BREAKS = (re.compile(r".*[,;:—–][\"”’)\]]*(?=\s)"), re.compile(r".*\s"))
 
 Span = tuple[int, int]
 Word = tuple[int, int, float, float]
@@ -58,23 +56,11 @@ class Result(Protocol):
 
 
 def sentence_spans(text: str) -> list[Span]:
-    spans: list[Span] = []
+    spans = []
     for line in re.finditer(r"[^\n]+", text):
-        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?:\[[^\]]*\])*(?=\s|$)|$)", line.group()):
-            spans.extend(pieces(text, line.start() + m.start(), line.start() + m.end()))
+        for m in re.finditer(r"\S.*?(?:[.!?]+[\"”’)\]]*(?=\s|$)|$)", line.group()):
+            spans.append((line.start() + m.start(), line.start() + m.end()))
     return spans
-
-
-def pieces(text: str, a: int, b: int) -> Iterator[Span]:
-    while b - a > CHARS:
-        window = text[a : a + CHARS]
-        cut = next((m.end() for p in BREAKS if (m := p.match(window)) and m.end() > CHARS // 3), CHARS)
-        yield a, a + len(window[:cut].rstrip())
-        a += cut
-        while a < b and text[a].isspace():
-            a += 1
-    if a < b:
-        yield a, b
 
 
 def collect(results: Iterable[Result], text: str) -> Chunk:
@@ -226,18 +212,18 @@ class Player:
 
     def _pump(self, src: Gst.Element, length: int) -> None:
         with self.lock:
-            if self.next_push >= len(self.spans):
-                self.src.emit("end-of-stream")
-                return
-            chunk = self.chunks[self.next_push]
-            if chunk is None:
-                data = SILENCE
-            else:
-                data = stretch(chunk[0], self.speed).tobytes()
-                self.starts[self.next_push] = self.pushed_ns
-                self.next_push += 1
-                if not data:
+            data = b""
+            while not data:
+                if self.next_push >= len(self.spans):
+                    self.src.emit("end-of-stream")
                     return
+                chunk = self.chunks[self.next_push]
+                if chunk is None:
+                    data = SILENCE
+                else:
+                    data = stretch(chunk[0], self.speed).tobytes()
+                    self.starts[self.next_push] = self.pushed_ns
+                    self.next_push += 1
             buf = Gst.Buffer.new_wrapped(data)
             buf.pts = self.pushed_ns
             buf.duration = len(data) // 4 * Gst.SECOND // SAMPLE_RATE
@@ -266,7 +252,6 @@ class Player:
     def close(self) -> None:
         with self.lock:
             self.generation += 1
-            self.chunks = []
         self.pipeline.set_state(Gst.State.NULL)
         self.bus.remove_signal_watch()
         for handler in self.handlers:
@@ -327,21 +312,18 @@ class Window(Gtk.ApplicationWindow):
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         self.connect("close-request", self._close_request)
-        self.connect("notify::is-active", self._activated)
+        self.connect("notify::is-active", self._focus_changed)
         self.view.add_tick_callback(self._tick)
 
     def read_primary(self) -> None:
+        self.set_visible(False)
+        self.present()
         self.want_read = True
-        if self.is_active():
-            self._read()
 
-    def _activated(self, window: Gtk.Window, pspec: GObject.ParamSpec) -> None:
+    def _focus_changed(self, window: Gtk.Window, pspec: GObject.ParamSpec) -> None:
         if self.want_read and self.is_active():
-            self._read()
-
-    def _read(self) -> None:
-        self.want_read = False
-        self.get_primary_clipboard().read_text_async(None, self._got_text)
+            self.want_read = False
+            self.get_primary_clipboard().read_text_async(None, self._got_text)
 
     def _got_text(self, clipboard: Gdk.Clipboard, result: Gio.AsyncResult) -> None:
         try:
@@ -481,7 +463,6 @@ class App(Gtk.Application):
     def do_activate(self) -> None:
         if self.window is None:
             self.window = Window(self)
-        self.window.present()
         self.window.read_primary()
 
 
