@@ -47,6 +47,7 @@ let
       };
       boot.postBootCommands = lib.mkAfter "${config.nix.package}/bin/nix-store --verify";
       nix.nixPath = [ "nixpkgs=${builtins.storePath pkgs.path}" ];
+      environment.sessionVariables.NIXPKGS_ALLOW_UNFREE = "1";
       services.openssh = {
         enable = true;
         settings.PasswordAuthentication = lib.mkDefault false;
