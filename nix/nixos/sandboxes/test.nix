@@ -327,6 +327,9 @@ in
           guest(2202, "command -v cowsay")
           guest(2201, "! command -v cowsay")
 
+      with subtest("<nixpkgs> in a guest is the host's pinned nixpkgs"):
+          assert guest(2202, "nix-instantiate --eval '<nixpkgs>' -A path").strip() == "${toString pkgs.path}"
+
       with subtest("serial console answers on the runtime socket"):
           host.wait_until_succeeds("(sleep 2; echo 'echo console-$(hostname)'; sleep 2) | timeout 10 socat - UNIX-CONNECT:/run/sandbox/alpha/console | grep console-alpha >/dev/null")
 
