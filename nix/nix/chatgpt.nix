@@ -30,6 +30,7 @@ stdenv.mkDerivation rec {
     mkdir -p "$out/lib" "$out/bin" "$out/share"
     cp -r usr/lib/chatgpt "$out/lib/"
     rm "$out/lib/chatgpt/libqt5_shim.so" "$out/lib/chatgpt/libqt6_shim.so"
+    find "$out/lib/chatgpt/resources/app.asar.unpacked" -path '*/prebuilds/*musl*' -type f -delete
     cp -r usr/share/applications usr/share/pixmaps "$out/share/"
     makeWrapper "$out/lib/chatgpt/ChatGPT" "$out/bin/chatgpt" \
       --prefix PATH : ${lib.makeBinPath [ xdg-utils ]}
