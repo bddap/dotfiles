@@ -46,7 +46,26 @@ let
   failing = c: map (a: a.message) (lib.filter (a: !a.assertion) c.assertions);
   rejected = extra: failing (host { virtualisation.sandboxes = { hostUser = "tester"; } // extra; }).config;
 
+  visible = (host {
+    virtualisation.sandboxes = {
+      hostUser = "tester";
+      vms.desktop = { sshPort = 2203; display = true; module = { }; };
+    };
+  }).config.virtualisation.sandboxes.vms.desktop;
+
   failures = lib.runTests {
+    testDisplayIsOptInAndUsesAPrivateSocket = {
+      expr = {
+        defaults = map (sb: sb.display) [ alpha beta ];
+        graphics = visible.guest.config.virtualisation.graphics;
+        display = lib.filter (o: lib.any (p: lib.hasPrefix p o) [ "-display" "-vnc" "-nographic" ]) visible.guest.config.virtualisation.qemu.options;
+      };
+      expected = {
+        defaults = [ false false ];
+        graphics = true;
+        display = [ "-display none" "-vnc unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/vnc" ];
+      };
+    };
     testNothingDeclaredNoUnitsNoAssertions = {
       expr = let c = (host { }).config; in { units = sandboxUnits c; failing = failing c; };
       expected = { units = [ ]; failing = [ ]; };
@@ -312,7 +331,7 @@ in
         hostUser = "tester";
         vms = {
           alpha = smallAlpha "alpha";
-          beta = vms.beta // { home = "/home/tester/elsewhere/beta"; };
+          beta = vms.beta // { home = "/home/tester/elsewhere/beta"; display = true; };
         };
       };
       specialisation.only-alpha.configuration.virtualisation.sandboxes.vms = lib.mkForce { alpha = smallAlpha "alpha"; };
@@ -374,6 +393,11 @@ in
           assert guest(2202, "cat /etc/recipe").strip() == "beta"
           guest(2202, "command -v cowsay")
           guest(2201, "! command -v cowsay")
+
+      with subtest("display is private, speaks VNC, and is absent by default"):
+          host.succeed("test -S /run/sandbox/beta/vnc && test ! -e /run/sandbox/alpha/vnc")
+          assert host.succeed("stat -c '%U %a' /run/sandbox/beta").strip() == "tester 700"
+          host.wait_until_succeeds("timeout 5 socat - UNIX-CONNECT:/run/sandbox/beta/vnc | head -c 12 | grep 'RFB 003.008'")
 
       with subtest("a guest reaches the LAN over IPv4 and IPv6"):
           lan.wait_for_unit("marker.service")
