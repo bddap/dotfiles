@@ -22,7 +22,7 @@ let
         useNixStoreImage = true;
         writableStore = true;
         writableStoreUseTmpfs = false;
-        graphics = false;
+        graphics = sb.display;
         memorySize = lib.mkDefault 4096;
         cores = lib.mkDefault 2;
         sharedDirectories.home = {
@@ -43,6 +43,9 @@ let
           "-serial chardev:console"
           "-qmp unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/qmp,server=on,wait=off"
           "-sandbox on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny"
+        ] ++ lib.optionals sb.display [
+          "-display none"
+          "-vnc unix:\${RUNTIME_DIRECTORY:-$TMPDIR}/vnc"
         ];
       };
       boot.postBootCommands = lib.mkAfter "${config.nix.package}/bin/nix-store --verify";
@@ -116,6 +119,16 @@ let
         type = types.ints.between 1024 65535;
         description = "Host loopback port forwarded to the sandbox's sshd.";
       };
+      display = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Expose the guest display on the private Unix socket
+          `/run/sandbox/<name>/vnc`. Open it as hostUser with
+          `vncviewer /run/sandbox/<name>/vnc` (TigerVNC).
+          No TCP listener or host display access is needed.
+        '';
+      };
       guest = mkOption {
         type = types.raw;
         readOnly = true;
@@ -169,7 +182,7 @@ in
         }
       '';
       description = ''
-        Headless NixOS VMs, one systemd service each
+        NixOS VMs (headless by default), one systemd service each
         (`sandbox-<name>.service`); a rebuild starts the declared ones and
         stops the removed ones. Reach a sandbox with
         `ssh -p <sshPort> agent@localhost` or on its serial console at
