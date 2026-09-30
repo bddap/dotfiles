@@ -7,6 +7,7 @@ let
   chatgpt = appPkgs.callPackage ../../nix/chatgpt.nix { };
 in {
   virtualisation.sharedDirectories.home.target = lib.mkForce "/home/agent/shared";
+  powerManagement.enable = false;
   services.xserver = {
     enable = true;
     desktopManager.xfce.enable = true;
