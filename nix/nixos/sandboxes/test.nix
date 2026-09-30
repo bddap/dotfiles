@@ -367,7 +367,7 @@ in
       with subtest("display is private, speaks VNC, and is absent by default"):
           host.succeed("test -S /run/sandbox/beta/vnc && test ! -e /run/sandbox/alpha/vnc")
           assert host.succeed("stat -c '%U %a' /run/sandbox/beta").strip() == "tester 700"
-          host.wait_until_succeeds("timeout 5 socat -u UNIX-CONNECT:/run/sandbox/beta/vnc - | head -c 12 | grep 'RFB 003.008'")
+          host.wait_until_succeeds("timeout 5 socat -u UNIX-CONNECT:/run/sandbox/beta/vnc,readbytes=12 - | grep 'RFB 003.008'")
 
       with subtest("<nixpkgs> in a guest is the host's pinned nixpkgs"):
           assert guest(2202, "nix-instantiate --eval '<nixpkgs>' -A path").strip() == "${toString pkgs.path}"

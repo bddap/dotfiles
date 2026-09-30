@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 let
   appPkgs = import pkgs.path {
     inherit (pkgs.stdenv.hostPlatform) system;
@@ -6,6 +6,7 @@ let
   };
   chatgpt = appPkgs.callPackage ../../nix/chatgpt.nix { };
 in {
+  virtualisation.sharedDirectories.home.target = lib.mkForce "/home/agent/shared";
   services.xserver = {
     enable = true;
     desktopManager.xfce.enable = true;
@@ -16,7 +17,7 @@ in {
     defaultSession = "xfce";
   };
   services.gnome.gnome-keyring.enable = true;
-  environment.systemPackages = [ chatgpt pkgs.firefox pkgs.git ];
+  environment.systemPackages = [ chatgpt pkgs.firefox pkgs.git pkgs.bubblewrap ];
   environment.etc."xdg/autostart/chatgpt.desktop".text = ''
     [Desktop Entry]
     Type=Application
