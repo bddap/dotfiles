@@ -50,6 +50,7 @@ in { ... }: {
     ripgrep
     ruff
     sl
+    sshfs
     stow
     taplo
     tmux
