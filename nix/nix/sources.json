@@ -23,6 +23,18 @@
         "url": "https://github.com/ipetkov/crane/archive/75390a36cd0c2cdd5f1aafd8a9f827d7107f2e53.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "dumbpipe": {
+        "branch": "main",
+        "description": "Unix pipes between devices",
+        "homepage": "https://dumbpipe.dev",
+        "owner": "n0-computer",
+        "repo": "dumbpipe",
+        "rev": "6c4990dc0c49f3c93947ef6ebeafcf846a6532e0",
+        "sha256": "1lm5pfbf6q8h9f924s6789sk4hx44f466ldfabcmd8r3acb9d182",
+        "type": "tarball",
+        "url": "https://github.com/n0-computer/dumbpipe/archive/6c4990dc0c49f3c93947ef6ebeafcf846a6532e0.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nixpkgs": {
         "branch": "nixos-25.11",
         "description": "Nix Packages collection",
