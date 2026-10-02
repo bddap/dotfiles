@@ -20,14 +20,12 @@
         "nix/nixos/laptop-hardware.nix",
         "nix/nixos/framework-16-nvidia.nix",
         "nix/nixos/steam.nix",
-        "nix/nixos/remote-agent.nix",
         "nix/nixos/laptop-test.nix",
-        "nix/nix/dumbpipe.nix",
         "nix/nix/default.nix",
         "nix/nix/sources.json"
       ],
-      "tests": ["nix-build --no-out-link nix/nixos/laptop-test.nix -A system -A steamEnv -A agent"],
-      "why": "The laptop modules build into a full system closure, Steam carries the PRIME offload environment, and the remote agent's key-only tunnel, ticket and persistent identity run in a NixOS VM test"
+      "tests": ["nix-build --no-out-link nix/nixos/laptop-test.nix -A system -A steamEnv"],
+      "why": "The laptop modules build into a full system closure and Steam carries the PRIME offload environment"
     },
     {
       "paths": ["nix/**/*.nix"],

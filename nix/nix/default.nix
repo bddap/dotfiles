@@ -6,7 +6,6 @@ let
       nixpkgs-unstable = import sources.nixpkgs-unstable { config.allowUnfree = true; };
       craneLib = import sources.crane { pkgs = final; };
       refac = import ./refac.nix final;
-      dumbpipe = import ./dumbpipe.nix final;
       shitty-nixpath = final.writeTextFile {
         name = "shitty-nixpath";
         text =
