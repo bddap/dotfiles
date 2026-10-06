@@ -15,6 +15,11 @@
       "why": "The sandbox module's option and unit contract is eval-tested; boot, reach, persistence, isolation and rebuild teardown run in a nested-VM NixOS test"
     },
     {
+      "paths": ["nix/nix/sources.json", "nix/nix/sources.nix", "nix/nix/default.nix", "nix/nix/version-floor.nix"],
+      "tests": ["nix-instantiate --eval nix/nix/version-floor.nix"],
+      "why": "The nixpkgs pin must not carry network-facing packages older than the recorded floor"
+    },
+    {
       "paths": ["nix/**/*.nix"],
       "tests": ["nix-instantiate --parse {path}"],
       "why": "Nix changes must parse before activation"
