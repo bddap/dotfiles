@@ -28,6 +28,27 @@
       "paths": ["test-map.json"],
       "tests": ["nix-shell -p jq --run 'jq empty test-map.json'"],
       "why": "The touched-path manifest must remain valid JSON"
+    },
+    {
+      "paths": [
+        "nix/home-manager/root/bin/browser",
+        "nix/home-manager/root/bin/cdoc",
+        "nix/home-manager/root/bin/csv2json",
+        "nix/home-manager/root/bin/json2csv",
+        "nix/home-manager/root/bin/tmux-layout-dwindle"
+      ],
+      "tests": ["python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])' {path}"],
+      "why": "Python scripts must parse"
+    },
+    {
+      "paths": ["activate", "home-manager-build", "install-to-disk", "nixos-build", "nix/home-manager/root/bin/*"],
+      "tests": ["bash -n {path}"],
+      "why": "Bash scripts must parse"
+    },
+    {
+      "paths": [".gitignore", "home/**", "nix/home-manager/zellij/**"],
+      "tests": [],
+      "why": "Config read by its own program at runtime; nothing in the repo checks it"
     }
   ]
 }
