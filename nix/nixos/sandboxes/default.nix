@@ -13,10 +13,14 @@ let
   '';
 
   # qemu's user network always maps its gateway to the host's loopback; passt
-  # leaves the host's loopback out but for DNS sent to --dns-forward.
+  # leaves the host's loopback out except DNS sent to the --dns-forward
+  # address. The guest's addresses are fixed so that they never depend on the
+  # host's routes: without a template interface passt falls back to a local
+  # mode with IPv6 on.
   start = name: sb: pkgs.writeShellScript "sandbox-${name}" ''
     set -e
     ${pkgs.passt}/bin/passt --quiet --socket "$RUNTIME_DIRECTORY/passt" --ipv4-only \
+      --interface lo --address 10.0.2.15 --netmask 24 --gateway 10.0.2.2 \
       --no-map-gw --dns-forward 169.254.1.1 --tcp-ports 127.0.0.1/${toString sb.sshPort}:22
     exec ${lib.getExe sb.guest.vm}
   '';
@@ -226,7 +230,7 @@ in
         description = "sandbox VM ${name}";
         wantedBy = [ "multi-user.target" ];
         requires = [ "sandbox-home@${name}.service" ];
-        # passt copies the host's addresses and routes once, at start.
+        # passt reads the host's resolv.conf once, at start.
         wants = [ "network-online.target" ];
         after = [ "sandbox-home@${name}.service" "network-online.target" ];
         unitConfig.RequiresMountsFor = [ sb.home (dirOf sb.disk) ];

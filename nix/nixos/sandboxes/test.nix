@@ -286,9 +286,14 @@ in
     defaults.boot.kernelParams = [ "no-kvmapf" ];
     nodes.lan = { pkgs, ... }: {
       networking.firewall.allowedTCPPorts = [ 8080 ];
+      networking.firewall.allowedUDPPorts = [ 8080 ];
       systemd.services.marker = {
         wantedBy = [ "multi-user.target" ];
         script = "exec ${pkgs.socat}/bin/socat TCP-LISTEN:8080,fork,reuseaddr SYSTEM:'echo lan'";
+      };
+      systemd.services.udp6-log = {
+        wantedBy = [ "multi-user.target" ];
+        script = "exec ${pkgs.socat}/bin/socat -u UDP6-RECV:8080 CREATE:/tmp/udp6";
       };
     };
     nodes.host = { pkgs, lib, nodes, ... }: {
@@ -330,6 +335,17 @@ in
 
       def fetch(addr, port):
           return guest(2201, f"timeout 5 bash -c 'exec 3<>/dev/tcp/{addr}/{port} && head -c 64 <&3' || true").strip()
+
+      def ipv6_reaches_lan():
+          route = guest(2201, "ip -4 route show default").split()
+          gateway, dev = route[2], route[4]
+          guest(2201, f"ping -c 1 -W 2 {gateway} || true")
+          mac = guest(2201, f"ip -4 neigh show {gateway}").split()[4]
+          lan6 = "${nodes.lan.networking.primaryIPv6Address}"
+          guest(2201, f"sudo ip -6 route replace {lan6} dev {dev} && sudo ip -6 neigh replace {lan6} lladdr {mac} dev {dev}")
+          guest(2201, f"for i in 1 2 3 4 5; do echo guest > /dev/udp/{lan6}/8080; sleep 0.5; done")
+          lan.succeed("sleep 2")
+          return "guest" in lan.succeed("cat /tmp/udp6")
 
       def wait_ssh(port):
           host.wait_until_succeeds(f"{ssh} -p {port} agent@localhost true")
@@ -374,16 +390,32 @@ in
           host.wait_for_unit("loopback-tcp.service")
           assert host.succeed("socat -u TCP:127.0.0.1:8080 -").strip() == "loopback"
           retry(lambda _: fetch("${nodes.lan.networking.primaryIPAddress}", 8080) == "lan")
-          gateway = guest(2201, "ip -4 route show default").split()[2]
-          assert (got := fetch(gateway, 8080)) == "lan", got
+          network = guest(2201, "ip -4 route show default")
+          gateway = network.split()[2]
+          assert (got := fetch(gateway, 8080)) != "loopback", got
           assert "SSH" not in (got := fetch(gateway, 2202)), got
 
       with subtest("the guest has IPv4 only, though the host routes IPv6"):
-          assert (got := guest(2201, "ip -6 addr show scope global")) == "", got
+          lan.wait_for_unit("udp6-log.service")
+          retry(lambda _: host.succeed("echo host | socat -u - UDP6-SENDTO:[${nodes.lan.networking.primaryIPv6Address}]:8080") == "" and lan.execute("grep -q host /tmp/udp6")[0] == 0)
+          assert not ipv6_reaches_lan(), "a guest datagram reached the LAN over IPv6"
 
       with subtest("the guest resolves through the host's loopback resolver"):
           host.wait_for_unit("loopback-dns.service")
           assert guest(2201, "ns=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf); exec 3<>/dev/udp/$ns/53; echo q >&3; timeout 5 head -n 1 <&3").strip() == "dns"
+
+      with subtest("a sandbox started while the host has no IPv4 route gets the same network, which works once the host's IPv4 is back"):
+          host.succeed("systemctl stop dhcpcd.service && ip -4 route flush table main")
+          assert (got := host.succeed("ip -4 route show table main")) == "", got
+          host.succeed("systemctl restart sandbox-alpha.service")
+          wait_ssh(2201)
+          assert not ipv6_reaches_lan(), "a guest datagram reached the LAN over IPv6"
+          assert (got := guest(2201, "ip -4 route show default")) == network, got
+          assert (got := fetch(gateway, 8080)) != "loopback", got
+          assert "SSH" not in (got := fetch(gateway, 2202)), got
+          host.succeed("ip -4 addr flush dev eth1 && ip -4 addr add ${nodes.host.networking.primaryIPAddress}/24 dev eth1")
+          host.succeed("ip -4 route add default via ${nodes.lan.networking.primaryIPAddress} dev eth1 && systemctl start dhcpcd.service")
+          retry(lambda _: fetch("${nodes.lan.networking.primaryIPAddress}", 8080) == "lan")
 
       with subtest("<nixpkgs> in a guest is the host's pinned nixpkgs"):
           assert guest(2202, "nix-instantiate --eval '<nixpkgs>' -A path").strip() == "${toString pkgs.path}"
