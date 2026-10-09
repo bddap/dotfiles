@@ -18,7 +18,6 @@
       "paths": [
         "nix/nixos/default.nix",
         "nix/nixos/laptop-hardware.nix",
-        "nix/nixos/framework-16-nvidia.nix",
         "nix/nixos/steam.nix",
         "nix/nixos/laptop-test.nix",
         "nix/nix/default.nix",

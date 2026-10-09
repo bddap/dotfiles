@@ -1,9 +1,10 @@
 let
   pkgs = import ../nix { };
+  sources = import ../nix/sources.nix;
   local = {
     imports = [
       ./laptop-hardware.nix
-      ./framework-16-nvidia.nix
+      (sources.nixos-hardware + "/framework/16-inch/amd-ai-300-series/nvidia")
       ./steam.nix
     ];
     fileSystems."/" = { device = "/dev/disk/by-label/root"; fsType = "ext4"; };
