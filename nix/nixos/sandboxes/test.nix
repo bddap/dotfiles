@@ -284,6 +284,9 @@ in
     nodes.host = { pkgs, lib, ... }: {
       imports = [ ./. ];
       virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; useNixStoreImage = true; };
+      # The store image is read-only, so loading the registration DB can only fail,
+      # and switch-to-configuration reports that failed unit.
+      systemd.services.register-nix-paths.enable = false;
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       users.users.tester = { isNormalUser = true; uid = 1000; };
       environment.systemPackages = [ pkgs.socat ];

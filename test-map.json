@@ -15,6 +15,11 @@
       "why": "The sandbox module's option and unit contract is eval-tested; boot, reach, persistence, isolation and rebuild teardown run in a nested-VM NixOS test"
     },
     {
+      "paths": ["nix/nix/sources.nix", "nix/nix/version-floor.nix"],
+      "tests": ["nix-instantiate --eval nix/nix/version-floor.nix"],
+      "why": "The nixpkgs pin must not carry network-facing packages older than the recorded floor"
+    },
+    {
       "paths": [
         "nix/nixos/default.nix",
         "nix/nixos/laptop-hardware.nix",
@@ -23,8 +28,11 @@
         "nix/nix/default.nix",
         "nix/nix/sources.json"
       ],
-      "tests": ["nix-build --no-out-link nix/nixos/laptop-test.nix -A system -A steamEnv"],
-      "why": "The laptop modules build into a full system closure and Steam carries the PRIME offload environment"
+      "tests": [
+        "nix-build --no-out-link nix/nixos/laptop-test.nix -A system -A steamEnv",
+        "nix-instantiate --eval nix/nix/version-floor.nix"
+      ],
+      "why": "The laptop modules build into a full system closure and Steam carries the PRIME offload environment; the nixpkgs pin must not carry network-facing packages older than the recorded floor"
     },
     {
       "paths": ["nix/**/*.nix"],
