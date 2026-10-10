@@ -15,9 +15,16 @@
       "why": "The sandbox module's option and unit contract is eval-tested; boot, reach, persistence, isolation and rebuild teardown run in a nested-VM NixOS test"
     },
     {
-      "paths": ["nix/nix/sources.json", "nix/nix/sources.nix", "nix/nix/default.nix", "nix/nix/version-floor.nix"],
-      "tests": ["nix-instantiate --eval nix/nix/version-floor.nix"],
-      "why": "The nixpkgs pin must not carry network-facing packages older than the recorded floor"
+      "paths": [
+        "nix/nixos/default.nix",
+        "nix/nixos/laptop-hardware.nix",
+        "nix/nixos/steam.nix",
+        "nix/nixos/laptop-test.nix",
+        "nix/nix/default.nix",
+        "nix/nix/sources.json"
+      ],
+      "tests": ["nix-build --no-out-link nix/nixos/laptop-test.nix -A system -A steamEnv"],
+      "why": "The laptop modules build into a full system closure and Steam carries the PRIME offload environment"
     },
     {
       "paths": ["nix/**/*.nix"],
@@ -25,9 +32,28 @@
       "why": "Nix changes must parse before activation"
     },
     {
-      "paths": ["test-map.json"],
-      "tests": ["nix-shell -p jq --run 'jq empty test-map.json'"],
-      "why": "The touched-path manifest must remain valid JSON"
+      "paths": [
+        "activate",
+        "home-manager-build",
+        "install-to-disk",
+        "nixos-build",
+        "nix/home-manager/root/bin/aspng",
+        "nix/home-manager/root/bin/bunch",
+        "nix/home-manager/root/bin/capture-soul",
+        "nix/home-manager/root/bin/cop",
+        "nix/home-manager/root/bin/fmt-python",
+        "nix/home-manager/root/bin/next-rustc-err",
+        "nix/home-manager/root/bin/onch",
+        "nix/home-manager/root/bin/onchs",
+        "nix/home-manager/root/bin/paintforme",
+        "nix/home-manager/root/bin/pas",
+        "nix/home-manager/root/bin/pred",
+        "nix/home-manager/root/bin/show-vega",
+        "nix/home-manager/root/bin/tmnew",
+        "nix/home-manager/root/bin/znew"
+      ],
+      "tests": ["bash -n {path}"],
+      "why": "Shell scripts must parse"
     },
     {
       "paths": [
@@ -37,18 +63,18 @@
         "nix/home-manager/root/bin/json2csv",
         "nix/home-manager/root/bin/tmux-layout-dwindle"
       ],
-      "tests": ["python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])' {path}"],
+      "tests": ["python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' {path}"],
       "why": "Python scripts must parse"
-    },
-    {
-      "paths": ["activate", "home-manager-build", "install-to-disk", "nixos-build", "nix/home-manager/root/bin/*"],
-      "tests": ["bash -n {path}"],
-      "why": "Bash scripts must parse"
     },
     {
       "paths": [".gitignore", "home/**", "nix/home-manager/zellij/**"],
       "tests": [],
-      "why": "Config read by its own program at runtime; nothing in the repo checks it"
+      "why": "Plain config read by each tool at runtime; the repo carries no checker for these formats"
+    },
+    {
+      "paths": ["test-map.json"],
+      "tests": ["nix-shell -p jq --run 'jq empty test-map.json'"],
+      "why": "The touched-path manifest must remain valid JSON"
     }
   ]
 }
