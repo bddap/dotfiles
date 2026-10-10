@@ -141,7 +141,11 @@ in {
   # [org/gtk/gtk4/settings/file-chooser]
   # show-hidden=true
 
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings.PasswordAuthentication = false;
+    settings.KbdInteractiveAuthentication = false;
+  };
 
   # Pins stateful-data defaults from the first install — don't bump.
   system.stateVersion = "23.11";
