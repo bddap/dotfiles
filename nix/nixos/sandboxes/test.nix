@@ -56,7 +56,6 @@ let
     testUnitRunsTheGuestRunnerAsTheUser = {
       expr = with declared.systemd.services.sandbox-alpha; {
         inherit (serviceConfig) User SupplementaryGroups PrivateTmp RuntimeDirectory RuntimeDirectoryMode;
-        runner = serviceConfig.ExecStart == lib.getExe alpha.guest.vm;
         inherit wantedBy;
       };
       expected = {
@@ -65,7 +64,6 @@ let
         PrivateTmp = true;
         RuntimeDirectory = "sandbox/alpha";
         RuntimeDirectoryMode = "0700";
-        runner = true;
         wantedBy = [ "multi-user.target" ];
       };
     };
@@ -94,7 +92,7 @@ let
       expr = map (name: with declared.systemd.services."sandbox-home@${name}"; {
         service = serviceConfig;
         inherit (unitConfig) RequiresMountsFor StartLimitIntervalSec;
-        vm = { inherit (declared.systemd.services."sandbox-${name}") requires after; };
+        vm = { inherit (declared.systemd.services."sandbox-${name}") requires wants after; };
         activation = declared.system.activationScripts ? sandboxes;
       }) [ "alpha" "beta" ];
       expected = map (name: let sb = declared.virtualisation.sandboxes.vms.${name}; in {
@@ -105,7 +103,11 @@ let
         };
         RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
         StartLimitIntervalSec = 0;
-        vm = { requires = [ "sandbox-home@${name}.service" ]; after = [ "sandbox-home@${name}.service" ]; };
+        vm = {
+          requires = [ "sandbox-home@${name}.service" ];
+          wants = [ "network-online.target" ];
+          after = [ "sandbox-home@${name}.service" "network-online.target" ];
+        };
         activation = false;
       }) [ "alpha" "beta" ];
     };
@@ -143,14 +145,12 @@ let
       expr = map (sb: { inherit (sb.guest.config.virtualisation) memorySize cores diskSize; }) [ alpha beta ];
       expected = [ { memorySize = 4096; cores = 2; diskSize = 32768; } { memorySize = 1024; cores = 1; diskSize = 8192; } ];
     };
-    testSshKeysOnlyOnLoopback = {
+    testSshdTakesKeysOnly = {
       expr = with alpha.guest.config; {
-        ports = map (p: { inherit (p.host) address port; guest = p.guest.port; }) virtualisation.forwardPorts;
         inherit (services.openssh) enable;
         inherit (services.openssh.settings) PasswordAuthentication KbdInteractiveAuthentication;
       };
       expected = {
-        ports = [ { address = "127.0.0.1"; port = 2201; guest = 22; } ];
         enable = true;
         PasswordAuthentication = false;
         KbdInteractiveAuthentication = false;
@@ -281,8 +281,33 @@ in
 
   vm = pkgs.testers.runNixOSTest {
     name = "sandboxes";
-    nodes.host = { pkgs, lib, ... }: {
+    globalTimeout = 7200;
+    # A swapped-out test VM otherwise panics on an async page fault taken in kernel mode.
+    defaults.boot.kernelParams = [ "no-kvmapf" ];
+    nodes.lan = { pkgs, ... }: {
+      networking.firewall.allowedTCPPorts = [ 8080 ];
+      networking.firewall.allowedUDPPorts = [ 8080 ];
+      systemd.services.marker = {
+        wantedBy = [ "multi-user.target" ];
+        script = "exec ${pkgs.socat}/bin/socat TCP-LISTEN:8080,fork,reuseaddr SYSTEM:'echo lan'";
+      };
+      systemd.services.udp6-log = {
+        wantedBy = [ "multi-user.target" ];
+        script = "exec ${pkgs.socat}/bin/socat -u UDP6-RECV:8080 CREATE:/tmp/udp6";
+      };
+    };
+    nodes.host = { pkgs, lib, nodes, ... }: {
       imports = [ ./. ];
+      networking.defaultGateway = { address = nodes.lan.networking.primaryIPAddress; interface = "eth1"; };
+      networking.defaultGateway6 = { address = nodes.lan.networking.primaryIPv6Address; interface = "eth1"; metric = 1; };
+      networking.nameservers = [ "127.0.0.1" ];
+      systemd.services = lib.mapAttrs (_: listen: {
+        wantedBy = [ "multi-user.target" ];
+        script = "exec ${pkgs.socat}/bin/socat ${listen}";
+      }) {
+        loopback-tcp = "TCP-LISTEN:8080,bind=127.0.0.1,fork,reuseaddr SYSTEM:'echo loopback'";
+        loopback-dns = "UDP-RECVFROM:53,bind=127.0.0.1,fork SYSTEM:'echo dns'";
+      };
       virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; useNixStoreImage = true; };
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       users.users.tester = { isNormalUser = true; uid = 1000; };
@@ -298,7 +323,7 @@ in
       specialisation.only-alpha.configuration.virtualisation.sandboxes.vms = lib.mkForce { alpha = smallAlpha "alpha"; };
       specialisation.new-alpha.configuration.virtualisation.sandboxes.vms = lib.mkForce { alpha = smallAlpha "alpha-2"; };
     };
-    testScript = ''
+    testScript = { nodes, ... }: ''
       import shlex
 
       ssh = "ssh -n -q -i /etc/sandbox-test-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
@@ -307,6 +332,20 @@ in
 
       def guest(port, cmd):
           return host.succeed(f"{ssh} -p {port} agent@localhost {shlex.quote(cmd)}")
+
+      def fetch(addr, port):
+          return guest(2201, f"timeout 5 bash -c 'exec 3<>/dev/tcp/{addr}/{port} && head -c 64 <&3' || true").strip()
+
+      def ipv6_reaches_lan():
+          route = guest(2201, "ip -4 route show default").split()
+          gateway, dev = route[2], route[4]
+          guest(2201, f"ping -c 1 -W 2 {gateway} || true")
+          mac = guest(2201, f"ip -4 neigh show {gateway}").split()[4]
+          lan6 = "${nodes.lan.networking.primaryIPv6Address}"
+          guest(2201, f"sudo ip -6 route replace {lan6} dev {dev} && sudo ip -6 neigh replace {lan6} lladdr {mac} dev {dev}")
+          guest(2201, f"for i in 1 2 3 4 5; do echo guest > /dev/udp/{lan6}/8080; sleep 0.5; done")
+          lan.succeed("sleep 2")
+          return "guest" in lan.succeed("cat /tmp/udp6")
 
       def wait_ssh(port):
           host.wait_until_succeeds(f"{ssh} -p {port} agent@localhost true")
@@ -321,6 +360,7 @@ in
           replay = [l for l in guest(port, "sudo journalctl -b -o cat").splitlines() if "recover" in l.lower()]
           assert replay == [], replay
 
+      lan.start()
       host.wait_for_unit("multi-user.target")
 
       with subtest("declared sandboxes come up, each with its own recipe; homes and disk directories private, on the mounted /home"):
@@ -344,6 +384,38 @@ in
           assert guest(2202, "cat /etc/recipe").strip() == "beta"
           guest(2202, "command -v cowsay")
           guest(2201, "! command -v cowsay")
+
+      with subtest("a guest reaches the LAN, but neither the host's loopback nor another sandbox's ssh port through its gateway"):
+          lan.wait_for_unit("marker.service")
+          host.wait_for_unit("loopback-tcp.service")
+          assert host.succeed("socat -u TCP:127.0.0.1:8080 -").strip() == "loopback"
+          retry(lambda _: fetch("${nodes.lan.networking.primaryIPAddress}", 8080) == "lan")
+          network = guest(2201, "ip -4 route show default")
+          gateway = network.split()[2]
+          assert (got := fetch(gateway, 8080)) != "loopback", got
+          assert "SSH" not in (got := fetch(gateway, 2202)), got
+
+      with subtest("the guest has IPv4 only, though the host routes IPv6"):
+          lan.wait_for_unit("udp6-log.service")
+          retry(lambda _: host.succeed("echo host | socat -u - UDP6-SENDTO:[${nodes.lan.networking.primaryIPv6Address}]:8080") == "" and lan.execute("grep -q host /tmp/udp6")[0] == 0)
+          assert not ipv6_reaches_lan(), "a guest datagram reached the LAN over IPv6"
+
+      with subtest("the guest resolves through the host's loopback resolver"):
+          host.wait_for_unit("loopback-dns.service")
+          assert guest(2201, "ns=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf); exec 3<>/dev/udp/$ns/53; echo q >&3; timeout 5 head -n 1 <&3").strip() == "dns"
+
+      with subtest("a sandbox started while the host has no IPv4 route gets the same network, which works once the host's IPv4 is back"):
+          host.succeed("systemctl stop dhcpcd.service && ip -4 route flush table main")
+          assert (got := host.succeed("ip -4 route show table main")) == "", got
+          host.succeed("systemctl restart sandbox-alpha.service")
+          wait_ssh(2201)
+          assert not ipv6_reaches_lan(), "a guest datagram reached the LAN over IPv6"
+          assert (got := guest(2201, "ip -4 route show default")) == network, got
+          assert (got := fetch(gateway, 8080)) != "loopback", got
+          assert "SSH" not in (got := fetch(gateway, 2202)), got
+          host.succeed("ip -4 addr flush dev eth1 && ip -4 addr add ${nodes.host.networking.primaryIPAddress}/24 dev eth1")
+          host.succeed("ip -4 route add default via ${nodes.lan.networking.primaryIPAddress} dev eth1 && systemctl start dhcpcd.service")
+          retry(lambda _: fetch("${nodes.lan.networking.primaryIPAddress}", 8080) == "lan")
 
       with subtest("<nixpkgs> in a guest is the host's pinned nixpkgs"):
           assert guest(2202, "nix-instantiate --eval '<nixpkgs>' -A path").strip() == "${toString pkgs.path}"
