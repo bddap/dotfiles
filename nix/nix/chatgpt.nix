@@ -2,7 +2,8 @@
 , alsa-lib, at-spi2-atk, at-spi2-core, cairo, cups, dbus, expat
 , gdk-pixbuf, glib, gtk3, libdrm, libgbm, libGL, libnotify, libusb1
 , libxkbcommon, nspr, nss, openssl, pango, systemd, tpm2-tss
-, xorg, wayland, xdg-utils }:
+, libx11, libxcomposite, libxdamage, libxext, libxfixes, libxrandr, libxcb
+, libxshmfence, wayland, xdg-utils }:
 
 stdenv.mkDerivation rec {
   pname = "chatgpt";
@@ -16,9 +17,9 @@ stdenv.mkDerivation rec {
     alsa-lib at-spi2-atk at-spi2-core cairo cups dbus expat gdk-pixbuf
     glib gtk3 libdrm libgbm libGL libnotify libusb1 libxkbcommon nspr nss
     openssl pango systemd tpm2-tss wayland
-    stdenv.cc.cc.lib
-  ] ++ (with xorg; [ libX11 libXcomposite libXdamage libXext libXfixes
-    libXrandr libxcb libxshmfence ]);
+    libx11 libxcomposite libxdamage libxext libxfixes libxrandr libxcb
+    libxshmfence stdenv.cc.cc.lib
+  ];
   runtimeDependencies = [ (lib.getLib systemd) (lib.getLib libGL) ];
   unpackPhase = ''
     runHook preUnpack
