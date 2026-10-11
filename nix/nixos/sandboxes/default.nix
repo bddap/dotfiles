@@ -12,6 +12,19 @@ let
       | ${pkgs.socat}/bin/socat -,ignoreeof UNIX-CONNECT:"$qmp"
   '';
 
+  # qemu's user network always maps its gateway to the host's loopback; passt
+  # leaves the host's loopback out except DNS sent to the --dns-forward
+  # address. The guest's addresses are fixed so that they never depend on the
+  # host's routes: without a template interface passt falls back to a local
+  # mode with IPv6 on.
+  start = name: sb: pkgs.writeShellScript "sandbox-${name}" ''
+    set -e
+    ${pkgs.passt}/bin/passt --quiet --socket "$RUNTIME_DIRECTORY/passt" --ipv4-only \
+      --interface lo --address 10.0.2.15 --netmask 24 --gateway 10.0.2.2 \
+      --no-map-gw --dns-forward 169.254.1.1 --tcp-ports 127.0.0.1/${toString sb.sshPort}:22
+    exec ${lib.getExe sb.guest.vm}
+  '';
+
   guest = name: sb: pkgs.nixos [
     ({ config, modulesPath, ... }: {
       imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
@@ -30,12 +43,10 @@ let
           target = "/home/agent";
           securityModel = "none";
         };
-        forwardPorts = [{
-          from = "host";
-          host.address = "127.0.0.1";
-          host.port = sb.sshPort;
-          guest.port = 22;
-        }];
+        qemu.networkingOptions = lib.mkForce [
+          "-device virtio-net-pci,netdev=net0"
+          "-netdev stream,id=net0,server=off,addr.type=unix,addr.path=$RUNTIME_DIRECTORY/passt"
+        ];
         qemu.options = [
           "-monitor none"
           "-serial stdio"
@@ -219,10 +230,12 @@ in
         description = "sandbox VM ${name}";
         wantedBy = [ "multi-user.target" ];
         requires = [ "sandbox-home@${name}.service" ];
-        after = [ "sandbox-home@${name}.service" ];
+        # passt reads the host's resolv.conf once, at start.
+        wants = [ "network-online.target" ];
+        after = [ "sandbox-home@${name}.service" "network-online.target" ];
         unitConfig.RequiresMountsFor = [ sb.home (dirOf sb.disk) ];
         serviceConfig = {
-          ExecStart = lib.getExe sb.guest.vm;
+          ExecStart = start name sb;
           ExecStop = "${powerdown}";
           TimeoutStopSec = stopTimeout;
           User = cfg.hostUser;
