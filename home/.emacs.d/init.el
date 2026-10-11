@@ -15,8 +15,9 @@
 
 (setq backup-directory-alist
       `(("." . ,(expand-file-name "saves/bak/" user-emacs-directory))))
-(setq auto-save-file-name-transforms
-      `((".*" ,(expand-file-name "saves/auto/" user-emacs-directory) t)))
+(let ((auto-save-dir (expand-file-name "saves/auto/" user-emacs-directory)))
+  (make-directory auto-save-dir t)
+  (setq auto-save-file-name-transforms `((".*" ,auto-save-dir t))))
 
 ;; stop emacs from creating '.#filename' files because they mess with filesystem watchers
 (setq create-lockfiles nil)
