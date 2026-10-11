@@ -19,7 +19,6 @@ in { lib, ... }: {
   home.packages = with pkgs; [
     alacritty
     authenticator
-    nixpkgs-unstable.bambu-studio
     openscad
     discord
     firefox
