@@ -13,6 +13,7 @@ let
       };
       claude-code = import ./claude-code.nix final;
       codex = import ./codex.nix final;
+      zoom-us = import ./zoom-us.nix final;
       tts-read = import ./tts-read final;
       inherit (import ./zellij.nix final) zellij zellij-spiral;
     };

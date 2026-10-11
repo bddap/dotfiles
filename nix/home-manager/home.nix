@@ -33,7 +33,7 @@ in { lib, ... }: {
     bddap.tts-read
     vlc
     xclip
-    zoom-us
+    bddap.zoom-us
     ollama-cuda
     open-webui
     code-cursor
