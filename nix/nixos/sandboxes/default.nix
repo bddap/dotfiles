@@ -12,15 +12,23 @@ let
       | ${pkgs.socat}/bin/socat -,ignoreeof UNIX-CONNECT:"$qmp"
   '';
 
+  # passt sends a guest's IPv6 packet to an IPv4-mapped address out as IPv4,
+  # so ::ffff:127.0.0.1 reaches the host's loopback.
+  passt = pkgs.passt.overrideAttrs (old: {
+    patches = old.patches or [ ] ++ [ ./passt-drop-v4-mapped.patch ];
+  });
+
   # qemu's user network always maps its gateway to the host's loopback; passt
   # leaves the host's loopback out except DNS sent to the --dns-forward
   # address. The guest's addresses are fixed so that they never depend on the
   # host's routes: without a template interface passt falls back to a local
-  # mode with IPv6 on.
+  # mode. lo has no link-local address, so passt takes its own from the IPv6
+  # gateway, which must be link-local or IPv6 stays off.
   start = name: sb: pkgs.writeShellScript "sandbox-${name}" ''
     set -e
-    ${pkgs.passt}/bin/passt --quiet --socket "$RUNTIME_DIRECTORY/passt" --ipv4-only \
-      --interface lo --address 10.0.2.15 --netmask 24 --gateway 10.0.2.2 \
+    ${passt}/bin/passt --quiet --socket "$RUNTIME_DIRECTORY/passt" --interface lo \
+      --address 10.0.2.15 --netmask 24 --gateway 10.0.2.2 \
+      --address fd37:29bf:4de3::15 --gateway fe80::2 \
       --no-map-gw --dns-forward 169.254.1.1 --tcp-ports 127.0.0.1/${toString sb.sshPort}:22
     exec ${lib.getExe sb.guest.vm}
   '';
