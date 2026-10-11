@@ -1,7 +1,7 @@
 let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
-in { ... }: {
+in { lib, ... }: {
   # Machine-local home-manager config lives in nix/home-manager/local/
   # (gitignored) — same mechanism as nix/nixos/local/ in
   # nix/nixos/default.nix: imported iff present, so a machine without one
@@ -65,12 +65,23 @@ in { ... }: {
   # https://github.com/bddap/dotfiles/issues/38.
   dconf.settings = {
     "org/gnome/settings-daemon/plugins/media-keys".custom-keybindings =
-      [ "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/" ];
+      [
+        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/"
+      ];
     "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
       name = "Read selection aloud";
       command = "${pkgs.bddap.tts-read}/bin/tts-read";
       binding = "<Super>r";
     };
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1" = {
+      name = "New terminal window";
+      command = "${pkgs.alacritty}/bin/alacritty";
+      binding = "<Super><Shift>n";
+    };
+    # Alt+Space belongs to the focused app (Emacs), not the window menu.
+    "org/gnome/desktop/wm/keybindings".activate-window-menu =
+      lib.hm.gvariant.mkEmptyArray lib.hm.gvariant.type.string;
   };
 
   programs.home-manager.enable = true;
