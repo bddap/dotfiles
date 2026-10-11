@@ -1,6 +1,6 @@
-{ claude-code-bin, fetchurl, ... }:
+{ claude-code, fetchurl, ... }:
 
-claude-code-bin.overrideAttrs (finalAttrs: _: {
+claude-code.overrideAttrs (finalAttrs: _: {
   version = "2.1.280";
 
   src = fetchurl {

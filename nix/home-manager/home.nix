@@ -1,28 +1,6 @@
 let
   pkgs = import ../nix { };
   nixpkgs-unstable = pkgs.bddap.nixpkgs-unstable;
-  zoomVersion = "7.1.5.4332";
-  zoomSrc = pkgs.fetchurl {
-    url = "https://zoom.us/client/${zoomVersion}/zoom_x86_64.pkg.tar.xz";
-    hash = "sha256-5znZNrySgRrs9I5zhqN5p5dPfXpEHXKf8o2dWeYTPso=";
-  };
-  zoomPatched = pkgs.callPackage
-    (builtins.toFile "zoom-us-${zoomVersion}.nix" (builtins.replaceStrings
-      [
-        ''versions.x86_64-linux = "6.6.10.5815";''
-        ''hash = "sha256-SvPAhv6Ja37aviG4Gh65FvDc9U4fUDKRJvvu8/tbxls=";''
-      ]
-      [
-        ''versions.x86_64-linux = "${zoomVersion}";''
-        ''hash = "${zoomSrc.outputHash}";''
-      ]
-      (builtins.readFile "${pkgs.bddap.sources.nixpkgs}/pkgs/by-name/zo/zoom-us/package.nix")))
-    { targetPkgsFixed = [ pkgs.zstd ]; };
-  zoom = pkgs.zoom-us.overrideAttrs (_: (builtins.removeAttrs zoomPatched.drvAttrs
-    [ "NIX_MAIN_PROGRAM" ]) // {
-    passthru = zoomPatched.passthru;
-    meta = zoomPatched.meta;
-  });
 in { ... }: {
   # Machine-local home-manager config lives in nix/home-manager/local/
   # (gitignored) — same mechanism as nix/nixos/local/ in
@@ -56,7 +34,7 @@ in { ... }: {
     bddap.tts-read
     vlc
     xclip
-    zoom
+    zoom-us
     ollama-cuda
     open-webui
     code-cursor

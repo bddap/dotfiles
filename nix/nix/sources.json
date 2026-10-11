@@ -1,16 +1,4 @@
 {
-    "disko": {
-        "branch": "master",
-        "description": "Declarative disk partitioning and formatting using nix",
-        "homepage": "https://github.com/nix-community/disko",
-        "owner": "nix-community",
-        "repo": "disko",
-        "rev": "7b9f7f88ab3b339f8142dc246445abb3c370d3d3",
-        "sha256": "02k1rx0ph625bd71wyfdr2w6zr73adnd36b19zhgb8pcajb4f6cj",
-        "type": "tarball",
-        "url": "https://github.com/nix-community/disko/archive/7b9f7f88ab3b339f8142dc246445abb3c370d3d3.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
     "crane": {
         "branch": "master",
         "description": "A Nix library for building cargo projects. Never build twice thanks to incremental artifact caching.",
@@ -23,16 +11,16 @@
         "url": "https://github.com/ipetkov/crane/archive/75390a36cd0c2cdd5f1aafd8a9f827d7107f2e53.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "nixpkgs": {
-        "branch": "nixos-25.11",
-        "description": "Nix Packages collection",
-        "homepage": null,
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "a4bf06618f0b5ee50f14ed8f0da77d34ecc19160",
-        "sha256": "0vma331213djanwmb7ibgmi5290952h6ri123xwb66mg58k8r200",
+    "disko": {
+        "branch": "master",
+        "description": "Declarative disk partitioning and formatting using nix",
+        "homepage": "https://github.com/nix-community/disko",
+        "owner": "nix-community",
+        "repo": "disko",
+        "rev": "7b9f7f88ab3b339f8142dc246445abb3c370d3d3",
+        "sha256": "02k1rx0ph625bd71wyfdr2w6zr73adnd36b19zhgb8pcajb4f6cj",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/a4bf06618f0b5ee50f14ed8f0da77d34ecc19160.tar.gz",
+        "url": "https://github.com/nix-community/disko/archive/7b9f7f88ab3b339f8142dc246445abb3c370d3d3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixos-hardware": {
@@ -47,16 +35,28 @@
         "url": "https://github.com/NixOS/nixos-hardware/archive/2096f3f411ce46e88a79ae4eafcfc9df8ed41c61.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "nixpkgs": {
+        "branch": "nixos-26.05",
+        "description": "Nix Packages collection",
+        "homepage": null,
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "2efa67fd26b6df417c33e4603185c701f260dd83",
+        "sha256": "0y0ars4h19fiprdfcjcdiqylm9hwcy6zy8h9nnskwjzchapsmgdz",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/2efa67fd26b6df417c33e4603185c701f260dd83.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nixpkgs-unstable": {
         "branch": "nixpkgs-unstable",
         "description": "Nix Packages collection & NixOS",
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "a421ac6595024edcfbb1ef950a3712b89161c359",
-        "sha256": "03m03cr0h2bfbnlz36pqzz83lgbvx48vmpzkiva1yi0s86ssyg9p",
+        "rev": "aa48d347080940b8a2b8d2f48228674e280a3514",
+        "sha256": "0h3lgfddm7c6yl41niqk213mjrs6xmmr08l4vb0vnq2fhdlaxhlb",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/a421ac6595024edcfbb1ef950a3712b89161c359.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/aa48d347080940b8a2b8d2f48228674e280a3514.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "refac": {

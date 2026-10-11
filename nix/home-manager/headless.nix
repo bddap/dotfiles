@@ -43,8 +43,8 @@ in { ... }: {
     nixfmt-classic
     nix-index
     fnm
-    nodePackages.bash-language-server
-    nodePackages.typescript-language-server
+    bash-language-server
+    typescript-language-server
     pv
     bddap.refac
     ripgrep
@@ -60,7 +60,7 @@ in { ... }: {
     yaml-language-server
     yj
     copilot-language-server
-    nodePackages.prettier
+    prettier
     jc
     dig
     mkpasswd
