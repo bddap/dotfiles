@@ -161,7 +161,7 @@ class Synthesis(unittest.TestCase):
 
         Gst.init(None)
         player = Held(self.engine, "One. Two.", 1.0, lambda error: None)
-        self.assertTrue(in_flight.wait(10))
+        in_flight.wait()
         player.close()
         self.assertTrue(pumped.is_set())
 
@@ -181,19 +181,38 @@ class Synthesis(unittest.TestCase):
     def test_image_placeholder_lines_play_through(self) -> None:
         self.assertEqual(self.engine.synth("\ufffc")[0].size, 0)
         Gst.init(None)
+        context = GLib.MainContext.default()
+
+        class Watched(tts_read.Player):
+            answers = 0
+            unanswered = False
+
+            def _answered(self, *_: object) -> Gst.FlowReturn:
+                self.answers += 1
+                return Gst.FlowReturn.OK
+
+            @override
+            def _pump(self, src: Gst.Element, length: int) -> None:
+                if not self.answers:
+                    for signal in ("push-buffer", "end-of-stream"):
+                        src.connect(signal, self._answered)
+                before = self.answers
+                super()._pump(src, length)
+                if self.answers == before:
+                    self.unanswered = True
+                    context.wakeup()
+
         for text in (
             "Larger Y-axis numbers mean more efficient.\n\n\ufffc\n\nThis is a logarithmic graph.",
             "Larger Y-axis numbers mean more efficient.\n\n\ufffc",
         ):
             with self.subTest(text=text):
                 ended: list[str | None] = []
-                player = tts_read.Player(self.engine, text, 3.0, ended.append)
-                context = GLib.MainContext.default()
-                deadline = time.monotonic() + 60
-                while not ended and time.monotonic() < deadline:
-                    if not context.iteration(False):
-                        time.sleep(0.01)
+                player = Watched(self.engine, text, 3.0, ended.append)
+                while not ended and not player.unanswered:
+                    context.iteration(True)
                 player.close()
+                self.assertFalse(player.unanswered)
                 self.assertEqual(ended, [None])
                 self.assertEqual(sorted(player.starts), list(range(len(player.spans))))
 
