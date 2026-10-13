@@ -36,13 +36,6 @@ in {
 
   hardware.keyboard.zsa.enable = true;
 
-  hardware.nvidia-container-toolkit.enable = true;
-  hardware.nvidia-container-toolkit.mount-nvidia-executables = true;
-
-  # Open kernel modules (Turing+). mkDefault so a machine can override in
-  # nix/nixos/local/; driver >= 560 requires the option to be set.
-  hardware.nvidia.open = lib.mkDefault true;
-
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";
@@ -71,7 +64,7 @@ in {
   services.xserver = {
     enable = true;
 
-    videoDrivers = [ "nvidia" "amdgpu" "intel" ];
+    videoDrivers = [ "amdgpu" "intel" ];
 
     xkb.layout = "us";
     xkb.variant = "";
