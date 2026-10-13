@@ -8,6 +8,7 @@
     {
       "paths": ["nix/nixos/sandboxes/**"],
       "tests": [
+        "nix-instantiate --parse {path}",
         "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A eval",
         "nix-build --no-out-link nix/nixos/sandboxes/test.nix -A vm"
       ],

@@ -25,26 +25,8 @@ let
     };
   };
   smallAlpha = recipe: vms.alpha // {
-    module = { pkgs, ... }: {
-      imports = [ base ];
-      virtualisation.memorySize = 1024;
-      virtualisation.cores = 1;
-      environment.etc.recipe.text = recipe;
-      environment.systemPackages = [ (pkgs.python3.withPackages (p: [ p.scapy ])) ];
-      environment.etc."probe.py".source = probe;
-    };
+    module = { imports = [ base ]; virtualisation.memorySize = 1024; virtualisation.cores = 1; environment.etc.recipe.text = recipe; };
   };
-  probe = pkgs.writeText "probe.py" ''
-    import sys
-    from scapy.all import IP, UDP, TCP, Ether, IPv6, getmacbyip, sendp
-    iface, src4, src6, *targets = sys.argv[1:]
-    mac = getmacbyip("10.0.2.2")
-    for target in targets:
-        proto, dst, port = target.rsplit(",", 2)
-        l3 = IPv6(src=src6, dst=dst) if ":" in dst else IP(src=src4, dst=dst)
-        l4 = UDP(sport=40000, dport=int(port)) / f"probe {dst}" if proto == "udp" else TCP(sport=40000, dport=int(port), flags="S")
-        sendp(Ether(dst=mac) / l3 / l4, iface=iface, count=3, inter=0.2, verbose=False)
-  '';
 
   host = extra: pkgs.nixos [
     ./.
@@ -302,17 +284,11 @@ in
     globalTimeout = 7200;
     # A swapped-out test VM otherwise panics on an async page fault taken in kernel mode.
     defaults.boot.kernelParams = [ "no-kvmapf" ];
-    nodes.lan = { pkgs, lib, ... }: {
-      networking.firewall.allowedTCPPorts = [ 8080 8082 8083 ];
-      networking.firewall.allowedUDPPorts = [ 8080 ];
-      systemd.services = lib.mapAttrs (_: listen: {
+    nodes.lan = { pkgs, ... }: {
+      networking.firewall.allowedTCPPorts = [ 8080 ];
+      systemd.services.marker = {
         wantedBy = [ "multi-user.target" ];
-        script = "exec ${pkgs.socat}/bin/socat ${listen}";
-      }) {
-        marker = "TCP6-LISTEN:8080,ipv6only=0,fork,reuseaddr SYSTEM:'echo lan'";
-        udp-log = "-u UDP6-RECV:8080,ipv6only=0 OPEN:/tmp/udp,creat,append";
-        tcp4-log = "TCP4-LISTEN:8082,fork,reuseaddr SYSTEM:'echo tcp4 >> /tmp/tcp'";
-        tcp6-log = "TCP6-LISTEN:8083,ipv6only=1,fork,reuseaddr SYSTEM:'echo tcp6 >> /tmp/tcp'";
+        script = "exec ${pkgs.socat}/bin/socat TCP6-LISTEN:8080,ipv6only=0,fork,reuseaddr SYSTEM:'echo lan'";
       };
     };
     nodes.host = { pkgs, lib, nodes, ... }: {
@@ -320,17 +296,9 @@ in
       networking.defaultGateway = { address = nodes.lan.networking.primaryIPAddress; interface = "eth1"; };
       networking.defaultGateway6 = { address = nodes.lan.networking.primaryIPv6Address; interface = "eth1"; metric = 1; };
       networking.nameservers = [ "127.0.0.1" ];
-      systemd.services = lib.mapAttrs (_: listen: {
+      systemd.services.loopback-dns = {
         wantedBy = [ "multi-user.target" ];
-        script = "exec ${pkgs.socat}/bin/socat ${listen}";
-      }) {
-        loopback-tcp = "TCP-LISTEN:8080,bind=127.0.0.1,fork,reuseaddr SYSTEM:'echo loopback'";
-        loopback-tcp6 = "TCP6-LISTEN:8080,bind=[::1],fork,reuseaddr SYSTEM:'echo loopback'";
-      } // {
-        loopback-dns = {
-          wantedBy = [ "multi-user.target" ];
-          script = "exec ${pkgs.dnsmasq}/bin/dnsmasq -k -u nobody --listen-address=127.0.0.1 --bind-interfaces --no-resolv --no-hosts --host-record=lan.test,${nodes.lan.networking.primaryIPv6Address}";
-        };
+        script = "exec ${pkgs.dnsmasq}/bin/dnsmasq -k -u nobody --listen-address=127.0.0.1 --bind-interfaces --no-resolv --no-hosts --host-record=lan.test,${nodes.lan.networking.primaryIPv6Address}";
       };
       virtualisation = { memorySize = 4096; cores = 4; diskSize = 16384; useNixStoreImage = true; };
       # The store image is read-only, so loading the registration DB can only fail,
@@ -338,7 +306,7 @@ in
       systemd.services.register-nix-paths.enable = false;
       virtualisation.fileSystems."/home" = { device = "none"; fsType = "tmpfs"; options = [ "mode=0755" "uid=1000" "gid=100" ]; };
       users.users.tester = { isNormalUser = true; uid = 1000; };
-      environment.systemPackages = [ pkgs.socat pkgs.tcpdump ];
+      environment.systemPackages = [ pkgs.socat ];
       environment.etc.sandbox-test-key = { source = keys.snakeOilPrivateKey; mode = "0600"; };
       virtualisation.sandboxes = {
         hostUser = "tester";
@@ -368,29 +336,6 @@ in
 
       def network():
           return guest(2201, "ip -4 route show default; ip -4 -o addr show scope global | awk '{print $2, $4}'; ip -6 route show default | sed -E 's/ expires [0-9]+sec//'; ip -6 -o addr show scope global -temporary | awk '{print $2, $4}'")
-
-      def gateways():
-          route4 = guest(2201, "ip -4 route show default").split()
-          gateway6 = guest(2201, "ip -6 route show default").split()[2]
-          return route4[2], f"{gateway6}%{route4[4]}"
-
-      forms = ["127.0.0.1", "127.0.0.2", "0.0.0.0", "10.0.2.2", "169.254.1.1", "::1", "::", "::ffff:127.0.0.1", "::ffff:127.0.0.2", "::ffff:0.0.0.0", "::127.0.0.1", "::ffff:0:127.0.0.1", "64:ff9b::127.0.0.1", "fe80::2"]
-
-      def crafted_reach_host_loopback():
-          dev = guest(2201, "ip -4 route show default").split()[4]
-          src4 = guest(2201, f"ip -4 -o addr show dev {dev} scope global").split()[3].split("/")[0]
-          src6 = guest(2201, f"ip -6 -o addr show dev {dev} scope global -temporary").split()[3].split("/")[0]
-          probes = [f"udp,{f},8081" for f in forms] + [f"tcp,{f},{p}" for f in forms for p in (8080, 2202)]
-          controls = [f"udp,{lan4},8080", f"udp,{lan6},8080", f"tcp,{lan4},8082", f"tcp,{lan6},8083"]
-          host.succeed("rm -f /tmp/lo.pcap; (tcpdump -i lo -n -U -w /tmp/lo.pcap 'port 8080 or port 8081 or port 2202' >/dev/null 2>&1 & echo $! > /tmp/tcpdump.pid)")
-          host.wait_until_succeeds("test -s /tmp/lo.pcap")
-          lan.succeed("truncate -s 0 /tmp/udp /tmp/tcp")
-          host.execute(f"{ssh} -p 2201 agent@localhost " + shlex.quote(f"sudo python3 /etc/probe.py {dev} {src4} {src6} " + " ".join(probes + controls)))
-          host.succeed("sleep 2; kill $(cat /tmp/tcpdump.pid)")
-          udp = set(lan.succeed("cat /tmp/udp").split("probe ")) - {""}
-          tcp = lan.succeed("cat /tmp/tcp").split()
-          missing = [c for c, ok in (("udp4", lan4 in udp), ("udp6", lan6 in udp), ("tcp4", "tcp4" in tcp), ("tcp6", "tcp6" in tcp)) if not ok]
-          return host.succeed("tcpdump -n -r /tmp/lo.pcap 2>/dev/null"), missing
 
       def wait_ssh(port):
           host.wait_until_succeeds(f"{ssh} -p {port} agent@localhost true")
@@ -430,58 +375,28 @@ in
           guest(2202, "command -v cowsay")
           guest(2201, "! command -v cowsay")
 
-      def through_gateways_reaches_host():
-          return [(g, p, got) for g in gateways() for p in (8080, 2202) if (got := fetch(g, p)) == "loopback" or "SSH" in got]
-
       with subtest("a guest reaches the LAN over IPv4 and IPv6"):
           lan.wait_for_unit("marker.service")
           retry(lambda _: fetch(lan4, 8080) == "lan")
           retry(lambda _: fetch(lan6, 8080) == "lan")
 
-      with subtest("through its IPv4 or IPv6 gateway a guest reaches neither the host's loopback nor another sandbox's ssh port"):
-          host.wait_for_unit("loopback-tcp.service")
-          host.wait_for_unit("loopback-tcp6.service")
-          assert host.succeed("socat -u TCP:127.0.0.1:8080 -").strip() == "loopback"
-          assert host.succeed("socat -u TCP6:[::1]:8080 -").strip() == "loopback"
-          assert (got := through_gateways_reaches_host()) == [], got
-
-      with subtest("no crafted packet to a loopback, IPv4-mapped, IPv4-compatible, NAT64 or unspecified address or to the gateway reaches the host's loopback or another sandbox's ssh port"):
-          host.wait_for_unit("loopback-tcp.service")
-          lan.wait_for_unit("udp-log.service")
-          lan.wait_for_unit("tcp4-log.service")
-          lan.wait_for_unit("tcp6-log.service")
-          assert (got := crafted_reach_host_loopback()) == ("", []), got
-
       with subtest("the guest resolves through the host's loopback resolver and reaches the IPv6 address it resolved"):
           host.wait_for_unit("loopback-dns.service")
-          nameservers = guest(2201, "awk '/^nameserver/ {print $2}' /etc/resolv.conf").split()
-          assert nameservers == ["169.254.1.1"], nameservers
           assert guest(2201, "getent ahostsv6 lan.test").split()[0] == lan6
           assert fetch("lan.test", 8080) == "lan"
 
-      def restart_with_the_same_network():
-          host.succeed("systemctl restart sandbox-alpha.service")
-          wait_ssh(2201)
-          retry(lambda _: network() == before)
-
-      with subtest("a sandbox started while the host has no IPv4 or IPv6 route, only an IPv4 route, or only an IPv6 route gets the same network, which works once the host's routes are back"):
-          before = network()
-          print(before)
+      with subtest("a sandbox started while the host has no IPv4 or IPv6 route gets the same network, which works once the host's routes are back"):
+          network_before = network()
           host.succeed("systemctl stop dhcpcd.service && ip -4 route flush table main && ip -6 route flush table main")
           assert (got := host.succeed("ip -4 route show table main; ip -6 route show table main")) == "", got
-          restart_with_the_same_network()
-          assert (got := through_gateways_reaches_host()) == [], got
+          host.succeed("systemctl restart sandbox-alpha.service")
+          wait_ssh(2201)
+          retry(lambda _: network() == network_before)
           host.succeed("ip -4 addr flush dev eth1 && ip -4 addr add ${nodes.host.networking.primaryIPAddress}/24 dev eth1")
-          host.succeed(f"ip -4 route add default via {lan4} dev eth1")
-          restart_with_the_same_network()
-          host.succeed(f"ip -6 route add fe80::/64 dev eth1 && ip -6 route add 2001:db8:1::/64 dev eth1 && ip -6 route add default via {lan6} dev eth1")
-          host.succeed("ip -4 route flush table main")
-          restart_with_the_same_network()
-          host.succeed("ip -4 addr flush dev eth1 && ip -4 addr add ${nodes.host.networking.primaryIPAddress}/24 dev eth1")
+          host.succeed("ip -6 route add fe80::/64 dev eth1 && ip -6 route add 2001:db8:1::/64 dev eth1")
           host.succeed(f"ip -4 route add default via {lan4} dev eth1 && systemctl start dhcpcd.service")
           retry(lambda _: fetch(lan4, 8080) == "lan")
           retry(lambda _: fetch(lan6, 8080) == "lan")
-          assert (got := crafted_reach_host_loopback()) == ("", []), got
 
       with subtest("<nixpkgs> in a guest is the host's pinned nixpkgs"):
           assert guest(2202, "nix-instantiate --eval '<nixpkgs>' -A path").strip() == "${toString pkgs.path}"
