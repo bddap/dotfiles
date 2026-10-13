@@ -34,7 +34,6 @@ in { lib, ... }: {
     vlc
     xclip
     zoom-us
-    ollama-cuda
     open-webui
     code-cursor
     zed-editor
