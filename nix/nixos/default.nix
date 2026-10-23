@@ -29,6 +29,9 @@ in {
     kernelPackages = pkgs.linuxPackages_6_18;
   };
 
+  # Delete once the nixpkgs pin carries cacert >= 3.131.1, which drops this root.
+  security.pki.caCertificateBlacklist = [ "emSign ECC Root CA - G3" ];
+
   hardware.bluetooth.enable = true;
 
   # steam wants this
