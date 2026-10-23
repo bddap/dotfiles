@@ -18,6 +18,7 @@ in { lib, ... }: {
 
   home.packages = with pkgs; [
     alacritty
+    bddap.glacritty
     authenticator
     openscad
     discord

@@ -6,6 +6,11 @@
       "why": "The derivation's check phase runs mypy --strict and the unit tests"
     },
     {
+      "paths": ["nix/nix/glacritty.nix"],
+      "tests": ["nix-build --no-out-link nix/nix/default.nix -A bddap.glacritty"],
+      "why": "The package builds the pinned fork and runs its test suite"
+    },
+    {
       "paths": ["nix/nixos/sandboxes/**"],
       "tests": [
         "nix-instantiate --parse {path}",

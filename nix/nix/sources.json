@@ -23,6 +23,18 @@
         "url": "https://github.com/nix-community/disko/archive/7b9f7f88ab3b339f8142dc246445abb3c370d3d3.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "glacritty": {
+        "branch": "master",
+        "description": "Alacritty with a GPU shader background",
+        "homepage": "",
+        "owner": "bddap-bot",
+        "repo": "glacritty",
+        "rev": "b51e401124cf755099ab46046e9bbf55d0880c02",
+        "sha256": "1p8wmszix6sr89ahvs97v9dig0q4kdzrgb7fhkjk57andgf6csi5",
+        "type": "tarball",
+        "url": "https://github.com/bddap-bot/glacritty/archive/b51e401124cf755099ab46046e9bbf55d0880c02.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "nixos-hardware": {
         "branch": "master",
         "description": "A collection of NixOS modules covering hardware quirks.",
