@@ -14,6 +14,7 @@ let
       claude-code = import ./claude-code.nix final;
       codex = import ./codex.nix final;
       tts-read = import ./tts-read final;
+      glacritty = final.callPackage ./glacritty.nix { };
       inherit (import ./zellij.nix final) zellij zellij-spiral;
     };
   };

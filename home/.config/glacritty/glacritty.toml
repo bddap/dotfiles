@@ -1,0 +1,5 @@
+[general]
+import = ["~/.config/alacritty/alacritty.toml"]
+
+[window]
+background_shader = "paper.glsl"
