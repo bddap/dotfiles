@@ -29,10 +29,10 @@
         "homepage": "",
         "owner": "bddap-bot",
         "repo": "glacritty",
-        "rev": "b51e401124cf755099ab46046e9bbf55d0880c02",
-        "sha256": "1p8wmszix6sr89ahvs97v9dig0q4kdzrgb7fhkjk57andgf6csi5",
+        "rev": "f2d38535d72c6ea9aaf7fe880dce59a5dfe45fdd",
+        "sha256": "0xmzvy9yijakhjdqm4mx3my5rk2vnn79iq6n3q2g07xy10ff8kvs",
         "type": "tarball",
-        "url": "https://github.com/bddap-bot/glacritty/archive/b51e401124cf755099ab46046e9bbf55d0880c02.tar.gz",
+        "url": "https://github.com/bddap-bot/glacritty/archive/f2d38535d72c6ea9aaf7fe880dce59a5dfe45fdd.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixos-hardware": {
