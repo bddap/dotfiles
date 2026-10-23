@@ -5,6 +5,7 @@ let
     imports = [
       ./laptop-hardware.nix
       (sources.nixos-hardware + "/framework/16-inch/amd-ai-300-series/nvidia")
+      ./nvidia.nix
       ./steam.nix
     ];
     fileSystems."/" = { device = "/dev/disk/by-label/root"; fsType = "ext4"; };
