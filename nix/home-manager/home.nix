@@ -75,12 +75,18 @@ in { lib, ... }: {
     };
     "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1" = {
       name = "New terminal window";
-      command = "${pkgs.alacritty}/bin/alacritty";
+      command = "${pkgs.bddap.glacritty}/bin/glacritty";
       binding = "<Super><Shift>n";
     };
     # Alt+Space belongs to the focused app (Emacs), not the window menu.
     "org/gnome/desktop/wm/keybindings".activate-window-menu =
       lib.hm.gvariant.mkEmptyArray lib.hm.gvariant.type.string;
+  };
+
+  # GLib launches Terminal=true desktop entries through xdg-terminal-exec.
+  xdg.terminal-exec = {
+    enable = true;
+    settings.default = [ "glacritty.desktop" ];
   };
 
   programs.home-manager.enable = true;
