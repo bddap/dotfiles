@@ -1,40 +1,61 @@
 #!/usr/bin/env bash
 
-# Runs write-local-config into scratch copies of this repo and checks that
-# every generated local/default.nix parses and that its imports resolve.
-# Prints each generated file.
+# Runs write-local-config from scratch git copies of this tree and checks
+# that every generated local/default.nix parses and its imports resolve,
+# and that bad input is refused before anything is written. Prints each
+# generated file.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
-REPO="$(pwd)"
 SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 
-mkdir -p "$SCRATCH/extra/gpu-tuning"
+copy() {
+    mkdir -p "$1"
+    git ls-files -z | xargs -0 cp --parents -t "$1"
+    git -C "$1" init -q
+    git -C "$1" add -A
+}
+
+mkdir -p "$SCRATCH/extra/gpu-tuning" "$SCRATCH/extra/no-default" "$SCRATCH/extra/clash"
 echo '{ ... }: { boot.kernelParams = [ "quiet" ]; }' > "$SCRATCH/extra/printer.nix"
 echo '{ ... }: { services.fwupd.enable = true; }' > "$SCRATCH/extra/gpu-tuning/default.nix"
+echo '{ ... }: { }' > "$SCRATCH/extra/clash/hardware-configuration.nix"
 
 run() {
     local name="$1"
     shift
-    local dest="$SCRATCH/$name"
-    mkdir -p "$dest"
-    git ls-files -z | xargs -0 cp --parents -t "$dest"
-    mkdir -p "$dest/nix/nixos/local"
-    echo '{ ... }: { }' > "$dest/nix/nixos/local/hardware-configuration.nix"
+    local repo="$SCRATCH/$name"
+    copy "$repo"
+    mkdir -p "$repo/nix/nixos/local"
+    echo '{ ... }: { }' > "$repo/nix/nixos/local/stale.nix"
+    local stage="$SCRATCH/$name.stage"
+    (cd "$repo" && nix/nixos/write-local-config "$stage" "host-$name" "$@")
 
-    nix/nixos/write-local-config "$REPO" "$dest" "host-$name" "$@"
+    rm -rf "$repo/nix/nixos/local"
+    cp -a "$stage" "$repo/nix/nixos/local"
+    echo '{ ... }: { }' > "$repo/nix/nixos/local/hardware-configuration.nix"
 
-    local cfg="$dest/nix/nixos/local/default.nix"
+    local cfg="$repo/nix/nixos/local/default.nix"
     echo "── $name: nix/nixos/local/default.nix"
     cat "$cfg"
     nix-instantiate --parse "$cfg" > /dev/null
     local missing
-    missing="$(nix-instantiate --eval --strict -E \
-        "builtins.filter (p: !builtins.pathExists p) (import $cfg { }).imports")"
+    missing="$(nix-instantiate --eval --strict -E "
+        builtins.filter
+          (p: !builtins.pathExists p
+            || builtins.readFileType p == \"directory\" && !builtins.pathExists (p + \"/default.nix\"))
+          (import $cfg { }).imports")"
     if [ "$missing" != "[ ]" ]; then
         echo "FAIL $name: unresolved imports $missing"
+        exit 1
+    fi
+}
+
+expect() {
+    if ! grep -qx "    $2" "$SCRATCH/$1/nix/nixos/local/default.nix"; then
+        echo "FAIL $1: no import $2"
         exit 1
     fi
 }
@@ -42,19 +63,34 @@ run() {
 run none
 run nvidia nix/nixos/nvidia.nix
 run arbitrary "$SCRATCH/extra/printer.nix" "$SCRATCH/extra/gpu-tuning"
+run from-old-local nix/nixos/local/stale.nix
 
-grep -qx '    ../nvidia.nix' "$SCRATCH/nvidia/nix/nixos/local/default.nix"
-grep -qx '    ./printer.nix' "$SCRATCH/arbitrary/nix/nixos/local/default.nix"
-grep -qx '    ./gpu-tuning' "$SCRATCH/arbitrary/nix/nixos/local/default.nix"
+expect nvidia ../nvidia.nix
+expect arbitrary ./printer.nix
+expect arbitrary ./gpu-tuning
+expect from-old-local ./stale.nix
 if grep -q nvidia "$SCRATCH/none/nix/nixos/local/default.nix"; then
     echo "FAIL none: imports nvidia"
     exit 1
 fi
 
-if nix/nixos/write-local-config "$REPO" "$SCRATCH/none" h "$SCRATCH/extra/printer.nix" \
-    "$SCRATCH/extra/printer.nix" 2> /dev/null; then
-    echo "FAIL: duplicate module name accepted"
-    exit 1
-fi
+refuse() {
+    local why="$1"
+    shift
+    if nix/nixos/write-local-config "$SCRATCH/refused" "$@" 2> /dev/null; then
+        echo "FAIL: accepted $why"
+        exit 1
+    fi
+    if [ -e "$SCRATCH/refused" ]; then
+        echo "FAIL: refusing $why still wrote output"
+        exit 1
+    fi
+}
+
+refuse "an invalid hostname" "Bad Host"
+refuse "a missing module" h "$SCRATCH/extra/nope.nix"
+refuse "a directory without default.nix" h "$SCRATCH/extra/no-default"
+refuse "a reserved module name" h "$SCRATCH/extra/clash/hardware-configuration.nix"
+refuse "a duplicate module name" h "$SCRATCH/extra/printer.nix" "$SCRATCH/extra/printer.nix"
 
 echo "ok"

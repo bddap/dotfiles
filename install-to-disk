@@ -77,10 +77,11 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-if ! [[ "$NEW_HOSTNAME" =~ ^[a-z][a-z0-9-]*$ ]]; then
-    echo "Error: hostname must match ^[a-z][a-z0-9-]*$"
-    exit 1
-fi
+# Staged before the disk is touched, so a bad hostname or module fails
+# while the target is still intact.
+LOCAL_STAGE="$(mktemp -d)"
+trap 'rm -rf "$LOCAL_STAGE"' EXIT
+nix/nixos/write-local-config "$LOCAL_STAGE" "$NEW_HOSTNAME" "${MODULES[@]}"
 
 # ── Wrong-target guards ─────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ KEYFILE=""
 cleanup() {
     # Keyfile first: nothing below may run before the secret is gone.
     rm -f "$KEYFILE"
+    rm -rf "$LOCAL_STAGE"
     if mountpoint -q /mnt; then
         echo "==> Unmounting /mnt..."
         umount -R /mnt
@@ -220,9 +222,9 @@ mkdir -p /mnt/home/a
 cp -a "$(pwd)" "$DEST"
 
 # local/ is machine-local: drop the carried-over copies (the installing
-# machine's own host config) and generate this machine's.
+# machine's own host config) and install this machine's.
 rm -rf "$DEST/nix/nixos/local" "$DEST/nix/home-manager/local"
-mkdir -p "$DEST/nix/nixos/local"
+cp -a "$LOCAL_STAGE" "$DEST/nix/nixos/local"
 
 echo "==> Generating hardware configuration for ${NEW_HOSTNAME}..."
 nixos-generate-config --root /mnt
@@ -246,8 +248,6 @@ sed -i 's/cryptroot-install/cryptroot/g' \
 # boot-critical set is laptop-hardware.nix's generic superset.)
 sed -i -E 's/"(kvm-intel|kvm-amd)"//g' \
     "$DEST/nix/nixos/local/hardware-configuration.nix"
-
-nix/nixos/write-local-config "$(pwd)" "$DEST" "$NEW_HOSTNAME" "${MODULES[@]}"
 
 # ── Step 3: Build the system closure from the target's copy ─────────────
 
