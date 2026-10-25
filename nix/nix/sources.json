@@ -65,10 +65,10 @@
         "homepage": "",
         "owner": "bddap",
         "repo": "refac",
-        "rev": "8fa5d5b74f90ddc7bdc917e63ded301b7c923012",
-        "sha256": "0ywx88gg1q272apvmrm0ysfp4l92qfz5g06yg77r12663acwk3w9",
+        "rev": "2147082957888b8730e1e3454ca325ab9070b62c",
+        "sha256": "1n4yl9fz27rldgcps9mpk2dr5ycgi56w59kzd9hccagbvm42rl9r",
         "type": "tarball",
-        "url": "https://github.com/bddap/refac/archive/8fa5d5b74f90ddc7bdc917e63ded301b7c923012.tar.gz",
+        "url": "https://github.com/bddap/refac/archive/2147082957888b8730e1e3454ca325ab9070b62c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "rust-overlay": {
