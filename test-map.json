@@ -29,6 +29,7 @@
         "nix/nixos/default.nix",
         "nix/nixos/laptop-hardware.nix",
         "nix/nixos/steam.nix",
+        "nix/nixos/nvidia.nix",
         "nix/nixos/laptop-test.nix",
         "nix/nix/default.nix",
         "nix/nix/sources.json"
