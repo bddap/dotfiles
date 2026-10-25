@@ -46,11 +46,18 @@
       "why": "Nix changes must parse before activation"
     },
     {
+      "paths": ["install-to-disk", "nix/nixos/write-local-config", "nix/nixos/write-local-config-test"],
+      "tests": ["nix/nixos/write-local-config-test"],
+      "why": "The installer's generated local/default.nix must parse and resolve its imports, with and without extra modules"
+    },
+    {
       "paths": [
         "activate",
         "home-manager-build",
         "install-to-disk",
         "nixos-build",
+        "nix/nixos/write-local-config",
+        "nix/nixos/write-local-config-test",
         "nix/home-manager/root/bin/aspng",
         "nix/home-manager/root/bin/bunch",
         "nix/home-manager/root/bin/capture-soul",

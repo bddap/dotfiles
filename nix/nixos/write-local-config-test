@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+# Runs write-local-config into scratch copies of this repo and checks that
+# every generated local/default.nix parses and that its imports resolve.
+# Prints each generated file.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+REPO="$(pwd)"
+SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH"' EXIT
+
+mkdir -p "$SCRATCH/extra/gpu-tuning"
+echo '{ ... }: { boot.kernelParams = [ "quiet" ]; }' > "$SCRATCH/extra/printer.nix"
+echo '{ ... }: { services.fwupd.enable = true; }' > "$SCRATCH/extra/gpu-tuning/default.nix"
+
+run() {
+    local name="$1"
+    shift
+    local dest="$SCRATCH/$name"
+    mkdir -p "$dest"
+    git ls-files -z | xargs -0 cp --parents -t "$dest"
+    mkdir -p "$dest/nix/nixos/local"
+    echo '{ ... }: { }' > "$dest/nix/nixos/local/hardware-configuration.nix"
+
+    nix/nixos/write-local-config "$REPO" "$dest" "host-$name" "$@"
+
+    local cfg="$dest/nix/nixos/local/default.nix"
+    echo "── $name: nix/nixos/local/default.nix"
+    cat "$cfg"
+    nix-instantiate --parse "$cfg" > /dev/null
+    local missing
+    missing="$(nix-instantiate --eval --strict -E \
+        "builtins.filter (p: !builtins.pathExists p) (import $cfg { }).imports")"
+    if [ "$missing" != "[ ]" ]; then
+        echo "FAIL $name: unresolved imports $missing"
+        exit 1
+    fi
+}
+
+run none
+run nvidia nix/nixos/nvidia.nix
+run arbitrary "$SCRATCH/extra/printer.nix" "$SCRATCH/extra/gpu-tuning"
+
+grep -qx '    ../nvidia.nix' "$SCRATCH/nvidia/nix/nixos/local/default.nix"
+grep -qx '    ./printer.nix' "$SCRATCH/arbitrary/nix/nixos/local/default.nix"
+grep -qx '    ./gpu-tuning' "$SCRATCH/arbitrary/nix/nixos/local/default.nix"
+if grep -q nvidia "$SCRATCH/none/nix/nixos/local/default.nix"; then
+    echo "FAIL none: imports nvidia"
+    exit 1
+fi
+
+if nix/nixos/write-local-config "$REPO" "$SCRATCH/none" h "$SCRATCH/extra/printer.nix" \
+    "$SCRATCH/extra/printer.nix" 2> /dev/null; then
+    echo "FAIL: duplicate module name accepted"
+    exit 1
+fi
+
+echo "ok"
