@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Runs write-local-config from scratch git copies of this tree and checks
+# Runs write-local-config from scratch copies of this tree and checks
 # that every generated local/default.nix parses and its imports resolve,
 # and that bad input is refused before anything is written. Prints each
 # generated file.
@@ -14,8 +14,6 @@ trap 'rm -rf "$SCRATCH"' EXIT
 copy() {
     mkdir -p "$1"
     git ls-files -z | xargs -0 cp --parents -t "$1"
-    git -C "$1" init -q
-    git -C "$1" add -A
 }
 
 mkdir -p "$SCRATCH/extra/gpu-tuning" "$SCRATCH/extra/no-default" "$SCRATCH/extra/clash"

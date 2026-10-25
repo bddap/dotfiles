@@ -7,9 +7,10 @@
 # Usage:
 #   write-local-config <local-dir> <hostname> [module...]
 #
-# A module tracked in this repo is imported in place, so it keeps
-# following the repo; any other is copied into <local-dir>, since the new
-# machine has no other copy.
+# A module in this repo is imported in place, so it keeps following the
+# repo; any other, including one in the installing machine's own local/
+# dirs (which the installer does not carry over), is copied into
+# <local-dir>, since the new machine has no other copy.
 
 set -euo pipefail
 
@@ -36,12 +37,15 @@ for MODULE in "$@"; do
         echo "Error: $MODULE: directory without a default.nix" >&2
         exit 1
     fi
-    COPY=no
-    if git -c safe.directory="$REPO" -C "$REPO" ls-files --error-unmatch -- "$MODULE" > /dev/null 2>&1; then
+    case "$MODULE" in
+        "$REPO"/nix/nixos/local/* | "$REPO"/nix/home-manager/local/*) COPY=yes ;;
+        "$REPO"/*) COPY=no ;;
+        *) COPY=yes ;;
+    esac
+    if [ $COPY = no ]; then
         REL="$(realpath -m --relative-to="$REPO/nix/nixos/local" -- "$MODULE")"
     else
         REL="./$(basename "$MODULE")"
-        COPY=yes
     fi
     if ! [[ "$REL" =~ ^\.\.?/[A-Za-z0-9._/+-]+$ ]]; then
         echo "Error: $MODULE: not expressible as a Nix path literal" >&2
