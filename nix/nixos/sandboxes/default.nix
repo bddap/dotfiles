@@ -2,7 +2,6 @@
 let
   inherit (lib) mkOption types;
   cfg = config.virtualisation.sandboxes;
-  hostPki = config.security.pki;
   hostUser = config.users.users.${cfg.hostUser}
     or (throw "virtualisation.sandboxes.hostUser: no such user ${cfg.hostUser}");
 
@@ -32,8 +31,6 @@ let
     ({ config, modulesPath, ... }: {
       imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
       networking.hostName = name;
-      // this can be dropped once we bump nixpkgs to a point where the compromized emudhra whatevers are no longer trusted
-      security.pki.caCertificateBlacklist = hostPki.caCertificateBlacklist;
       virtualisation = {
         diskImage = sb.disk;
         diskSize = lib.mkDefault 32768;

@@ -31,8 +31,6 @@ in {
 
   # Delete once the nixpkgs pin carries cacert >= 3.131.1, which drops this root.
   security.pki.caCertificateBlacklist = [ "emSign ECC Root CA - G3" ];
-  # uv otherwise trusts its bundled roots, which the line above does not reach.
-  environment.etc."xdg/uv/uv.toml".text = "system-certs = true\n";
 
   hardware.bluetooth.enable = true;
 
