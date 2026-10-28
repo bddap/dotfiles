@@ -32,6 +32,7 @@ let
     ({ config, modulesPath, ... }: {
       imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
       networking.hostName = name;
+      // this can be dropped once we bump nixpkgs to a point where the compromized emudhra whatevers are no longer trusted
       security.pki.caCertificateBlacklist = hostPki.caCertificateBlacklist;
       virtualisation = {
         diskImage = sb.disk;
