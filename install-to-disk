@@ -4,11 +4,10 @@
 # (running) machine, e.g. via a USB dongle.
 #
 # Usage:
-#   sudo ./install-to-disk [--nvidia] <hostname> /dev/sdX
+#   sudo ./install-to-disk <hostname> /dev/sdX [module...]
 #
-#   --nvidia: the target has an NVIDIA GPU; local/default.nix imports
-#   ../nvidia.nix. The target is not the running machine, so this is
-#   stated, never probed.
+#   Each module is a repo-relative NixOS module path (tracked or not)
+#   that local/default.nix also imports, e.g. nix/nixos/nvidia.nix.
 #
 # What it does:
 #   1. Wipes any existing partition table (disko's format+mount is
@@ -18,8 +17,8 @@
 #   2. Copies this repo to /home/a/<repo-dir-name> on the target and
 #      populates nix/nixos/local/ in that copy:
 #        local/hardware-configuration.nix — nixos-generate-config output
-#        local/default.nix                — imports it (and ../nvidia.nix
-#                                           with --nvidia) + sets hostName
+#        local/default.nix                — imports it and the modules,
+#                                           sets hostName
 #   3. Builds the full system closure from that copy
 #   4. nixos-install --system <closure> --root /mnt
 #   5. Sets the password for user `a`
@@ -50,14 +49,8 @@ cd "$(dirname "$0")"
 
 # ── Arguments ───────────────────────────────────────────────────────────
 
-NVIDIA=no
-if [ "${1:-}" = --nvidia ]; then
-    NVIDIA=yes
-    shift
-fi
-
-if [ $# -ne 2 ]; then
-    echo "Usage: sudo $0 [--nvidia] <hostname> /dev/sdX"
+if [ $# -lt 2 ]; then
+    echo "Usage: sudo $0 <hostname> /dev/sdX [module...]"
     echo ""
     echo "WARNING: This ERASES the target disk entirely."
     exit 1
@@ -65,9 +58,18 @@ fi
 
 NEW_HOSTNAME="$1"
 DISK="$2"
+IMPORTS=""
+for m in "${@:3}"; do
+    m="$(realpath -e --relative-to=. -- "$m")"
+    case "$m" in ../* | nix/*/local/* | *[!A-Za-z0-9._/-]*)
+        echo "Error: module $m must be in the repo, outside local/, with no special characters"
+        exit 1
+    esac
+    IMPORTS+=$'\n    ../../../'"$m"
+done
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Error: must run as root (sudo $0 $([ $NVIDIA = yes ] && echo "--nvidia ")$NEW_HOSTNAME $DISK)"
+    echo "Error: must run as root (sudo $0 $*)"
     exit 1
 fi
 
@@ -126,7 +128,7 @@ fi
 echo ""
 echo "Target disk:"
 lsblk -o NAME,SIZE,TYPE,MODEL,SERIAL "$DISK"
-echo "NVIDIA GPU on the target (--nvidia): $NVIDIA"
+echo "Extra modules: ${*:3}"
 echo ""
 echo "ALL DATA ON $DISK WILL BE DESTROYED."
 IFS= read -rp "Type the device path ($DISK) to continue: " CONFIRM
@@ -248,7 +250,7 @@ cat > "$DEST/nix/nixos/local/default.nix" <<EOF
 { ... }: {
   imports = [
     ../laptop-hardware.nix       # generic laptop baseline
-    ./hardware-configuration.nix # this machine (nixos-generate-config)$([ $NVIDIA = yes ] && printf '\n    ../nvidia.nix')
+    ./hardware-configuration.nix # this machine (nixos-generate-config)${IMPORTS}
   ];
 
   networking.hostName = "${NEW_HOSTNAME}";
