@@ -65,10 +65,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "aa48d347080940b8a2b8d2f48228674e280a3514",
-        "sha256": "0h3lgfddm7c6yl41niqk213mjrs6xmmr08l4vb0vnq2fhdlaxhlb",
+        "rev": "5c9de89ec55bff981cb8da1a4ee92b10f1438ffc",
+        "sha256": "1g326dqnr2p3wxwlxxbnfgndrbvajsjyv8b5bzyfxc9x4sb5ldaq",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/aa48d347080940b8a2b8d2f48228674e280a3514.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/5c9de89ec55bff981cb8da1a4ee92b10f1438ffc.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "refac": {
@@ -105,18 +105,6 @@
         "sha256": "14f4in4hfgkv15sbw1w0ggkcrggignqi4g0vnblzy3jq2fxy94fl",
         "type": "tarball",
         "url": "https://github.com/bddap-bot/zellij/archive/7969518483be55cb2fbe2b1385a3493c9e324975.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "zellij-nixpkgs": {
-        "branch": "nixos-unstable",
-        "description": "nixpkgs pin whose zellij-unwrapped builds cleanly with the fork (matches the spiral's flake.lock)",
-        "homepage": null,
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
-        "sha256": "1vq77hlx8mi3z03pw2nf6r5h7473r1p9yxyf58ym3fh01zppmfln",
-        "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/567a49d1913ce81ac6e9582e3553dd90a955875f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "zellij-spiral": {
