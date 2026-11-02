@@ -10,6 +10,7 @@ let
     curl = "8.22.0";
     unbound = "1.26.0";
     rsync = "3.5.0";
+    linux_6_18 = "6.18.56";
   };
   below = lib.filterAttrs (name: min: lib.versionOlder pkgs.${name}.version min) floor;
   report = lib.mapAttrsToList (name: min: "${name} ${pkgs.${name}.version} < ${min}") below;
