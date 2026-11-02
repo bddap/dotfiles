@@ -2,17 +2,10 @@
 # `./home-manager build` produces both with no flakes and no build-on-launch.
 # `zellij` (the fork) goes on PATH — it adds the pane-slot-binding API the spiral
 # needs, which stock zellij lacks. The wasm store path is what the config loads.
-#
-# Built against the spiral's own pinned nixpkgs + rust-overlay, not the repo's
-# main nixpkgs: that rev's zellij-unwrapped + fetchCargoVendor are what the fork's
-# vendor hashes were computed against, so reusing it keeps the hashes valid.
 final:
 let
   sources = final.bddap.sources;
-  pkgs = import sources.zellij-nixpkgs {
-    inherit (final.stdenv.hostPlatform) system;
-    overlays = [ (import sources.rust-overlay) ];
-  };
+  pkgs = final.extend (import sources.rust-overlay);
 
   # zellij plugins are WASI modules; the stock pinned rustc ships only
   # wasm32-unknown-unknown, so pull a toolchain carrying the wasm32-wasip1 std.
