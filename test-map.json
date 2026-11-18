@@ -6,6 +6,14 @@
       "why": "The derivation's check phase runs mypy --strict and the unit tests"
     },
     {
+      "paths": ["nix/nix/dictate/**", "nix/nixos/dictate.nix", "nix/nixos/dictate-test.nix"],
+      "tests": [
+        "nix-build nix/nix/default.nix -A bddap.dictate --no-out-link",
+        "nix-build --no-out-link nix/nixos/dictate-test.nix"
+      ],
+      "why": "The derivation's check phase runs mypy --strict and transcribes the model's sample; the VM test boots the laptop configuration into GNOME, holds the key while speech plays into a virtual microphone, and reads the text typed into a Wayland and an X11 window"
+    },
+    {
       "paths": ["nix/nix/glacritty.nix"],
       "tests": ["nix-build --no-out-link nix/nix/default.nix -A bddap.glacritty"],
       "why": "The package builds the pinned fork and runs its test suite"

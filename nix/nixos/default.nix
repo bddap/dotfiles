@@ -8,7 +8,7 @@ in {
   # mechanism in nix/home-manager/local/.) Imported iff present.
   # ./install-to-disk populates it on new machines; it is never carried from
   # one machine to another.
-  imports = [ ./sandboxes ] ++ (
+  imports = [ ./sandboxes ./dictate.nix ] ++ (
     if builtins.pathExists ./local/default.nix
     then [ ./local/default.nix ]
     else [ ]);
