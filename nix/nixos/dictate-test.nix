@@ -1,7 +1,6 @@
 let
   pkgs = import ../nix { };
-  inherit (pkgs.bddap) dictate;
-  sample = "${dictate.model}/test_wavs/0.wav";
+  sample = "${pkgs.bddap.dictate.model}/test_wavs/0.wav";
   asUser = "systemd-run --user -M a@ --collect --quiet";
   windows = {
     wayland = "${pkgs.gnome-console}/bin/kgx -e";
@@ -12,16 +11,22 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
   hostPkgs = pkgs;
 
   nodes.machine = {
-    imports = [ ./default.nix ];
+    imports = [ ./default.nix "${pkgs.home-manager.src}/nixos" ];
     virtualisation.memorySize = 6144;
     virtualisation.cores = 8;
+    home-manager.users.a = {
+      imports = [ ../home-manager/dictate.nix ];
+      home.stateVersion = "23.11";
+    };
   };
 
   testScript = ''
     import re
 
+    machine.wait_for_unit("home-manager-a.service")
     machine.wait_for_file("/run/user/1000/wayland-0")
-    machine.wait_until_succeeds("find /proc/[0-9]*/fd -user a -lname /run/dictate-key | grep -q .")
+    # The daemon reads key events from its stdin once the model is loaded.
+    machine.wait_until_succeeds("grep -q '^0 0x0 ' /proc/$(pgrep -u a -f bin/.dictate-wrapped)/syscall", timeout=300)
     machine.succeed("${asUser} ${pkgs.pipewire}/bin/pw-loopback --capture-props='media.class=Audio/Sink node.name=mouth' --playback-props='media.class=Audio/Source node.name=mic'")
     machine.sleep(10)
     machine.send_key("esc")
@@ -30,7 +35,7 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
 
     for name, terminal in ${builtins.toJSON windows}.items():
         with subtest(f"speech typed into a {name} window"):
-            machine.succeed(f"${asUser} {terminal} sh -c 'stty -icanon; cat > /tmp/{name}'")
+            machine.succeed(f"${asUser} --unit=window-{name} {terminal} sh -c 'stty -icanon; cat > /tmp/{name}'")
             machine.sleep(10)
             machine.send_monitor_command("sendkey alt_r 12000")
             machine.sleep(1)
@@ -48,13 +53,11 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
             machine.sleep(10)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 
-        with subtest(f"no other process can make it type into a {name} window"):
-            machine.fail("su a -c 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus ${pkgs.glib.bin}/bin/gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/Dictate --method org.gnome.Shell.Extensions.Dictate.Type injected'")
-            machine.fail("su a -c 'echo +dictate > ${dictate.events}'")
-            machine.fail("su a -c 'chmod u+w ${dictate.events}'")
+        with subtest(f"no session-bus caller can make it type into a {name} window"):
+            machine.fail("${asUser} --wait --pipe ${pkgs.glib.bin}/bin/gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/Dictate --method org.gnome.Shell.Extensions.Dictate.Type injected")
             machine.sleep(5)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 
-        machine.systemctl("restart keyd")
+        machine.succeed(f"systemctl --user -M a@ stop window-{name}")
   '';
 }

@@ -10,7 +10,6 @@ import numpy as np
 from sherpa_onnx.offline_recognizer import OfflineRecognizer
 
 MODEL = "@model@"
-EVENTS = "@events@"
 SAMPLE_RATE = 16000
 MIN_SECONDS = 0.3
 
@@ -47,6 +46,7 @@ class Recording:
     def __init__(self) -> None:
         self.process = subprocess.Popen(
             ["pw-record", "--raw", "--rate", str(SAMPLE_RATE), "--channels", "1", "--format", "s16", "-"],
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
         )
         self.audio = b""
@@ -70,20 +70,16 @@ def main() -> None:
     os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
     recognizer = load()
     recording: Recording | None = None
-    while True:
-        with open(EVENTS) as events:
-            for event in events:
-                if event == "+dictate\n" and recording is None:
-                    recording = Recording()
-                elif event == "-dictate\n" and recording is not None:
-                    text = plain(transcribe(recognizer, recording.stop()))
-                    recording = None
-                    if text:
-                        print(text, file=transcripts, flush=True)
-        # The key's release is lost with the stream that would have carried it.
-        if recording is not None:
-            recording.stop()
+    for event in sys.stdin:
+        if event == "press\n" and recording is None:
+            recording = Recording()
+        elif event == "release\n" and recording is not None:
+            text = plain(transcribe(recognizer, recording.stop()))
             recording = None
+            if text:
+                print(text, file=transcripts, flush=True)
+    if recording is not None:
+        recording.stop()
 
 
 if __name__ == "__main__":

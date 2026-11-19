@@ -13,7 +13,6 @@ let
   python = python3.withPackages deps;
   checkPython = python3.withPackages (ps: deps ps ++ [ ps.mypy ]);
   extension = "dictate@dotfiles";
-  events = "/run/dictate-key";
   metadata = builtins.toFile "metadata.json" (builtins.toJSON {
     uuid = extension;
     name = "Dictate";
@@ -30,8 +29,7 @@ in stdenv.mkDerivation {
   postPatch = ''
     substituteInPlace dictate.py \
       --replace-fail "#!/usr/bin/env python3" "#!${python}/bin/python3" \
-      --replace-fail @model@ ${model} \
-      --replace-fail @events@ ${events}
+      --replace-fail @model@ ${model}
   '';
 
   doCheck = true;
@@ -52,5 +50,5 @@ in stdenv.mkDerivation {
     runHook postInstall
   '';
 
-  passthru = { inherit model extension events; };
+  passthru = { inherit model extension; };
 }
