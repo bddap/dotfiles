@@ -17,6 +17,8 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
   };
 
   testScript = ''
+    import re
+
     machine.wait_for_file("/run/user/1000/wayland-0")
     machine.wait_until_succeeds("find /proc/[0-9]*/fd -user a -lname /run/dictate-key | grep -q .")
     machine.succeed("${asUser} ${pkgs.pipewire}/bin/pw-loopback --capture-props='media.class=Audio/Sink node.name=mouth' --playback-props='media.class=Audio/Source node.name=mic'")
@@ -36,7 +38,9 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
             machine.wait_until_succeeds(f"grep -q 'It is certainly very like the old portrait. $' /tmp/{name}", timeout=60)
             machine.screenshot(f"{name}-typed")
             typed = machine.succeed(f"cat /tmp/{name}")
-            assert typed.startswith("Well, I don't wish to see it any more, observed"), typed
+            # Through the virtual microphone the name comes out as Phoebe, Phebe or Pebe from one run to the next.
+            assert re.fullmatch(r"Well, I don't wish to see it any more, observed \S+, turning away her eyes\. It is certainly very like the old portrait\. ", typed), typed
+            machine.copy_from_machine(f"/tmp/{name}")
 
         with subtest(f"a tap types nothing into a {name} window"):
             machine.send_monitor_command("sendkey alt_r 100")

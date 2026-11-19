@@ -32,7 +32,7 @@ export default class Dictate extends Extension {
             Main.inputMethod.commit(text);
             return;
         }
-        // Without an input-method focus (X11 clients) only key events reach the window.
+        // Without an input-method focus (X11 clients, GTK under GTK_IM_MODULE=ibus) only key events reach the window.
         for (const character of text) {
             const keyval = Clutter.unicode_to_keysym(character.codePointAt(0));
             const time = Clutter.get_current_event_time() * 1000;
