@@ -89,7 +89,8 @@ export default class Dictate extends Extension {
                 [line] = stream.read_line_finish_utf8(result);
             } catch (e) {
                 logError(e, 'Dictate: unreadable transcript');
-                next();
+                if (this._daemon === daemon)
+                    next();
                 return;
             }
             if (line === null || this._daemon !== daemon)

@@ -61,13 +61,22 @@ class Recording:
             self.process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             self.process.kill()
+            self.process.wait()
         self.reader.join()
         return self.audio
 
 
+def exit_on_thread_error(args: threading.ExceptHookArgs) -> None:
+    threading.__excepthook__(args)
+    # A daemon that can no longer transcribe must exit so the shell starts a new one.
+    os._exit(1)
+
+
 def main() -> None:
-    # Same-user processes could otherwise write key events or transcripts through /proc/<pid>/fd.
-    ctypes.CDLL(None).prctl(PR_SET_DUMPABLE, 0)
+    libc = ctypes.CDLL(None, use_errno=True)
+    # Keeps same-user processes from writing key events or transcripts into this end of the pipes through /proc/<pid>/fd.
+    if libc.prctl(PR_SET_DUMPABLE, 0) != 0:
+        raise OSError(ctypes.get_errno(), "prctl(PR_SET_DUMPABLE)")
     transcripts = os.fdopen(os.dup(sys.stdout.fileno()), "w", encoding="utf-8")
     # The shell commits every line of stdout to the focused window, so nothing else may write there.
     os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
@@ -80,6 +89,7 @@ def main() -> None:
             if text:
                 print(text, file=transcripts, flush=True)
 
+    threading.excepthook = exit_on_thread_error
     threading.Thread(target=transcribe_in_order, daemon=True).start()
     recording: Recording | None = None
     for event in sys.stdin:

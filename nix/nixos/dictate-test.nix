@@ -54,7 +54,7 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
             machine.sleep(10)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 
-        with subtest(f"no session-bus caller or write to the daemon's pipes can make it type into a {name} window"):
+        with subtest(f"neither a session-bus caller nor a write to the daemon's end of its pipes makes it type into a {name} window"):
             machine.fail("${asUser} --wait --pipe ${pkgs.glib.bin}/bin/gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/Dictate --method org.gnome.Shell.Extensions.Dictate.Type injected")
             daemon = machine.succeed("pgrep -u a -f bin/.dictate-wrapped").strip()
             for fd in machine.succeed(f"ls /proc/{daemon}/fd").split():
