@@ -1,6 +1,7 @@
 let
   pkgs = import ../nix { };
-  sample = "${pkgs.bddap.dictate.model}/test_wavs/0.wav";
+  inherit (pkgs.bddap) dictate;
+  sample = "${dictate.model}/test_wavs/0.wav";
   asUser = "systemd-run --user -M a@ --collect --quiet";
   windows = {
     wayland = "${pkgs.gnome-console}/bin/kgx -e";
@@ -45,6 +46,13 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
         with subtest(f"a tap types nothing into a {name} window"):
             machine.send_monitor_command("sendkey alt_r 100")
             machine.sleep(10)
+            assert machine.succeed(f"cat /tmp/{name}") == typed
+
+        with subtest(f"no other process can make it type into a {name} window"):
+            machine.fail("su a -c 'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus ${pkgs.glib.bin}/bin/gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/Dictate --method org.gnome.Shell.Extensions.Dictate.Type injected'")
+            machine.fail("su a -c 'echo +dictate > ${dictate.events}'")
+            machine.fail("su a -c 'chmod u+w ${dictate.events}'")
+            machine.sleep(5)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 
         machine.systemctl("restart keyd")

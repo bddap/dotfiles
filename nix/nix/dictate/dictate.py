@@ -3,12 +3,14 @@ import os
 import signal
 import subprocess
 import sys
-import wave
+import threading
+import unicodedata
 
 import numpy as np
 from sherpa_onnx.offline_recognizer import OfflineRecognizer
 
 MODEL = "@model@"
+EVENTS = "@events@"
 SAMPLE_RATE = 16000
 MIN_SECONDS = 0.3
 
@@ -25,9 +27,8 @@ def load() -> OfflineRecognizer:
     return recognizer
 
 
-def transcribe(recognizer: OfflineRecognizer, path: str) -> str:
-    with wave.open(path, "rb") as recording:
-        samples = np.frombuffer(recording.readframes(recording.getnframes()), np.int16).astype(np.float32) / 32768
+def transcribe(recognizer: OfflineRecognizer, audio: bytes) -> str:
+    samples = np.frombuffer(audio[: len(audio) // 2 * 2], np.int16).astype(np.float32) / 32768
     # The model hears "Yeah." in the click of a tapped key.
     if len(samples) < MIN_SECONDS * SAMPLE_RATE:
         return ""
@@ -38,43 +39,50 @@ def transcribe(recognizer: OfflineRecognizer, path: str) -> str:
     return text.strip()
 
 
-def type_text(text: str) -> None:
-    subprocess.run(
-        [
-            "gdbus", "call", "--session", "--dest", "org.gnome.Shell",
-            "--object-path", "/org/gnome/Shell/Extensions/Dictate",
-            "--method", "org.gnome.Shell.Extensions.Dictate.Type", "--", text,
-        ],
-        stdout=subprocess.DEVNULL,
-    )
+def plain(text: str) -> str:
+    return "".join(" " if c.isspace() else c for c in text if c.isspace() or unicodedata.category(c)[0] != "C")
+
+
+class Recording:
+    def __init__(self) -> None:
+        self.process = subprocess.Popen(
+            ["pw-record", "--raw", "--rate", str(SAMPLE_RATE), "--channels", "1", "--format", "s16", "-"],
+            stdout=subprocess.PIPE,
+        )
+        self.audio = b""
+        self.reader = threading.Thread(target=self.drain)
+        self.reader.start()
+
+    def drain(self) -> None:
+        assert self.process.stdout is not None
+        self.audio = self.process.stdout.read()
+
+    def stop(self) -> bytes:
+        self.process.send_signal(signal.SIGINT)
+        self.process.wait()
+        self.reader.join()
+        return self.audio
 
 
 def main() -> None:
+    transcripts = os.fdopen(os.dup(sys.stdout.fileno()), "w")
+    # The shell commits every line of stdout to the focused window, so nothing else may write there.
+    os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
     recognizer = load()
-    path = os.path.join(os.environ["XDG_RUNTIME_DIR"], "dictate.wav")
-    recording: subprocess.Popen[bytes] | None = None
+    recording: Recording | None = None
     while True:
-        with open(sys.argv[1]) as events:
+        with open(EVENTS) as events:
             for event in events:
                 if event == "+dictate\n" and recording is None:
-                    # A release that beats the recorder's start must not find the last utterance.
-                    if os.path.exists(path):
-                        os.unlink(path)
-                    recording = subprocess.Popen(
-                        ["pw-record", "--rate", str(SAMPLE_RATE), "--channels", "1", "--format", "s16", path]
-                    )
+                    recording = Recording()
                 elif event == "-dictate\n" and recording is not None:
-                    recording.send_signal(signal.SIGINT)
-                    recording.wait()
+                    text = plain(transcribe(recognizer, recording.stop()))
                     recording = None
-                    if os.path.exists(path):
-                        text = transcribe(recognizer, path)
-                        if text:
-                            type_text(text + " ")
+                    if text:
+                        print(text, file=transcripts, flush=True)
         # The key's release is lost with the stream that would have carried it.
         if recording is not None:
-            recording.kill()
-            recording.wait()
+            recording.stop()
             recording = None
 
 

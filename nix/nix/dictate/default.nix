@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, lib, makeWrapper, python3, pipewire, glib, gnome-shell, ... }:
+{ stdenv, fetchurl, lib, makeWrapper, python3, pipewire, gnome-shell, ... }:
 let
   model = stdenv.mkDerivation {
     name = "parakeet-tdt-0.6b-v2-int8";
@@ -13,6 +13,7 @@ let
   python = python3.withPackages deps;
   checkPython = python3.withPackages (ps: deps ps ++ [ ps.mypy ]);
   extension = "dictate@dotfiles";
+  events = "/run/dictate-key";
   metadata = builtins.toFile "metadata.json" (builtins.toJSON {
     uuid = extension;
     name = "Dictate";
@@ -29,7 +30,8 @@ in stdenv.mkDerivation {
   postPatch = ''
     substituteInPlace dictate.py \
       --replace-fail "#!/usr/bin/env python3" "#!${python}/bin/python3" \
-      --replace-fail @model@ ${model}
+      --replace-fail @model@ ${model} \
+      --replace-fail @events@ ${events}
   '';
 
   doCheck = true;
@@ -43,11 +45,12 @@ in stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     install -Dm755 dictate.py $out/bin/dictate
-    wrapProgram $out/bin/dictate --prefix PATH : ${lib.makeBinPath [ pipewire glib ]}
-    install -Dm644 extension/extension.js -t $out/share/gnome-shell/extensions/${extension}
+    wrapProgram $out/bin/dictate --prefix PATH : ${lib.makeBinPath [ pipewire ]}
     install -Dm644 ${metadata} $out/share/gnome-shell/extensions/${extension}/metadata.json
+    substitute extension/extension.js $out/share/gnome-shell/extensions/${extension}/extension.js \
+      --replace-fail @dictate@ $out/bin/dictate
     runHook postInstall
   '';
 
-  passthru = { inherit model extension; };
+  passthru = { inherit model extension events; };
 }
