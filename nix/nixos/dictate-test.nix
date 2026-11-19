@@ -41,7 +41,8 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
             machine.sleep(1)
             machine.succeed("${asUser} --wait ${pkgs.pipewire}/bin/pw-play --target mouth ${sample}")
             machine.screenshot(f"{name}-listening")
-            machine.wait_until_succeeds(f"grep -q 'It is certainly very like the old portrait. $' /tmp/{name}", timeout=60)
+            machine.wait_until_succeeds(f"test -s /tmp/{name}", timeout=60)
+            machine.sleep(2)
             machine.screenshot(f"{name}-typed")
             typed = machine.succeed(f"cat /tmp/{name}")
             # Through the virtual microphone the name comes out as Phoebe, Phebe or Pebe from one run to the next.
@@ -53,8 +54,11 @@ in (import "${pkgs.path}/nixos/lib" { }).runTest {
             machine.sleep(10)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 
-        with subtest(f"no session-bus caller can make it type into a {name} window"):
+        with subtest(f"no session-bus caller or write to the daemon's pipes can make it type into a {name} window"):
             machine.fail("${asUser} --wait --pipe ${pkgs.glib.bin}/bin/gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/Dictate --method org.gnome.Shell.Extensions.Dictate.Type injected")
+            daemon = machine.succeed("pgrep -u a -f bin/.dictate-wrapped").strip()
+            for fd in machine.succeed(f"ls /proc/{daemon}/fd").split():
+                machine.fail(f"su a -c 'echo injected > /proc/{daemon}/fd/{fd}'")
             machine.sleep(5)
             assert machine.succeed(f"cat /tmp/{name}") == typed
 

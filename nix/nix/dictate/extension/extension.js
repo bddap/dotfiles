@@ -41,7 +41,7 @@ export default class Dictate extends Extension {
         this._respawn = 0;
         const daemon = this._daemon;
         this._daemon = null;
-        daemon.force_exit();
+        daemon?.force_exit();
     }
 
     _released() {
@@ -53,29 +53,61 @@ export default class Dictate extends Extension {
     }
 
     _send(event) {
-        this._daemon.get_stdin_pipe().write_all(new TextEncoder().encode(`${event}\n`), null);
+        try {
+            this._daemon.get_stdin_pipe().write_all(new TextEncoder().encode(`${event}\n`), null);
+        } catch (e) {
+            logError(e, 'Dictate: the daemon is not running');
+        }
+    }
+
+    _commit(line) {
+        const text = `${line.replace(/\s/gu, ' ').replace(/\p{C}/gu, '')} `;
+        const panel = getIBusManager()._panelService;
+        if (!panel) {
+            console.warn('Dictate: IBus is not running, transcript dropped');
+            return;
+        }
+        // The shell is IBus's panel: a panel commit is text, never a key event, and reaches the focused input context however the window talks to IBus.
+        panel.commit_text(IBus.Text.new_from_string(text));
     }
 
     _spawn() {
         this._respawn = 0;
-        const daemon = Gio.Subprocess.new([DAEMON], Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE);
+        let daemon;
+        try {
+            daemon = Gio.Subprocess.new([DAEMON], Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE);
+        } catch (e) {
+            logError(e, 'Dictate: cannot start the daemon');
+            this._scheduleRespawn();
+            return;
+        }
         this._daemon = daemon;
         const transcripts = new Gio.DataInputStream({base_stream: daemon.get_stdout_pipe()});
         const next = () => transcripts.read_line_async(GLib.PRIORITY_DEFAULT, null, (stream, result) => {
-            const [line] = stream.read_line_finish_utf8(result);
+            let line;
+            try {
+                [line] = stream.read_line_finish_utf8(result);
+            } catch (e) {
+                logError(e, 'Dictate: unreadable transcript');
+                next();
+                return;
+            }
             if (line === null || this._daemon !== daemon)
                 return;
-            // The shell is IBus's panel: a panel commit is text, never a key event, and reaches the focused input context however the window talks to IBus.
-            getIBusManager()._panelService?.commit_text(IBus.Text.new_from_string(`${line} `));
+            this._commit(line);
             next();
         });
         next();
         daemon.wait_async(null, () => {
             if (this._daemon === daemon)
-                this._respawn = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
-                    this._spawn();
-                    return GLib.SOURCE_REMOVE;
-                });
+                this._scheduleRespawn();
+        });
+    }
+
+    _scheduleRespawn() {
+        this._respawn = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
+            this._spawn();
+            return GLib.SOURCE_REMOVE;
         });
     }
 }

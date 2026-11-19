@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
+import ctypes
 import os
+import queue
 import signal
 import subprocess
 import sys
 import threading
-import unicodedata
 
 import numpy as np
 from sherpa_onnx.offline_recognizer import OfflineRecognizer
@@ -12,6 +13,7 @@ from sherpa_onnx.offline_recognizer import OfflineRecognizer
 MODEL = "@model@"
 SAMPLE_RATE = 16000
 MIN_SECONDS = 0.3
+PR_SET_DUMPABLE = 4
 
 
 def load() -> OfflineRecognizer:
@@ -35,11 +37,7 @@ def transcribe(recognizer: OfflineRecognizer, audio: bytes) -> str:
     stream.accept_waveform(SAMPLE_RATE, samples)
     recognizer.decode_stream(stream)
     text: str = stream.result.text
-    return text.strip()
-
-
-def plain(text: str) -> str:
-    return "".join(" " if c.isspace() else c for c in text if c.isspace() or unicodedata.category(c)[0] != "C")
+    return " ".join(text.split())
 
 
 class Recording:
@@ -59,25 +57,37 @@ class Recording:
 
     def stop(self) -> bytes:
         self.process.send_signal(signal.SIGINT)
-        self.process.wait()
+        try:
+            self.process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
         self.reader.join()
         return self.audio
 
 
 def main() -> None:
-    transcripts = os.fdopen(os.dup(sys.stdout.fileno()), "w")
+    # Same-user processes could otherwise write key events or transcripts through /proc/<pid>/fd.
+    ctypes.CDLL(None).prctl(PR_SET_DUMPABLE, 0)
+    transcripts = os.fdopen(os.dup(sys.stdout.fileno()), "w", encoding="utf-8")
     # The shell commits every line of stdout to the focused window, so nothing else may write there.
     os.dup2(sys.stderr.fileno(), sys.stdout.fileno())
     recognizer = load()
+    utterances: queue.Queue[bytes] = queue.Queue()
+
+    def transcribe_in_order() -> None:
+        while True:
+            text = transcribe(recognizer, utterances.get())
+            if text:
+                print(text, file=transcripts, flush=True)
+
+    threading.Thread(target=transcribe_in_order, daemon=True).start()
     recording: Recording | None = None
     for event in sys.stdin:
         if event == "press\n" and recording is None:
             recording = Recording()
         elif event == "release\n" and recording is not None:
-            text = plain(transcribe(recognizer, recording.stop()))
+            utterances.put(recording.stop())
             recording = None
-            if text:
-                print(text, file=transcripts, flush=True)
     if recording is not None:
         recording.stop()
 

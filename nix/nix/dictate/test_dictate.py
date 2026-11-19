@@ -18,10 +18,6 @@ class Dictate(unittest.TestCase):
     def test_a_tap_types_nothing(self) -> None:
         self.assertEqual(dictate.transcribe(dictate.load(), sample(0.2)), "")
 
-    def test_only_text_reaches_the_window(self) -> None:
-        self.assertEqual(dictate.plain("x\ty\nz\x1b[1mq\x07 end‮."), "x y z[1mq end.")
-        self.assertEqual(dictate.plain("Aa1 é ü — “q” 你好 🙂"), "Aa1 é ü — “q” 你好 🙂")
-
 
 if __name__ == "__main__":
     unittest.main()

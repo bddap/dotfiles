@@ -5,7 +5,7 @@ in { ... }: {
   xdg.dataFile."gnome-shell/extensions/${dictate.extension}".source =
     "${dictate}/share/gnome-shell/extensions/${dictate.extension}";
 
-  systemd.user.services.dictate = {
+  systemd.user.services.dictate-enable = {
     Unit = {
       Description = "Enable the dictation extension";
       PartOf = [ "graphical-session.target" ];
