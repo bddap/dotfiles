@@ -6,7 +6,7 @@ in { lib, ... }: {
   # (gitignored) — same mechanism as nix/nixos/local/ in
   # nix/nixos/default.nix: imported iff present, so a machine without one
   # builds unchanged.
-  imports = [ ./headless.nix ]
+  imports = [ ./headless.nix ./dictate.nix ]
     ++ pkgs.lib.optional (builtins.pathExists ./local/default.nix)
     ./local/default.nix;
 
